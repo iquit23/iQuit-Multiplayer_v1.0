@@ -1,0 +1,264 @@
+/* I QUIT! Online — mobile-first, παλέτα από IQuit_App.html */
+:root{
+  --bg:#0e1726; --card:#15233b; --card2:#1e3050; --line:#2b3f63;
+  --txt:#eaf1fb; --muted:#8fa3c4;
+  --accent:#3b82f6; --accent2:#2563eb;
+  --green:#3ec46d; --yellow:#e8c43d; --red:#e25b54; --gold:#f0c14b;
+  --funding:#f06fb0; --bond:#6fb3c9; --purple:#a98cf0; --orange:#f08c4b;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{background:var(--bg); color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  min-height:100vh; padding-bottom:24px;}
+button{font-family:inherit; cursor:pointer; border:none; border-radius:12px;
+  font-size:15px; font-weight:600; color:#fff; background:var(--card2);}
+button:disabled{opacity:.45; cursor:default;}
+input,select{font-family:inherit; font-size:16px; background:#0a1320; color:var(--txt);
+  border:1px solid var(--line); border-radius:10px; padding:12px; width:100%;}
+h1,h2,h3{margin:0;}
+.wrap{max-width:1100px; margin:0 auto; padding:12px;}
+.muted{color:var(--muted); font-size:12px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px;}
+.primary{background:linear-gradient(90deg,var(--accent2),var(--accent)); padding:15px 18px; font-size:16px; font-weight:800; width:100%;}
+.primary:active{transform:translateY(1px);}
+.ghost{background:var(--card2); border:1px solid var(--line); padding:12px 14px;}
+.danger{border:1px solid #5a2a28; color:#e8847f; background:var(--card2);}
+.row{display:flex; gap:8px; align-items:center;}
+.spacer{flex:1;}
+
+/* ---------- HOME ---------- */
+#screen-home{max-width:430px; margin:0 auto; padding:28px 16px;}
+.logo{font-size:44px; font-weight:900; letter-spacing:1px; text-align:center; margin:26px 0 2px;}
+.logo em{color:var(--accent); font-style:normal;}
+.tagline{text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;}
+.home-label{font-size:12px; color:var(--muted); margin:14px 0 5px; text-transform:uppercase; letter-spacing:.5px;}
+#joinCode{text-transform:uppercase; letter-spacing:6px; font-weight:800; text-align:center; font-size:22px;}
+.err{background:#3a1d20; border:1px solid #5a2a28; color:#f0a8a3; padding:10px 12px;
+  border-radius:10px; font-size:13px; margin-top:12px; display:none;}
+.notice{background:#1d2f1e; border:1px solid #2e5a33; color:#a8f0b0; padding:10px 12px;
+  border-radius:10px; font-size:13px; margin-top:12px;}
+
+/* ---------- LOBBY ---------- */
+#screen-lobby{max-width:430px; margin:0 auto; padding:20px 16px;}
+.roomcode{font-size:42px; font-weight:900; letter-spacing:10px; text-align:center;
+  background:var(--card2); border:2px dashed var(--line); border-radius:16px; padding:16px 6px; margin:10px 0;}
+.lobby-player{display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line);}
+.lobby-player:last-child{border-bottom:none;}
+.avatar{width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-weight:800; font-size:15px; color:#0a1320; flex:0 0 auto;}
+.lobby-player .nm{flex:1; font-size:15px; font-weight:600;}
+.tag{font-size:10px; padding:2px 8px; border-radius:20px; background:#0a1320; border:1px solid var(--line); color:var(--muted);}
+.kick{background:none; border:none; color:#e8847f; font-size:16px; padding:4px 8px;}
+
+/* ---------- GAME LAYOUT (v0.7: μεγαλύτερο ταμπλό για laptop) ---------- */
+#screen-game .wrap{display:grid; grid-template-columns:1fr; gap:12px; max-width:1280px;}
+@media(min-width:900px){
+  #screen-game .wrap{grid-template-columns:minmax(560px,1.35fr) 1fr; align-items:start;}
+  #colLeft{position:sticky; top:10px;}
+}
+.topbar{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--card);
+  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:30;}
+.topbar .code{font-weight:800; letter-spacing:2px; color:var(--gold); font-size:13px;}
+.topbar .turnwho{font-size:13px; color:var(--muted); flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.tbtn{padding:6px 10px; font-size:13px; border-radius:8px; background:var(--card2);
+  border:1px solid var(--line); color:var(--muted); flex:0 0 auto;}
+.tbtn.on{border-color:var(--accent); color:#fff;}
+
+/* ---------- CHAT ---------- */
+.chatlog{max-height:170px; overflow:auto; font-size:13px; line-height:1.65; overflow-anchor:none;}
+.chatmsg{padding:2px 0; word-break:break-word;}
+
+/* ---------- PAWN PICKER ---------- */
+.pawnrow{display:flex; gap:8px; flex-wrap:wrap;}
+.pawnbtn{font-size:22px; width:48px; height:48px; border-radius:12px; background:#0a1320;
+  border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:#fff;}
+.pawnbtn.sel{border-color:var(--accent); background:#12233f; box-shadow:0 0 0 2px var(--accent);}
+.pawnbtn.taken{opacity:.3;}
+
+/* ---------- BOARD (v0.7: το πραγματικό board art) ---------- */
+.boardbox{position:relative; width:100%; aspect-ratio:1/1; border-radius:14px;
+  background:repeating-linear-gradient(90deg, #4d3524 0 88px, #573b28 88px 176px);
+  box-shadow:inset 0 0 40px rgba(0,0,0,.6); padding:14px;}
+.tiltwrap{position:relative; width:100%; height:100%;}
+#boardImg{width:100%; height:100%; display:block; border-radius:6px;
+  box-shadow:0 14px 40px rgba(0,0,0,.7), 0 0 0 2px #d8cfc2;}
+.boardOverlay{position:absolute; inset:0;}
+.sqglow{position:absolute; width:12.5%; height:12.5%; transform:translate(-50%,-50%);
+  border-radius:10%; box-shadow:0 0 0 3px rgba(59,130,246,.9), 0 0 22px 6px rgba(59,130,246,.55);
+  pointer-events:none; animation:glowp 1.2s ease-in-out infinite;}
+@keyframes glowp{0%,100%{opacity:.95}50%{opacity:.5}}
+.pawnspot{position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center;
+  justify-content:center; pointer-events:none; z-index:4;}
+/* Στοίβες καρτών στα 4 διαγώνια κουτιά του ταμπλό */
+.stack{position:absolute; transform:translate(-50%,-50%) rotate(var(--rot)); z-index:2; pointer-events:none;}
+.stack .cardback{width:9.5vmin; max-width:74px; min-width:46px; aspect-ratio:0.68; border-radius:8px;
+  border:2px solid rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center;
+  font-size:8px; font-weight:900; letter-spacing:.5px; color:#fff; text-align:center; padding:3px;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+  box-shadow:2px 2px 0 rgba(0,0,0,.25), 4px 4px 0 rgba(0,0,0,.18), 6px 6px 14px rgba(0,0,0,.5);}
+.stack .cnt{position:absolute; right:-9px; top:-9px; background:#0a1320; color:#fff; border:1px solid rgba(255,255,255,.5);
+  font-size:10px; font-weight:800; min-width:20px; height:20px; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:0 4px;
+  transform:rotate(calc(-1 * var(--rot)));}
+.st-lifestyle .cardback{background:linear-gradient(160deg,#a63a34,#6e2420);}
+.st-moments .cardback{background:linear-gradient(160deg,#2e7a44,#1b4a2a);}
+.st-project .cardback{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
+.st-bb .cardback{background:linear-gradient(160deg,#c46f2c,#7a4218);}
+/* Κάρτα που "τραβιέται" από τη στοίβα */
+.flycard{position:fixed; width:74px; aspect-ratio:0.68; border-radius:8px; z-index:300;
+  border:2px solid rgba(255,255,255,.8); box-shadow:0 18px 44px rgba(0,0,0,.7);
+  transform:translate(-50%,-50%) rotate(var(--rot,45deg)) scale(.7);
+  transition:left .55s cubic-bezier(.3,.7,.3,1), top .55s cubic-bezier(.3,.7,.3,1), transform .55s cubic-bezier(.3,.7,.3,1);
+  pointer-events:none;}
+.flycard.go{left:50vw !important; top:44vh !important; transform:translate(-50%,-50%) rotate(0deg) scale(1.9);}
+.fly-lifestyle{background:linear-gradient(160deg,#a63a34,#6e2420);}
+.fly-moments{background:linear-gradient(160deg,#2e7a44,#1b4a2a);}
+.fly-project{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
+.fly-bb{background:linear-gradient(160deg,#c46f2c,#7a4218);}
+.board{display:grid; width:100%; height:100%;
+  grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); gap:3px;}
+.sq{position:relative; border-radius:7px; background:var(--card2); border:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:9px; color:var(--muted); overflow:hidden; min-width:0;}
+.sq .ic{font-size:13px; line-height:1;}
+.sq .lb{font-size:7px; letter-spacing:0; text-align:center; line-height:1.1; margin-top:2px;
+  white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:clip;}
+@media(min-width:520px){ .sq .ic{font-size:17px;} .sq .lb{font-size:9px;} .sq{font-size:11px;} }
+.sq.corner{border-width:2px;}
+.sq.t-project{border-color:#2e466a; background:#182c4d;}
+.sq.t-bb{border-color:#5a4426; background:#33261a;}
+.sq.t-lifestyle{border-color:#5a2a28; background:#331d1c;}
+.sq.t-moments{border-color:#2e5a33; background:#1a3320;}
+.sq.t-crash{border-color:#7a2a28; background:#3d1715;}
+.sq.t-inflation{border-color:#5a4a1e; background:#332b14;}
+.sq.t-tax{border-color:#4a4a5a; background:#23232e;}
+.sq.t-salary,.sq.t-start{border-color:var(--gold); background:#3a2f0e;}
+.sq.active{outline:2px solid var(--accent); outline-offset:1px;}
+.crashdots{display:flex; gap:2px; margin-top:2px;}
+.crashdots i{width:6px; height:6px; border-radius:50%; display:block;}
+.pawns{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+.pawn{width:17px; height:17px; border-radius:50%; border:2px solid rgba(255,255,255,.85);
+  box-shadow:0 2px 6px rgba(0,0,0,.75); transition:all .25s ease; margin:0 -4px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:900; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.9); z-index:2;}
+.pawn.cur{animation:pawnpulse 1.1s ease-in-out infinite; z-index:3;}
+@keyframes pawnpulse{
+  0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.3), 0 0 8px 2px rgba(59,130,246,.7);}
+  50%{box-shadow:0 0 0 4px rgba(255,255,255,.5), 0 0 20px 7px rgba(59,130,246,1);}
+}
+.pawn.emo{font-size:11px; background-clip:padding-box;}
+@media(min-width:520px){ .pawn{width:27px; height:27px; font-size:13px; margin:0 -6px;} .pawn.emo{font-size:17px;} }
+
+/* ---------- 3D ΟΨΗ ΤΑΜΠΛΟ (v0.7: πάνω στο board art) ---------- */
+.boardbox.tilt{perspective:1600px;}
+.boardbox.tilt .tiltwrap{
+  transform:rotateX(24deg) scale(1.04);
+  transform-origin:50% 60%;
+  transform-style:preserve-3d;
+}
+.boardbox.tilt .boardOverlay{transform-style:preserve-3d;}
+.boardbox.tilt .pawnspot{transform:translate(-50%,-50%) rotateX(-24deg); transform-style:preserve-3d;}
+.boardbox.tilt .stack{transform:translate(-50%,-50%) rotate(var(--rot)) translateZ(6px);}
+.opdot{width:16px; height:16px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center;
+  justify-content:center; font-size:9px; font-weight:900; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.8);
+  border:1.5px solid rgba(255,255,255,.7);}
+
+/* v0.7: το λογότυπο είναι πάνω στο board art — dice/κουμπί κάθονται ΚΑΤΩ από αυτό */
+.boardCenter{position:absolute; left:50%; top:60%; transform:translateX(-50%); width:56%;
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; pointer-events:none; z-index:5;}
+.boardCenter>*{pointer-events:auto;}
+.centerLogo{display:none;}
+.dice{display:flex; gap:10px;}
+.die{width:44px; height:44px; background:#eaf1fb; color:#0a1320; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:900;
+  box-shadow:0 3px 0 rgba(0,0,0,.4);}
+.die.rolling{animation:shake .5s infinite;}
+@keyframes shake{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+#rollBtn{background:linear-gradient(90deg,var(--accent2),var(--accent)); padding:13px 26px;
+  font-size:16px; font-weight:800; border-radius:14px; box-shadow:0 4px 14px rgba(37,99,235,.45);}
+.turnBanner{font-size:12px; color:var(--muted); background:rgba(10,19,32,.85); padding:6px 12px; border-radius:20px;}
+
+/* ---------- DASHBOARD ---------- */
+.meter-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+.meter-pct{font-size:26px; font-weight:800; color:var(--gold);}
+.bar{height:14px; background:#0a1320; border-radius:10px; overflow:hidden; border:1px solid var(--line);}
+.fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .35s ease;}
+.statgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+.stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0;}
+.stat .k{color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
+.stat .v{font-size:14px; font-weight:700; margin-top:1px; white-space:nowrap;}
+.inv{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px;}
+.inv:last-child{border-bottom:none;}
+.dot{width:11px; height:11px; border-radius:50%; flex:0 0 auto;}
+.inv .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.inv .inc{color:var(--accent); font-weight:700; font-size:12px; white-space:nowrap;}
+.mini{font-size:11px; padding:5px 9px; border-radius:8px; background:#0a1320; border:1px solid var(--line); color:var(--muted);}
+.mini.sell{border-color:#2e466a; color:#9ec2f0;}
+details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:4px 0;}
+.exprow{display:flex; justify-content:space-between; font-size:13px; padding:3px 0; color:var(--muted);}
+.exprow b{color:var(--txt);}
+
+/* ---------- OTHER PLAYERS ---------- */
+.others{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px;}
+.op{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 11px;}
+.op.turn{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+.op .top{display:flex; align-items:center; gap:7px; margin-bottom:5px;}
+.op .nm{font-size:13px; font-weight:700; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.op .st{font-size:11px; color:var(--muted); display:flex; justify-content:space-between;}
+.op .bar{height:7px; margin-top:5px;}
+.op .off{color:#e8847f; font-size:10px;}
+.op .ret{color:var(--gold); font-size:10px; font-weight:700;}
+
+/* ---------- LOG ---------- */
+.log{font-size:12px; color:var(--muted); line-height:1.75; max-height:200px; overflow:auto; overflow-anchor:none;}
+.log b{color:var(--txt);}
+
+/* ---------- MODAL ---------- */
+#overlay{position:fixed; inset:0; background:rgba(4,9,18,.72); display:flex; align-items:center;
+  justify-content:center; padding:16px; z-index:100;}
+#overlay.hidden{display:none;}
+.modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
+  max-width:400px; width:100%; max-height:88vh; overflow:auto;}
+.gamecard{border-radius:14px; padding:16px; margin-bottom:14px; border:2px solid; text-align:center;}
+.gamecard .cat{font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;}
+.gamecard .ttl{font-size:17px; font-weight:700; line-height:1.35;}
+.gamecard .cost{font-size:14px; margin-top:10px; color:var(--muted);}
+.gamecard .cost b{font-size:19px; color:inherit;}
+.gc-project{border-color:var(--accent); background:#12233f;} .gc-project .cat{color:var(--accent);}
+.gc-bb{border-color:var(--orange); background:#33261a;} .gc-bb .cat{color:var(--orange);}
+.gc-lifestyle{border-color:var(--red); background:#331d1c;} .gc-lifestyle .cat{color:var(--red);}
+.gc-moments{border-color:var(--green); background:#1a3320;} .gc-moments .cat{color:var(--green);}
+.gc-wild{border-color:var(--purple); background:#241a38;} .gc-wild .cat{color:var(--purple);}
+.gc-funding{border-color:var(--funding); background:#241f38;} .gc-funding .cat{color:var(--funding);}
+.gc-bond{border-color:var(--bond); background:#14282f;} .gc-bond .cat{color:var(--bond);}
+.gc-inflation{border-color:var(--yellow); background:#332b14;} .gc-inflation .cat{color:var(--yellow);}
+
+/* ---------- BOT ROSTER (v0.5) ---------- */
+#botRoster{display:flex; flex-direction:column; gap:6px;}
+.botbtn{text-align:left; padding:10px 12px; font-size:14px; background:#0a1320;
+  border:1px solid var(--line); border-radius:10px; color:var(--txt);}
+.botbtn .muted{font-size:11px;}
+.botbtn.added{border-color:var(--green); opacity:.55;}
+.modal .acts{display:flex; flex-direction:column; gap:8px;}
+.modal .acts button{padding:13px; font-size:15px;}
+.buy{background:linear-gradient(90deg,var(--accent2),var(--accent)); font-weight:800;}
+.wildbtn{background:#3a2e5a; border:1px solid var(--purple); color:#d9c8ff;}
+.choice-list button{width:100%; text-align:left; padding:12px; margin-bottom:8px; background:var(--card2); border:1px solid var(--line);}
+
+/* ---------- TOAST (v0.2: ΚΑΤΩ, για να μην κρύβει το ταμπλό) ---------- */
+#toasts{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:200;
+  display:flex; flex-direction:column; gap:8px; width:min(92vw,420px); pointer-events:none;}
+@media(min-width:900px){
+  #toasts{left:auto; right:14px; transform:none; width:min(30vw,380px);}
+}
+.toast{background:var(--card2); border:1px solid var(--line); border-left:4px solid var(--accent);
+  padding:11px 14px; border-radius:12px; font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.5);
+  animation:slidein .3s ease;}
+@keyframes slidein{from{opacity:0; transform:translateY(12px)}to{opacity:1; transform:none}}
+
+/* ---------- END ---------- */
+.rank{display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line); font-size:15px;}
+.rank .pos{font-size:22px; font-weight:900; width:36px; text-align:center;}
+.rank .det{flex:1;} .rank .det .muted{font-size:12px;}
+.confetti{font-size:40px; text-align:center; margin:6px 0;}
+.hidden{display:none !important;}

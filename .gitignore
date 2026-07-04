@@ -1,0 +1,19 @@
+# Dependencies — δεν ανήκουν ποτέ στο repo
+node_modules/
+package-lock.json
+
+# Λειτουργικά συστήματα
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & προσωρινά
+*.log
+*.tmp
+.cache/
