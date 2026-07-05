@@ -18,10 +18,18 @@
     return new Peer(id || undefined, {
       debug: 1,
       config: {
+        // v0.8: Μόνο με STUN, η σύνδεση αποτυγχάνει πίσω από αυστηρά NAT (4G/CGNAT,
+        // εταιρικά δίκτυα). Προσθέτουμε δωρεάν δημόσιους TURN relays (Open Relay Project)
+        // ως δίχτυ ασφαλείας — αν το απευθείας P2P δεν περνά, η κίνηση δρομολογείται μέσω relay.
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.relay.metered.ca:80' },
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
         ],
+        iceCandidatePoolSize: 4,
       },
     });
   }
@@ -47,9 +55,12 @@
     };
 
     peer.on('open', () => cb.onReady(code));
+    // v0.8: αν πέσει η σύνδεση με τον broker, νέοι παίκτες δεν βρίσκουν το δωμάτιο — αυτόματο reconnect
+    peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch (e) {} });
     peer.on('error', (e) => {
       if (e.type === 'unavailable-id') cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.');
       else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Δεν υπάρχει σύνδεση με τον διακομιστή γνωριμίας. Έλεγξε το internet σου.');
+      else if (e.type === 'peer-unavailable') { /* κάποιος guest εξαφανίστηκε — όχι μοιραίο για τον host */ }
       else cb.onError('Σφάλμα δικτύου: ' + e.type);
     });
     peer.on('connection', (conn) => {
@@ -71,9 +82,10 @@
 
   // ---------------- GUEST ----------------
   function createGuest(code, hello, cb) {
-    // hello: {name, token?} — cb: { onOpen(), onMessage(msg), onClosed(), onError(msg) }
+    // hello: {name, token?} — cb: { onOpen(), onMessage(msg), onClosed(), onError(msg), onStatus(text)? }
     const peer = newPeer();
-    let conn = null, closedByUs = false, opened = false;
+    let conn = null, closedByUs = false, opened = false, foundPeer = false;
+    const status = (t) => { if (cb.onStatus) cb.onStatus(t); };
 
     const guest = {
       send(msg) { if (conn && conn.open) { try { conn.send(msg); } catch (e) {} } },
@@ -81,11 +93,23 @@
       close() { closedByUs = true; try { peer.destroy(); } catch (e) {} },
     };
 
+    status('Σύνδεση με τον διακομιστή…');
     peer.on('open', () => {
+      status('Αναζήτηση δωματίου «' + code + '»…');
       conn = peer.connect(PREFIX + code.toLowerCase(), { reliable: true });
+      // v0.8: παρακολούθηση ICE για διαγνωστικά — να ξέρουμε ΑΝ βρέθηκε το δωμάτιο
+      conn.on('iceStateChanged', (st) => {
+        if (st === 'checking') { foundPeer = true; status('Το δωμάτιο βρέθηκε — γίνεται σύζευξη των συσκευών…'); }
+        if (st === 'failed') status('Η απευθείας σύζευξη δυσκολεύεται — δοκιμάζεται εναλλακτική διαδρομή…');
+      });
       const failTimer = setTimeout(() => {
-        if (!opened) cb.onError('Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό — και ότι ο host έχει ανοιχτό το παιχνίδι.');
-      }, 12000);
+        if (!opened) {
+          // v0.8: διαφορετικό μήνυμα ανάλογα με το ΠΟΥ κόλλησε
+          cb.onError(foundPeer
+            ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε. Δοκιμάστε: (1) ανανέωση σελίδας και ξανά, (2) άλλο δίκτυο (π.χ. Wi-Fi αντί για δεδομένα), (3) απενεργοποίηση VPN.'
+            : 'Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό και ότι ο host έχει ανοιχτή τη σελίδα του παιχνιδιού.');
+        }
+      }, 25000);
       conn.on('open', () => {
         opened = true; clearTimeout(failTimer);
         guest.send(Object.assign({ t: 'hello' }, hello));
@@ -95,9 +119,11 @@
       conn.on('close', () => { if (!closedByUs) cb.onClosed(); });
       conn.on('error', () => { if (!closedByUs) cb.onClosed(); });
     });
+    peer.on('disconnected', () => { try { if (!peer.destroyed && !closedByUs) peer.reconnect(); } catch (e) {} });
     peer.on('error', (e) => {
-      if (e.type === 'peer-unavailable') cb.onError('Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό.');
-      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Πρόβλημα σύνδεσης. Έλεγξε το internet σου και δοκίμασε ξανά.');
+      if (e.type === 'peer-unavailable') cb.onError('Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό — και ότι ο host έχει ανοιχτό το παιχνίδι εκείνη τη στιγμή.');
+      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Πρόβλημα σύνδεσης με τον διακομιστή. Έλεγξε το internet σου και δοκίμασε ξανά.');
+      else if (e.type === 'webrtc') cb.onError('Πρόβλημα WebRTC — δοκίμασε ανανέωση ή άλλο δίκτυο.');
       else cb.onError('Σφάλμα δικτύου: ' + e.type);
     });
     return guest;

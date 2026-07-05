@@ -262,3 +262,17 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 .rank .det{flex:1;} .rank .det .muted{font-size:12px;}
 .confetti{font-size:40px; text-align:center; margin:6px 0;}
 .hidden{display:none !important;}
+
+/* ---------- ΚΑΝΟΝΕΣ & ΕΡΩΤΗΜΑΤΟΛΟΓΙΟ (v0.9) ---------- */
+.modal.wide{max-width:640px;}
+.rulesbox{max-height:68vh; overflow:auto; text-align:left; line-height:1.65; font-size:14px; padding-right:6px;}
+.rulesbox h2{font-size:20px; margin:0 0 10px; color:var(--gold);}
+.rulesbox h3{font-size:15px; margin:16px 0 6px; color:var(--accent); text-transform:none; letter-spacing:0;}
+.rulesbox p{margin:6px 0;}
+.fbq{margin-bottom:14px;}
+.fbq .q{font-weight:700; font-size:13px; margin-bottom:6px;}
+.fbrow{display:flex; flex-wrap:wrap; gap:4px 10px;}
+.fbopt{display:inline-flex; align-items:center; gap:5px; font-size:13px; background:#0a1320;
+  border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;}
+.fbopt:has(input:checked){border-color:var(--accent); background:#12233f;}
+.fbtext,.fbother{width:100%; font-size:14px;}

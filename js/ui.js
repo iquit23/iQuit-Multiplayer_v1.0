@@ -2,9 +2,12 @@
    Host: τρέχει engine + bots, κάνει broadcast state. Guest: στέλνει actions, κάνει render το snapshot. */
 (function () {
   'use strict';
-  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = window.IQ_NET, CARDS = window.IQ_CARDS;
+  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
   const $ = (id) => document.getElementById(id);
   const fmt = E.fmt;
+  const t = I.t;
+  // Τίτλος κάρτας/επένδυσης στη γλώσσα του παίκτη (τα inv κρατούν το ελληνικό snapshot — κοιτάμε την κάρτα)
+  function invTitle(i) { const c = i.cardId && E.card(i.cardId); return c ? I.cardTitle(c) : i.title; }
 
   // v0.5: επώνυμα bots με στρατηγική — αυτά επιλέγει ο host στο lobby
   const BOT_ROSTER = [
@@ -129,7 +132,7 @@
     if (!el) return;
     el.innerHTML = App.chat.length
       ? App.chat.map(m => '<div class="chatmsg"><b style="color:' + (m.color || 'var(--accent)') + '">' + esc(m.name) + ':</b> ' + esc(m.text) + '</div>').join('')
-      : '<div class="muted">Πες ένα γεια στους συμπαίκτες σου…</div>';
+      : '<div class="muted">' + t('chatHello') + '</div>';
     el.scrollTop = el.scrollHeight;
   }
   function sendChat() {
@@ -255,7 +258,7 @@
             const gp = App.game.players.find(p => p.id === existing.id);
             if (gp) gp.connected = true;
             send({ t: 'state', state: App.game });
-            toast('🔌 Ο ' + esc(existing.name) + ' επανασυνδέθηκε');
+            toast(t('reconn', { name: esc(existing.name) }));
             afterChange();
           } else broadcastLobby();
           return;
@@ -296,7 +299,7 @@
         } else {
           const gp = App.game.players.find(p => p.id === pl.id);
           if (gp) gp.connected = false;
-          toast('🔌 Ο ' + esc(pl.name) + ' αποσυνδέθηκε — αν δεν επιστρέψει, παίζει το AI για εκείνον.');
+          toast(t('disconn', { name: esc(pl.name) }));
           afterChange();
         }
       },
@@ -352,7 +355,7 @@
         const pl = App.game.players.find(x => x.id === actorId);
         if (pl && !pl.connected && App.game.phase === 'playing') {
           const a = BOTS.decide(App.game, actorId);
-          if (a) { toast('🤖 Αυτόματη κίνηση για τον ' + esc(pl.name) + ' (αποσυνδεδεμένος)'); applyAs(actorId, a); }
+          if (a) { toast(t('autoMove', { name: esc(pl.name) })); applyAs(actorId, a); }
         }
       }, DISCO_DELAY);
     }
@@ -368,6 +371,10 @@
     $('guestWait').classList.remove('hidden');
     $('lobbyPlayers').innerHTML = '<div class="muted">Σύνδεση…</div>';
     App.net = NET.createGuest(code, { name, token }, {
+      onStatus(t) { // v0.8: δείξε ΤΙ ακριβώς συμβαίνει όσο συνδεόμαστε
+        const el = $('lobbyPlayers');
+        if (el && !App.game) el.innerHTML = '<div class="muted">⏳ ' + esc(t) + '</div>';
+      },
       onOpen() {},
       onMessage(msg) {
         if (!msg) return;
@@ -450,7 +457,89 @@
   }
   function stratTag(strategy) {
     const prof = BOTS.PROFILES[strategy];
-    return prof ? '<span class="tag">' + prof.icon + ' ' + prof.label + '</span>' : '';
+    return prof ? '<span class="tag">' + prof.icon + ' ' + t('strat_' + strategy) + '</span>' : '';
+  }
+
+  // v0.9: μετάφραση των στατικών στοιχείων της σελίδας
+  function applyStatic() {
+    const set = (id, key, html) => { const el = $(id); if (el) { if (html) el.innerHTML = t(key); else el.textContent = t(key); } };
+    set('lblTagline', 'tagline'); set('lblName', 'yourName'); set('lblNew', 'newGame');
+    set('lblJoin', 'joinRoom'); set('lblHomeFoot', 'homeFoot', true);
+    set('btnCreate', 'createRoom'); set('btnJoin', 'joinBtn'); set('btnRulesHome', 'rulesBtn');
+    $('playerName').placeholder = t('namePh'); $('joinCode').placeholder = t('codePh');
+    set('lblRoom', 'room'); set('btnShare', 'shareBtn'); set('lblPlayers', 'players');
+    set('lblPickPawn', 'pickPawn'); set('lblAddBot', 'addBot'); set('btnStart', 'startBtn');
+    set('guestWait', 'guestWait'); set('btnRulesLobby', 'rulesBtn'); set('btnLeaveLobby', 'leave');
+    set('lblChat', 'chat'); set('lblLog', 'log');
+    const ci = $('chatInput'); if (ci) ci.placeholder = t('chatPh');
+    const flag = I.lang === 'el' ? '🇬🇧' : '🇬🇷';
+    if ($('btnLang')) $('btnLang').textContent = flag;
+    if ($('btnLangHome')) $('btnLangHome').textContent = flag + (I.lang === 'el' ? ' EN' : ' ΕΛ');
+  }
+
+  function toggleLang() {
+    I.setLang(I.lang === 'el' ? 'en' : 'el');
+    applyStatic();
+    if (App.game) render();
+    if (App.role === 'host' && App.lobby && !App.game) renderLobby();
+    if (App.role === 'guest' && App.guestLobby && !App.game) renderLobbyGuest(App.guestLobby);
+    renderChat();
+  }
+
+  // v0.9: Κανόνες — διαθέσιμοι από παντού
+  function showRules() {
+    App.localModal = true;
+    overlay('<div class="rulesbox">' + I.RULES[I.lang] + '</div>' +
+      '<div class="acts" style="margin-top:12px;"><button class="ghost" id="rulesClose">✕ ' + t('cancel') + '</button></div>', true);
+    $('rulesClose').onclick = () => { closeOverlay(); if (App.game) render(); };
+  }
+
+  // v0.9: Ερωτηματολόγιο feedback → αποστέλλεται ανώνυμα στον δημιουργό
+  function showFeedback() {
+    App.localModal = true;
+    let html = '<div class="rulesbox"><h2 style="margin:0 0 4px;">' + t('fbTitle') + '</h2>' +
+      '<div class="muted" style="margin-bottom:14px;">' + t('fbIntro') + '</div>';
+    I.QUEST.forEach((q, qi) => {
+      html += '<div class="fbq"><div class="q">' + (qi + 1) + '. ' + esc(q.q[I.lang]) + '</div>';
+      if (q.text) {
+        html += '<textarea class="fbtext" data-q="' + q.id + '" rows="2" maxlength="300"></textarea>';
+      } else if (q.scale) {
+        html += '<div class="fbrow">';
+        for (let v = 1; v <= q.scale; v++) html += '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + v + '"> ' + v + '</label>';
+        html += '</div>';
+      } else {
+        html += '<div class="fbrow">' + q.opts.map(o => '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + esc(o[I.lang]) + '"> ' + esc(o[I.lang]) + '</label>').join('') + '</div>';
+        if (q.other) html += '<input class="fbother" data-q="' + q.id + '_other" placeholder="…" maxlength="120" style="margin-top:4px;">';
+      }
+      html += '</div>';
+    });
+    html += '</div><div class="acts" style="margin-top:12px;">' +
+      '<button class="buy" id="fbSend">' + t('fbSubmit') + '</button>' +
+      '<button class="ghost" id="fbCancel">' + t('cancel') + '</button></div>';
+    overlay(html, true);
+    $('fbCancel').onclick = () => { closeOverlay(); if (App.game) render(); };
+    $('fbSend').onclick = () => {
+      const data = { _subject: 'I QUIT! — Feedback παίκτη', _template: 'table', _captcha: 'false', lang: I.lang, date: new Date().toISOString() };
+      I.QUEST.forEach(q => {
+        if (q.text) { const el = document.querySelector('.fbtext[data-q="' + q.id + '"]'); if (el && el.value.trim()) data[q.id] = el.value.trim(); }
+        else {
+          const sel = document.querySelector('input[name="fb_' + q.id + '"]:checked');
+          if (sel) data[q.id] = sel.value;
+          const oth = document.querySelector('.fbother[data-q="' + q.id + '_other"]');
+          if (oth && oth.value.trim()) data[q.id + '_other'] = oth.value.trim();
+        }
+      });
+      $('fbSend').disabled = true; $('fbSend').textContent = '…';
+      fetch('https://formsubmit.co/ajax/' + I.FEEDBACK_EMAIL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(r => {
+        closeOverlay(); toast(t('fbThanks')); if (App.game) render();
+      }).catch(() => {
+        $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
+        toast('⚠️ ' + t('fbErr'));
+      });
+    };
   }
 
   function renderLobby() {
@@ -477,7 +566,7 @@
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
       return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '" ' + (added || full ? 'disabled' : '') + '>' +
-        prof.icon + ' <b>' + esc(b.name) + '</b> <span class="muted">' + prof.label + '</span>' + (added ? ' ✓' : '') + '</button>';
+        prof.icon + ' <b>' + esc(b.name) + '</b> <span class="muted">' + t('strat_' + b.strategy) + '</span>' + (added ? ' ✓' : '') + '</button>';
     }).join('');
     $('botRoster').querySelectorAll('[data-addbot]').forEach(btn => btn.onclick = () => {
       const spec = BOT_ROSTER.find(b => b.name === btn.dataset.addbot);
@@ -494,7 +583,7 @@
     $('lobbyCount').textContent = '(' + msg.players.length + '/6)';
     $('lobbyPlayers').innerHTML = msg.players.map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
-      '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">(εσύ)</span>' : '') + '</span>' +
+      '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
       (p.id === 'p0' ? '<span class="tag">HOST</span>' : '') +
       (p.isBot ? stratTag(p.strategy) : '') +
       '</div>').join('');
@@ -520,8 +609,8 @@
     const cur = g.players[g.turn];
     const actorId = g.pending ? g.pending.playerId : cur.id;
     const actor = g.players.find(p => p.id === actorId);
-    $('turnWho').textContent = g.phase === 'ended' ? 'Τέλος παιχνιδιού' :
-      (actorId === App.myId ? '▶ Η σειρά σου!' : 'Παίζει: ' + (actor.isBot ? '🤖 ' : '') + actor.name);
+    $('turnWho').textContent = g.phase === 'ended' ? t('gameOver') :
+      (actorId === App.myId ? t('yourTurn') : t('playing', { name: (actor.isBot ? '🤖 ' : '') + actor.name }));
 
     renderBoard(g);
     renderCenter(g, actorId);
@@ -581,13 +670,13 @@
       html += '<div class="dice"><span class="die' + (rolling ? ' rolling' : '') + '">' + d1 + '</span><span class="die' + (rolling ? ' rolling' : '') + '">' + d2 + '</span></div>';
     }
     if (g.phase === 'ended') {
-      html += '<button id="rollBtn" onclick="IQ_UI.showEnd()">🏆 Αποτελέσματα</button>';
+      html += '<button id="rollBtn" onclick="IQ_UI.showEnd()">' + t('results') + '</button>';
     } else if (!g.pending && g.players[g.turn].id === App.myId) {
-      html += '<button id="rollBtn">🎲 Ρίξε τα ζάρια</button>';
+      html += '<button id="rollBtn">' + t('roll') + '</button>';
     } else {
       const actor = g.players.find(p => p.id === actorId);
-      const what = g.pending ? ' αποφασίζει…' : ' ρίχνει ζάρια…';
-      html += '<span class="turnBanner">' + (actorId === App.myId ? 'Δική σου απόφαση — δες το παράθυρο' : (actor.isBot ? '🤖 ' : '') + esc(actor.name) + what) + '</span>';
+      const what = g.pending ? t('deciding') : t('rolling');
+      html += '<span class="turnBanner">' + (actorId === App.myId ? t('yourDecision') : (actor.isBot ? '🤖 ' : '') + esc(actor.name) + what) + '</span>';
     }
     c.innerHTML = html;
     const rb = $('rollBtn');
@@ -597,14 +686,14 @@
   function renderMyDash(g) {
     const p = me();
     const box = $('myDash');
-    if (!p) { box.innerHTML = '<div class="muted">Παρακολουθείς το παιχνίδι.</div>'; return; }
+    if (!p) { box.innerHTML = '<div class="muted">' + t('spectating') + '</div>'; return; }
     const exp = E.totalExp(p), pas = E.passive(p), pct = E.quitPct(p);
     const net = p.salary - exp + pas;
     const myTurn = g.phase === 'playing' && !g.pending && g.players[g.turn].id === p.id;
 
     let status = '';
-    if (p.retiredAge !== null) status = '<div class="notice" style="margin-bottom:10px;">🎉 Παραιτήθηκες στα ' + p.retiredAge + '! Απόλαυσε την οικονομική σου ελευθερία.</div>';
-    else if (p.finished) status = '<div class="muted" style="margin-bottom:10px;">⏳ Έφτασες τα 65. Περιμένουμε την τελική κατάταξη…</div>';
+    if (p.retiredAge !== null) status = '<div class="notice" style="margin-bottom:10px;">' + t('retired', { age: p.retiredAge }) + '</div>';
+    else if (p.finished) status = '<div class="muted" style="margin-bottom:10px;">' + t('finished65') + '</div>';
 
     // v0.6: ταξινόμηση κατά απόδοση, από τη μικρότερη στη μεγαλύτερη
     const invSorted = p.inv.slice().sort((a, b) => {
@@ -616,54 +705,55 @@
       // v0.6: BB πορτοκαλί (το κίτρινο ανήκει στα REITs), Χρηματοδοτήσεις ροζ
       const color = i.kind === 'P' ? COLOR_HEX[i.color] : i.kind === 'bb' ? 'var(--orange)' : i.kind === 'funding' ? 'var(--funding)' : 'var(--bond)';
       let right = i.kind === 'bond'
-        ? '<span class="inc" style="color:var(--bond)">+' + fmt(E.bondInterestOf(i)) + '/εισπρ. · ' + i.tokens + '/10</span>'
+        ? '<span class="inc" style="color:var(--bond)">+' + fmt(E.bondInterestOf(i)) + t('perCollect') + ' · ' + i.tokens + '/10</span>'
         : '<span class="inc">+' + fmt(i.income) + '</span>';
       let btns = '';
-      if (myTurn && i.kind === 'bond') btns = '<button class="mini sell" data-redeem="' + i.uid + '">Πώληση +' + fmt(i.cost) + '</button>';
-      if (myTurn && i.kind === 'funding') btns = '<button class="mini sell" data-sellf="' + i.uid + '">Πώληση σε παίκτη</button>';
+      if (myTurn && i.kind === 'bond') btns = '<button class="mini sell" data-redeem="' + i.uid + '">' + t('sellBond', { v: fmt(i.cost) }) + '</button>';
+      if (myTurn && i.kind === 'funding') btns = '<button class="mini sell" data-sellf="' + i.uid + '">' + t('sellToPlayer') + '</button>';
+      const ttl = invTitle(i);
       return '<div class="inv"><span class="dot" style="background:' + color + '"></span>' +
-        '<span class="nm" title="' + esc(i.title) + '">' + esc(i.title) + ' <span class="muted">' + fmt(i.cost) + '</span></span>' + btns + right + '</div>';
-    }).join('') : '<div class="muted">Δεν έχεις επενδύσεις ακόμα.</div>';
+        '<span class="nm" title="' + esc(ttl) + '">' + esc(ttl) + ' <span class="muted">' + fmt(i.cost) + '</span></span>' + btns + right + '</div>';
+    }).join('') : '<div class="muted">' + t('noInv') + '</div>';
 
     let loanHtml = '';
     if (g.phase === 'playing' && p.retiredAge === null && !p.finished) {
       const max = E.maxLoan(p);
-      loanHtml = '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:12px 0 4px;">🏦 Δάνεια' +
-        (p.loans.length ? ' <span style="color:var(--red)">(χρέος ' + fmt(E.loanOwedNow(p)) + ')</span>' : '') + '</h3>';
+      loanHtml = '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:12px 0 4px;">' + t('loans') +
+        (p.loans.length ? ' <span style="color:var(--red)">' + t('debt', { v: fmt(E.loanOwedNow(p)) }) + '</span>' : '') + '</h3>';
       p.loans.forEach(l => {
         loanHtml += '<div class="inv"><span class="dot" style="background:var(--red)"></span>' +
-          '<span class="nm">Δάνειο ' + fmt(l.amount) + ' <span class="muted">' + l.remaining + ' δόσεις × ' + fmt(l.payment) + '</span></span>' +
-          (myTurn ? '<button class="mini sell" data-repay="' + l.uid + '" data-count="1" ' + (p.cash >= l.payment ? '' : 'disabled') + '>1 δόση</button>' +
-            (l.remaining > 1 ? '<button class="mini sell" data-repay="' + l.uid + '" data-count="' + l.remaining + '" ' + (p.cash >= l.remaining * l.payment ? '' : 'disabled') + '>Εξόφληση ' + fmt(l.remaining * l.payment) + '</button>' : '') : '') +
+          '<span class="nm">' + t('loanRow', { v: fmt(l.amount) }) + ' <span class="muted">' + t('installments', { n: l.remaining, p: fmt(l.payment) }) + '</span></span>' +
+          (myTurn ? '<button class="mini sell" data-repay="' + l.uid + '" data-count="1" ' + (p.cash >= l.payment ? '' : 'disabled') + '>' + t('pay1') + '</button>' +
+            (l.remaining > 1 ? '<button class="mini sell" data-repay="' + l.uid + '" data-count="' + l.remaining + '" ' + (p.cash >= l.remaining * l.payment ? '' : 'disabled') + '>' + t('payoff', { v: fmt(l.remaining * l.payment) }) + '</button>' : '') : '') +
           '</div>';
       });
       if (pct >= 100 && p.loans.length) {
-        loanHtml += '<div class="notice" style="margin-top:6px;">💡 Το παθητικό σου καλύπτει τα έξοδα — εξόφλησε τα δάνεια για να πατήσεις I QUIT!</div>';
+        loanHtml += '<div class="notice" style="margin-top:6px;">' + t('quitBlocked') + '</div>';
       }
-      loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="Νέο δάνειο έως ' + fmt(max) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
-        '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>+ Δάνειο</button></div>' +
-        '<div class="muted" style="margin-top:4px;">Έως όσο η αξία των επενδύσεών σου (' + fmt(E.loanBase(p)) + ') − υπάρχον χρέος κεφαλαίου · πολλαπλάσια του 100€ · 20 δόσεις × 10% · εξόφληση υποχρεωτική πριν το I QUIT</div>';
+      loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
+        '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
+        '<div class="muted" style="margin-top:4px;">' + t('loanHint', { v: fmt(E.loanBase(p)) }) + '</div>';
     }
 
     box.innerHTML = status +
-      '<div class="meter-top"><div><div class="muted">I QUIT meter — κάλυψη εξόδων</div>' +
+      '<div class="meter-top"><div><div class="muted">' + t('meterLbl') + '</div>' +
       '<div class="meter-pct">' + pct + '%</div></div>' +
-      '<div style="text-align:right"><div class="muted">Ηλικία</div><div style="font-size:26px; font-weight:800">' + p.age + '</div></div></div>' +
+      '<div style="text-align:right"><div class="muted">' + t('age') + '</div><div style="font-size:26px; font-weight:800">' + p.age + '</div></div></div>' +
       '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
       '<div class="statgrid">' +
-      '<div class="stat"><div class="k">Μετρητά</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
-      '<div class="stat"><div class="k">Παθητικό</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
-      '<div class="stat"><div class="k">Μισθός</div><div class="v">' + fmt(p.salary) + '</div></div>' +
-      '<div class="stat"><div class="k">Έξοδα</div><div class="v">' + fmt(exp) + '</div></div>' +
+      '<div class="stat"><div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
+      '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
+      '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
+      '<div class="stat"><div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
       '</div>' +
-      '<div class="muted" style="margin:8px 0 2px;">Καθαρό ανά είσπραξη: <b style="color:var(--txt)">' + fmt(net) + '</b> · 🃏 Wild: ' + p.wilds + '</div>' +
-      '<details class="exp" id="expDetails"' + (App.expOpen ? ' open' : '') + '><summary>Έξοδα ανά κατηγορία' + (g.inflMult > 1 ? ' <span style="color:var(--yellow)">(πληθωρισμένα ×' + g.inflMult.toFixed(2) + ')</span>' : '') + '</summary>' +
-      Object.keys(p.expenses).map(k => '<div class="exprow"><span>' + esc(k) + '</span><b>' + fmt(p.expenses[k]) + '</b></div>').join('') +
-      '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>Σύνολο εξόδων</b></span><b style="color:var(--yellow)">' + fmt(exp) + '</b></div>' +
+      '<div class="muted" style="margin:8px 0 2px;">' + t('netPer') + ' <b style="color:var(--txt)">' + fmt(net) + '</b> · 🃏 ' + t('wild') + ': ' + p.wilds + '</div>' +
+      '<details class="exp" id="expDetails"' + (App.expOpen ? ' open' : '') + '><summary>' + t('expByCat') + (g.inflMult > 1 ? ' <span style="color:var(--yellow)">' + t('inflatedTag', { m: g.inflMult.toFixed(2) }) + '</span>' : '') + '</summary>' +
+      Object.keys(p.expenses).map(k => '<div class="exprow"><span>' + esc(I.expName(k)) + '</span><b>' + fmt(p.expenses[k]) + '</b></div>').join('') +
+      '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalExp') + '</b></span><b style="color:var(--yellow)">' + fmt(exp) + '</b></div>' +
       '</details>' +
-      '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">Χαρτοφυλάκιο</h3>' +
+      '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">' + t('portfolio') + '</h3>' +
       inv +
-      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>Σύνολο επενδύσεων</b></span><b style="color:var(--accent)">' + fmt(E.invTotalCost(p)) + '</b></div>' : '') +
+      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInv') + '</b></span><b style="color:var(--accent)">' + fmt(E.invTotalCost(p)) + '</b></div>' : '') +
       loanHtml;
 
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
@@ -679,20 +769,20 @@
   function openLoanConfirm(amount) {
     const p = me();
     if (!p) return;
-    if (amount % 100 !== 0) { toast('⚠️ Το δάνειο δίνεται σε πολλαπλάσια του 100€ — δοκίμασε ' + fmt(Math.ceil(amount / 100) * 100) + '.'); return; }
+    if (amount % 100 !== 0) { toast(t('loanX100', { v: fmt(Math.ceil(amount / 100) * 100) })); return; }
     const n = Math.max(1, 20 - (p.loanBonusFewer || 0));
     const payment = amount * 0.1, total = n * payment, cost = total - amount;
     App.localModal = true;
     overlay('<div class="gamecard gc-inflation" style="border-color:var(--accent); background:#12233f;">' +
-      '<div class="ttl" style="font-size:20px;">🏦 Πρόταση δανείου</div>' +
+      '<div class="ttl" style="font-size:20px;">' + t('loanConfirmTitle') + '</div>' +
       '<div style="margin-top:12px; font-size:14px; line-height:1.7; text-align:left;">' +
-      'Θα λάβεις τώρα: <b style="color:var(--green)">+' + fmt(amount) + '</b><br>' +
-      'Θα πληρώνεις σε κάθε είσπραξη: <b>' + fmt(payment) + '</b> × <b>' + n + ' δόσεις</b><br>' +
-      'Συνολικά θα αποπληρώσεις: <b style="color:var(--red)">' + fmt(total) + '</b><br>' +
-      'Δηλαδή κόστος δανεισμού (τόκοι): <b style="color:var(--red)">' + fmt(cost) + '</b></div>' +
-      '<div class="muted" style="margin-top:10px; text-align:left;">💡 Το δάνειο αξίζει όταν το παθητικό εισόδημα που θα αγοράσεις ξεπερνά αυτό το κόστος — και θυμήσου: δεν κάνεις I QUIT όσο χρωστάς!</div></div>' +
-      '<div class="acts"><button class="buy" id="loanYes">Ναι, το παίρνω</button>' +
-      '<button class="ghost" id="loanNo">Άκυρο — το ξανασκέφτομαι</button></div>');
+      t('loanC1') + ' <b style="color:var(--green)">+' + fmt(amount) + '</b><br>' +
+      t('loanC2') + ' <b>' + fmt(payment) + '</b> × <b>' + n + '</b><br>' +
+      t('loanC3') + ' <b style="color:var(--red)">' + fmt(total) + '</b><br>' +
+      t('loanC4') + ' <b style="color:var(--red)">' + fmt(cost) + '</b></div>' +
+      '<div class="muted" style="margin-top:10px; text-align:left;">' + t('loanC5') + '</div></div>' +
+      '<div class="acts"><button class="buy" id="loanYes">' + t('loanYes') + '</button>' +
+      '<button class="ghost" id="loanNo">' + t('loanNo') + '</button></div>');
     $('loanYes').onclick = () => { closeOverlay(); act({ a: 'loan', amount }); };
     $('loanNo').onclick = closeOverlay;
   }
@@ -700,14 +790,14 @@
   function renderOthers(g, actorId) {
     $('others').innerHTML = g.players.filter(p => p.id !== App.myId).map(p => {
       const pct = E.quitPct(p);
-      const flags = (p.retiredAge !== null ? '<span class="ret">I QUIT στα ' + p.retiredAge + '!</span>' :
-        (p.finished ? '<span class="muted" style="font-size:10px;">στα 65</span>' :
-          (!p.isBot && !p.connected ? '<span class="off">⚡ offline</span>' : '')));
+      const flags = (p.retiredAge !== null ? '<span class="ret">' + t('iquitAt', { age: p.retiredAge }) + '</span>' :
+        (p.finished ? '<span class="muted" style="font-size:10px;">' + t('at65') + '</span>' :
+          (!p.isBot && !p.connected ? '<span class="off">⚡ ' + t('offline') + '</span>' : '')));
       return '<div class="op' + (p.id === actorId && g.phase === 'playing' ? ' turn' : '') + '">' +
         '<div class="top"><span class="opdot" style="background:' + p.color + '">' + (p.pawn || esc((p.name[0] || '?').toUpperCase())) + '</span>' +
         '<span class="nm">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</span>' + flags + '</div>' +
-        '<div class="st"><span>' + p.age + ' ετών</span><span>' + fmt(p.cash) + '</span></div>' +
-        '<div class="st"><span>Παθητικό ' + fmt(E.passive(p)) + '</span><span>' + pct + '%</span></div>' +
+        '<div class="st"><span>' + t('yearsOld', { n: p.age }) + '</span><span>' + fmt(p.cash) + '</span></div>' +
+        '<div class="st"><span>' + t('passiveShort', { v: fmt(E.passive(p)) }) + '</span><span>' + pct + '%</span></div>' +
         '<div class="st" style="margin-top:2px;"><span>📍 ' + esc(CARDS.BOARD[p.pos].label) + '</span></div>' +
         '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div></div>';
     }).join('');
@@ -731,51 +821,55 @@
   }
 
   // ============================================================ MODALS
-  function overlay(html) { $('modalBody').innerHTML = html; $('overlay').classList.remove('hidden'); }
+  function overlay(html, wide) {
+    const mb = $('modalBody');
+    mb.classList.toggle('wide', !!wide);
+    mb.innerHTML = html;
+    $('overlay').classList.remove('hidden');
+  }
   function closeOverlay() { $('overlay').classList.add('hidden'); App.localModal = null; }
 
   function inflationCardHtml() {
     return '<div class="gamecard gc-inflation">' +
-      '<div class="ttl" style="font-size:24px; letter-spacing:2px; font-weight:900;">ΠΛΗΘΩΡΙΣΜΟΣ</div>' +
-      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' +
-      'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.</div></div>';
+      '<div class="ttl" style="font-size:24px; letter-spacing:2px; font-weight:900;">' + t('inflTitle') + '</div>' +
+      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody') + '</div></div>';
   }
 
   function cardHtml(c, deck, discount, curPrice) {
+    const ttl = I.cardTitle(c);
     if (deck === 'lifestyle') {
       const d = (curPrice != null ? curPrice : c.delta);
-      return '<div class="gamecard gc-lifestyle"><div class="cat">LIFESTYLE</div><div class="ttl">' + esc(c.title) + '</div>' +
+      return '<div class="gamecard gc-lifestyle"><div class="cat">LIFESTYLE</div><div class="ttl">' + esc(ttl) + '</div>' +
         '<div style="margin-top:10px; font-weight:800; font-size:17px; color:' + (d > 0 ? 'var(--red)' : 'var(--green)') + '">' +
-        esc(c.cat) + ' ' + (d > 0 ? '+' : '') + d + '€ / κύκλο (μόνιμα)' + (c.shared ? ' — έκαστος' : '') +
-        (d !== c.delta ? ' <span class="muted" style="font-size:11px;">(βασικό ' + c.delta + '€ + πληθωρισμός)</span>' : '') + '</div></div>';
+        esc(I.expName(c.cat)) + ' ' + (d > 0 ? '+' : '') + d + '€ ' + t('permanent') + (c.shared ? t('each') : '') +
+        (d !== c.delta ? ' <span class="muted" style="font-size:11px;">' + t('baseInfl', { v: c.delta + '€' }) + '</span>' : '') + '</div></div>';
     }
     if (deck === 'moments') {
       const amt = (curPrice != null ? curPrice : c.amount);
       const eff = c.cancels
-        ? '<div style="margin-top:10px; font-weight:700; color:var(--green)">Αναιρεί τις αντίστοιχες Lifestyle κάρτες σου ✨</div>'
+        ? '<div style="margin-top:10px; font-weight:700; color:var(--green)">' + t('cancelsLS') + '</div>'
         : '<div style="margin-top:10px; font-weight:800; font-size:19px; color:' + (amt >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (amt > 0 ? '+' : '') + fmt(amt) +
-          (amt !== c.amount ? ' <span class="muted" style="font-size:11px; font-weight:400;">(βασικό ' + fmt(c.amount) + ' + πληθωρισμός)</span>' : '') + '</div>';
-      return '<div class="gamecard gc-moments"><div class="cat">MOMENTS</div><div class="ttl">' + esc(c.title) + '</div>' + eff + '</div>';
+          (amt !== c.amount ? ' <span class="muted" style="font-size:11px; font-weight:400;">' + t('baseInfl', { v: fmt(c.amount) }) + '</span>' : '') + '</div>';
+      return '<div class="gamecard gc-moments"><div class="cat">MOMENTS</div><div class="ttl">' + esc(ttl) + '</div>' + eff + '</div>';
     }
     const isBB = deck === 'bb';
     let cls = 'gc-project', cat = 'PROJECT', costLine = '';
     if (isBB) { cls = 'gc-bb'; cat = 'BIG BUSINESS'; }
-    else if (c.kind === 'P') { cat = 'PROJECT — ' + E.COLORNAME[c.color].toUpperCase(); }
-    else if (c.kind === 'funding') { cls = 'gc-funding'; cat = 'PROJECT — ΧΡΗΜΑΤΟΔΟΤΗΣΗ'; }
-    else if (c.kind === 'bond') { cls = 'gc-bond'; cat = 'PROJECT — ΟΜΟΛΟΓΟ'; }
-    else { cat = 'PROJECT — ' + (c.kind === 'masters' ? 'ΜΕΤΑΠΤΥΧΙΑΚΟ' : c.kind === 'taxprepay' ? 'ΦΟΡΟΣ' : 'ΔΑΝΕΙΟ'); }
+    else if (c.kind === 'P') { cat = 'PROJECT — ' + t('color_' + c.color); }
+    else if (c.kind === 'funding') { cls = 'gc-funding'; cat = t('cat_funding'); }
+    else if (c.kind === 'bond') { cls = 'gc-bond'; cat = t('cat_bond'); }
+    else { cat = t('cat_' + c.kind); }
     const base = (curPrice != null ? curPrice : c.cost);
     const price = Math.round(base * (1 - (discount || 0)));
-    const inflNote = (curPrice != null && curPrice !== c.cost) ? ' <span class="muted" style="font-size:11px;">(αρχική ' + fmt(c.cost) + ' + πληθωρισμός)</span>' : '';
-    costLine = 'Κόστος: <b>' + fmt(price) + '</b>' + (discount ? ' <s class="muted">' + fmt(base) + '</s> (-10%)' : '') + inflNote;
+    costLine = t('cost') + ' <b>' + fmt(price) + '</b>' + (discount ? ' <s class="muted">' + fmt(base) + '</s> (-10%)' : '');
     let effect = '';
-    if (c.income) effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(c.income) + ' / κύκλο (' + (100 * c.income / base).toFixed(1) + '%)</div>';
-    if (c.kind === 'bond') effect = '<div style="margin-top:6px; font-weight:800; color:var(--bond)">+' + fmt(c.cost * 0.04) + ' στο ταμείο σε κάθε είσπραξη</div>' +
-      '<div style="margin-top:4px;" class="muted">Λήξη στα 10 tokens → επιστροφή κεφαλαίου ' + fmt(c.cost) + ' · πωλείται όποτε θες · ανεπηρέαστο από πληθωρισμό · δεν μετράει στο I QUIT meter ούτε στο όριο δανείου</div>';
-    if (c.kind === 'masters') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">Μισθός +' + fmt(c.salaryUp) + ' μόνιμα</div>';
-    if (c.kind === 'taxprepay') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">Έξοδο «Φόροι» −' + fmt(c.taxDown) + ' μόνιμα</div>';
-    if (c.kind === 'betterloan') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">−' + c.fewerPayments + ' δόσεις δανείου</div>';
-    return '<div class="gamecard ' + cls + '"><div class="cat">' + cat + '</div><div class="ttl">' + esc(c.title) + '</div>' +
+    if (c.income) effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(c.income) + ' ' + t('perCycle') + ' (' + (100 * c.income / base).toFixed(1) + '%)</div>';
+    if (c.kind === 'bond') effect = '<div style="margin-top:6px; font-weight:800; color:var(--bond)">' + t('bondEffect', { v: fmt(c.cost * 0.04) }) + '</div>' +
+      '<div style="margin-top:4px;" class="muted">' + t('bondNote', { v: fmt(c.cost) }) + '</div>';
+    if (c.kind === 'masters') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">' + t('mastersEffect', { v: fmt(c.salaryUp) }) + '</div>';
+    if (c.kind === 'taxprepay') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">' + t('taxprepayEffect', { v: fmt(c.taxDown) }) + '</div>';
+    if (c.kind === 'betterloan') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">' + t('betterloanEffect', { n: c.fewerPayments }) + '</div>';
+    return '<div class="gamecard ' + cls + '"><div class="cat">' + cat + '</div><div class="ttl">' + esc(ttl) + '</div>' +
       '<div class="cost">' + costLine + '</div>' + effect + '</div>';
   }
 
@@ -827,14 +921,14 @@
       const actorP = g.players.find(x => x.id === pend.playerId);
       if (pend.special === 'inflation') {
         overlay(inflationCardHtml() +
-          '<div class="muted" style="text-align:center;">Την πάτησε ο <b>' + esc(actorP.name) + '</b></div>');
+          '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
         const shown = deck === 'lifestyle' ? E.lifestyleDelta(g, c) : (deck === 'moments' ? E.momentAmount(g, c) : E.priceOf(g, c));
         overlay(cardHtml(c, deck, pend.discount, shown) +
           '<div class="muted" style="text-align:center;">' +
-          (pend.type === 'reveal' ? 'Κάρτα του παίκτη <b>' + esc(actorP.name) + '</b>' : 'Ο <b>' + esc(actorP.name) + '</b> αποφασίζει…') +
+          (pend.type === 'reveal' ? t('cardOf', { name: esc(actorP.name) }) : t('decidesNow', { name: esc(actorP.name) })) +
           '</div>');
       } else closeOverlay();
       return;
@@ -847,8 +941,8 @@
         ? inflationCardHtml()
         : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
-        '<div class="acts"><button class="buy" data-ch="ok">ΟΚ, το διάβασα ✔</button></div>' +
-        '<div class="muted" style="text-align:center; margin-top:8px;">Όλοι οι παίκτες βλέπουν αυτή την κάρτα</div>');
+        '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
+        '<div class="muted" style="text-align:center; margin-top:8px;">' + t('everyoneSees') + '</div>');
       $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
       return;
     }
@@ -861,56 +955,56 @@
       const short = price - p.cash;
       const canLoan = !canBuy && E.maxLoan(p) >= short && short > 0;
       const myBonds = p.inv.filter(i => i.kind === 'bond');
-      let html = (pend.isDiscountOffer ? '<div class="muted" style="margin-bottom:8px;">Ο προηγούμενος παίκτης δεν την αγόρασε — τη θέλεις με έκπτωση 10%;</div>' : '') +
+      let html = (pend.isDiscountOffer ? '<div class="muted" style="margin-bottom:8px;">' + t('discountOffer') + '</div>' : '') +
         cardHtml(c, pend.deck, pend.discount, curPrice) +
-        '<div class="muted" style="margin-bottom:10px;">Μετρητά σου: ' + fmt(p.cash) + '</div><div class="acts">';
-      html += '<button class="buy" data-ch="buy" ' + (canBuy ? '' : 'disabled') + '>✔ Αγορά ' + fmt(price) + '</button>';
+        '<div class="muted" style="margin-bottom:10px;">' + t('yourCash', { v: fmt(p.cash) }) + '</div><div class="acts">';
+      html += '<button class="buy" data-ch="buy" ' + (canBuy ? '' : 'disabled') + '>' + t('buy', { v: fmt(price) }) + '</button>';
       // v0.2 (#1): πώληση ομολόγου επί τόπου για να βγει η αγορά
       if (!canBuy && myBonds.length) {
         myBonds.forEach(b => {
-          html += '<button class="wildbtn" style="border-color:var(--bond); color:#bfe3ef;" data-sellbond="' + b.uid + '">🏛️ Πώληση ομολόγου (' + b.tokens + '/10) → +' + fmt(b.cost) + '</button>';
+          html += '<button class="wildbtn" style="border-color:var(--bond); color:#bfe3ef;" data-sellbond="' + b.uid + '">' + t('sellBondModal', { t: b.tokens, v: fmt(b.cost) }) + '</button>';
         });
       }
       if (canLoan) {
         const lnAmount = Math.ceil(short / 100) * 100;
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
-        html += '<button class="wildbtn" data-ch="buy-loan">🏦 Αγορά με δάνειο (λείπουν ' + fmt(short) + ')</button>' +
-          '<div class="muted" style="font-size:11px; margin-top:-4px;">Θα πάρεις δάνειο ' + fmt(lnAmount) + ' → θα αποπληρώσεις ' + fmt(lnN * lnAmount * 0.1) + ' σε ' + lnN + ' δόσεις των ' + fmt(lnAmount * 0.1) + '</div>';
+        html += '<button class="wildbtn" data-ch="buy-loan">' + t('buyLoan', { v: fmt(short) }) + '</button>' +
+          '<div class="muted" style="font-size:11px; margin-top:-4px;">' + t('buyLoanInfo', { a: fmt(lnAmount), t: fmt(lnN * lnAmount * 0.1), n: lnN, p: fmt(lnAmount * 0.1) }) + '</div>';
       }
-      if (pend.canWild) html += '<button class="wildbtn" data-ch="wild">🃏 Wild Card → τράβα ' + (pend.deck === 'project' ? 'Big Business' : 'Project') + ' (' + p.wilds + ' διαθέσιμες)</button>';
-      html += '<button class="ghost" data-ch="decline">✋ Όχι, ευχαριστώ</button></div>';
+      if (pend.canWild) html += '<button class="wildbtn" data-ch="wild">' + t('wildBtn', { deck: pend.deck === 'project' ? 'Big Business' : 'Project', n: p.wilds }) + '</button>';
+      html += '<button class="ghost" data-ch="decline">' + t('decline') + '</button></div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-sellbond]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.sellbond }));
     } else if (pend.type === 'lifestyle-partner') {
       const c = E.card(pend.cardId);
       const d = E.lifestyleDelta(g, c);
-      let html = '<div class="gamecard gc-lifestyle"><div class="cat">LIFESTYLE — ΕΚΑΣΤΟΣ</div><div class="ttl">' + esc(c.title) + '</div>' +
-        '<div class="cost">' + esc(c.cat) + ': <b>' + d + '€</b> για σένα ΚΑΙ για όποιον διαλέξεις</div></div>' +
+      let html = '<div class="gamecard gc-lifestyle"><div class="cat">' + t('lsPartnerCat') + '</div><div class="ttl">' + esc(I.cardTitle(c)) + '</div>' +
+        '<div class="cost">' + t('lsPartnerBody', { cat: esc(I.expName(c.cat)), d: d }) + '</div></div>' +
         '<div class="choice-list">' +
         g.players.filter(x => x.id !== p.id && x.retiredAge === null && !x.finished)
-          .map(x => '<button data-partner="' + x.id + '">' + (x.isBot ? '🤖 ' : '') + esc(x.name) + ' <span class="muted">(' + esc(c.cat) + ' ' + fmt(x.expenses[c.cat] || 0) + ')</span></button>').join('') +
+          .map(x => '<button data-partner="' + x.id + '">' + (x.isBot ? '🤖 ' : '') + esc(x.name) + ' <span class="muted">(' + esc(I.expName(c.cat)) + ' ' + fmt(x.expenses[c.cat] || 0) + ')</span></button>').join('') +
         '</div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-partner]').forEach(b => b.onclick = () => act({ a: 'resolve', partnerId: b.dataset.partner }));
       return;
     } else if (pend.type === 'forced-sale') {
-      let html = '<h3 style="margin-bottom:6px;">⚠️ Αναγκαστική πώληση</h3>' +
-        '<div class="muted" style="margin-bottom:12px;">Τα μετρητά σου είναι ' + fmt(p.cash) + '. Πούλα επενδύσεις στην τράπεζα (80% της αξίας — ομόλογα στην τρέχουσα αξία) μέχρι να καλύψεις το έλλειμμα.</div>' +
+      let html = '<h3 style="margin-bottom:6px;">' + t('forcedTitle') + '</h3>' +
+        '<div class="muted" style="margin-bottom:12px;">' + t('forcedBody', { v: fmt(p.cash) }) + '</div>' +
         '<div class="choice-list">' +
         p.inv.map(i => {
           const val = i.kind === 'bond' ? E.bondValue(i) : 0.8 * i.cost;
-          return '<button data-fs="' + i.uid + '">' + esc(i.title) + ' <b style="float:right">+' + fmt(val) + '</b></button>';
+          return '<button data-fs="' + i.uid + '">' + esc(invTitle(i)) + ' <b style="float:right">+' + fmt(val) + '</b></button>';
         }).join('') + '</div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-fs]').forEach(b => b.onclick = () => act({ a: 'resolve', uid: b.dataset.fs }));
       return;
     } else if (pend.type === 'funding-offer') {
       const from = g.players.find(x => x.id === pend.fromId);
-      let html = '<div class="gamecard gc-funding"><div class="cat">ΠΡΟΣΦΟΡΑ ΧΡΗΜΑΤΟΔΟΤΗΣΗΣ</div><div class="ttl">' + esc(pend.title) + '</div>' +
-        '<div class="cost">Ο ' + esc(from.name) + ' σου την προσφέρει για <b>' + fmt(pend.price) + '</b></div>' +
-        '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(pend.income) + ' / κύκλο</div></div>' +
-        '<div class="acts"><button class="buy" data-ch="accept" ' + (p.cash >= pend.price ? '' : 'disabled') + '>✔ Αγορά</button>' +
-        '<button class="ghost" data-ch="decline">✋ Όχι, ευχαριστώ</button></div>';
+      let html = '<div class="gamecard gc-funding"><div class="cat">' + t('offerCat') + '</div><div class="ttl">' + esc(pend.title) + '</div>' +
+        '<div class="cost">' + t('offerBody', { name: esc(from.name), v: fmt(pend.price) }) + '</div>' +
+        '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(pend.income) + ' ' + t('perCycle') + '</div></div>' +
+        '<div class="acts"><button class="buy" data-ch="accept" ' + (p.cash >= pend.price ? '' : 'disabled') + '>' + t('buy', { v: '' }) + '</button>' +
+        '<button class="ghost" data-ch="decline">' + t('decline') + '</button></div>';
       overlay(html);
     }
     $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: b.dataset.ch }));
@@ -921,14 +1015,14 @@
     const inv = p.inv.find(i => i.uid === uid);
     if (!inv) return;
     const targets = g.players.filter(x => x.id !== p.id && x.retiredAge === null && !x.finished);
-    if (!targets.length) { toast('Δεν υπάρχουν διαθέσιμοι παίκτες.'); return; }
+    if (!targets.length) { toast(t('noTargets')); return; }
     App.localModal = true;
-    overlay('<h3 style="margin-bottom:8px;">Πώληση Χρηματοδότησης</h3>' +
-      '<div class="muted" style="margin-bottom:10px;">«' + esc(inv.title) + '» — ελάχιστη τιμή ' + fmt(inv.cost) + '</div>' +
+    overlay('<h3 style="margin-bottom:8px;">' + t('fundingSale') + '</h3>' +
+      '<div class="muted" style="margin-bottom:10px;">' + t('fundingMin', { title: esc(invTitle(inv)), v: fmt(inv.cost) }) + '</div>' +
       '<input id="fsPrice" type="number" inputmode="numeric" value="' + inv.cost + '" style="margin-bottom:10px;">' +
       '<div class="choice-list">' +
       targets.map(x => '<button data-fst="' + x.id + '">' + (x.isBot ? '🤖 ' : '') + esc(x.name) + '</button>').join('') +
-      '</div><button class="ghost" style="width:100%; padding:12px;" id="fsCancel">Άκυρο</button>');
+      '</div><button class="ghost" style="width:100%; padding:12px;" id="fsCancel">' + t('cancel') + '</button>');
     $('modalBody').querySelectorAll('[data-fst]').forEach(b => b.onclick = () => {
       const price = parseFloat($('fsPrice').value);
       closeOverlay();
@@ -940,15 +1034,18 @@
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
-    const medals = ['🥇', '🥈', '🥉', '4ος', '5ος', '6ος'];
-    let html = '<div class="confetti">🎉🏆🎉</div><h2 style="text-align:center; margin-bottom:12px;">Τελική Κατάταξη</h2>' +
+    const medals = ['🥇', '🥈', '🥉', '4.', '5.', '6.'];
+    let html = '<div class="confetti">🎉🏆🎉</div><h2 style="text-align:center; margin-bottom:12px;">' + t('finalRank') + '</h2>' +
       g.rankings.map((r, i) => '<div class="rank"><span class="pos">' + medals[i] + '</span><div class="det"><b>' + esc(r.name) + '</b>' +
-        '<div class="muted">' + (r.retiredAge !== null ? 'I QUIT στα ' + r.retiredAge + ' — οικονομική ελευθερία!' :
-          (r.months !== null ? 'Έφτασε τα 65 · επιβίωση ' + r.months + ' μήνες με το κεφάλαιό του' : 'Έφτασε τα 65')) + '</div></div></div>').join('');
-    if (App.role === 'host') html += '<div class="acts" style="margin-top:14px;"><button class="buy" id="btnAgain">🔁 Νέο παιχνίδι (ίδιοι παίκτες)</button><button class="ghost" id="btnExit">Έξοδος</button></div>';
-    else html += '<div class="acts" style="margin-top:14px;"><button class="ghost" id="btnExit">Έξοδος</button></div>';
+        '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
+          (r.months !== null ? t('survive', { n: r.months }) : t('reached65'))) + '</div></div></div>').join('');
+    html += '<div class="acts" style="margin-top:14px;">' +
+      '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
+      (App.role === 'host' ? '<button class="buy" id="btnAgain">' + t('playAgain') + '</button>' : '') +
+      '<button class="ghost" id="btnExit">' + t('exit') + '</button></div>';
     App.localModal = true;
     overlay(html);
+    $('btnFeedback').onclick = () => showFeedback();
     const ba = $('btnAgain');
     if (ba) ba.onclick = () => { App.localModal = null; hostStart(); closeOverlay(); };
     $('btnExit').onclick = () => { localStorage.removeItem(HOST_KEY); localStorage.removeItem(GUEST_KEY); location.reload(); };
@@ -963,12 +1060,12 @@
     $('btnCreate').onclick = () => {
       if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }
       localStorage.removeItem(HOST_KEY);
-      $('btnCreate').disabled = true; $('btnCreate').textContent = 'Δημιουργία…';
+      $('btnCreate').disabled = true; $('btnCreate').textContent = t('creating');
       hostCreate(false);
     };
     $('btnJoin').onclick = () => {
       const code = $('joinCode').value.trim();
-      if (code.length !== 4) { homeErr('Ο κωδικός δωματίου έχει 4 χαρακτήρες.'); return; }
+      if (code.length !== 4) { homeErr(t('codeLen')); return; }
       if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου.'); return; }
       localStorage.removeItem(GUEST_KEY);
       guestJoin(code, undefined);
@@ -977,10 +1074,15 @@
       const code = App.lobby ? App.lobby.code : $('lobbyCode').textContent;
       // Link πρόσκλησης: ανοίγει το παιχνίδι με προσυμπληρωμένο δωμάτιο (?room=ΚΩΔΙΚΟΣ)
       const url = location.origin + location.pathname + '?room=' + code;
-      const text = 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: ' + url;
+      const text = t('shareText', { url });
       if (navigator.share) { try { await navigator.share({ text, url }); } catch (e) {} }
-      else { try { await navigator.clipboard.writeText(text); toast('📋 Αντιγράφηκε το link πρόσκλησης!'); } catch (e) {} }
+      else { try { await navigator.clipboard.writeText(text); toast(t('copied')); } catch (e) {} }
     };
+
+    // v0.9: Κανόνες & γλώσσα — διαθέσιμα από αρχική, lobby και μέσα στο παιχνίδι
+    ['btnRules', 'btnRulesHome', 'btnRulesLobby'].forEach(id => { const b = $(id); if (b) b.onclick = showRules; });
+    ['btnLang', 'btnLangHome'].forEach(id => { const b = $(id); if (b) b.onclick = toggleLang; });
+    applyStatic();
 
     // Chat
     $('chatSend').onclick = sendChat;
@@ -1011,7 +1113,7 @@
         guestJoin(roomParam, undefined);
         return;
       }
-      homeErr('Πρόσκληση στο δωμάτιο «' + roomParam + '»! Γράψε το όνομά σου και πάτα «Είσοδος».');
+      homeErr(t('inviteMsg', { code: roomParam }));
       $('homeErr').style.background = '#1d2f1e'; $('homeErr').style.borderColor = '#2e5a33'; $('homeErr').style.color = '#a8f0b0';
       $('playerName').focus();
     }
@@ -1021,13 +1123,13 @@
     const guestS = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
     const rb = $('resumeBox');
     let rhtml = '';
-    if (hostS && hostS.game && hostS.game.phase === 'playing') rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">▶ Συνέχεια παιχνιδιού «' + esc(hostS.lobby.code) + '» (host)</button>';
-    if (guestS) rhtml += '<button class="primary" id="btnResumeGuest" style="margin-bottom:6px;">▶ Επανασύνδεση στο δωμάτιο ' + esc(guestS.code) + '</button>';
+    if (hostS && hostS.game && hostS.game.phase === 'playing') rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">' + t('resumeHost', { code: esc(hostS.lobby.code) }) + '</button>';
+    if (guestS) rhtml += '<button class="primary" id="btnResumeGuest" style="margin-bottom:6px;">' + t('resumeGuest', { code: esc(guestS.code) }) + '</button>';
     rb.innerHTML = rhtml;
     if ($('btnResumeHost')) $('btnResumeHost').onclick = () => { $('btnResumeHost').disabled = true; hostCreate(true); };
     if ($('btnResumeGuest')) $('btnResumeGuest').onclick = () => { $('playerName').value = guestS.name; guestJoin(guestS.code, guestS.token); };
   }
 
-  window.IQ_UI = { showEnd };
+  window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   init();
 })();

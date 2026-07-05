@@ -13,25 +13,28 @@
 
 <!-- ============ HOME ============ -->
 <div id="screen-home">
+  <button class="tbtn" id="btnLangHome" style="position:fixed; top:14px; right:14px;">🇬🇧 EN</button>
   <div class="logo">I QUIT<em>!</em></div>
-  <div class="tagline">Το παιχνίδι οικονομικού αλφαβητισμού — online με φίλους</div>
+  <div class="tagline" id="lblTagline">Το παιχνίδι οικονομικού αλφαβητισμού — online με φίλους</div>
 
   <div id="resumeBox"></div>
 
-  <div class="home-label">Το όνομά σου</div>
+  <div class="home-label" id="lblName">Το όνομά σου</div>
   <input id="playerName" maxlength="14" placeholder="π.χ. Γιώργος" autocomplete="off">
 
-  <div class="home-label">Νέο παιχνίδι</div>
+  <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
 
-  <div class="home-label">Μπες σε δωμάτιο</div>
+  <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
   <div class="row">
     <input id="joinCode" maxlength="4" placeholder="ΚΩΔ." autocomplete="off">
     <button class="ghost" id="btnJoin" style="flex:0 0 auto; padding:14px 18px;">Είσοδος →</button>
   </div>
 
+  <button class="ghost" id="btnRulesHome" style="width:100%; margin-top:14px;">📜 Κανόνες</button>
+
   <div class="err" id="homeErr"></div>
-  <div class="muted" style="text-align:center; margin-top:26px;">
+  <div class="muted" id="lblHomeFoot" style="text-align:center; margin-top:26px;">
     2–6 παίκτες · οι κενές θέσεις γεμίζουν με 🤖 bots<br>
     Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!
   </div>
@@ -39,29 +42,30 @@
 
 <!-- ============ LOBBY ============ -->
 <div id="screen-lobby" class="hidden">
-  <h2 style="text-align:center; margin-top:10px;">Δωμάτιο</h2>
+  <h2 style="text-align:center; margin-top:10px;" id="lblRoom">Δωμάτιο</h2>
   <div class="roomcode" id="lobbyCode">----</div>
   <button class="ghost" id="btnShare" style="width:100%; margin-bottom:14px;">📤 Κοινοποίηση κωδικού</button>
 
   <div class="card">
-    <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">Παίκτες <span id="lobbyCount"></span></h3>
+    <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;"><span id="lblPlayers">Παίκτες</span> <span id="lobbyCount"></span></h3>
     <div id="lobbyPlayers"></div>
   </div>
 
   <div class="card">
-    <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">Διάλεξε το πιόνι σου</h3>
+    <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;" id="lblPickPawn">Διάλεξε το πιόνι σου</h3>
     <div id="pawnPick" class="pawnrow"></div>
   </div>
 
   <div id="hostControls">
     <div class="card">
-      <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">🤖 Πρόσθεσε bot (διάλεξε στρατηγική)</h3>
+      <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;" id="lblAddBot">🤖 Πρόσθεσε bot (διάλεξε στρατηγική)</h3>
       <div id="botRoster"></div>
     </div>
     <button class="primary" id="btnStart">🚀 Έναρξη παιχνιδιού</button>
   </div>
   <div id="guestWait" class="muted hidden" style="text-align:center; margin-top:10px;">Περιμένουμε τον host να ξεκινήσει το παιχνίδι…</div>
-  <button class="danger" id="btnLeaveLobby" style="width:100%; margin-top:14px; padding:12px;">Αποχώρηση</button>
+  <button class="ghost" id="btnRulesLobby" style="width:100%; margin-top:14px; padding:12px;">📜 Κανόνες</button>
+  <button class="danger" id="btnLeaveLobby" style="width:100%; margin-top:8px; padding:12px;">Αποχώρηση</button>
 </div>
 
 <!-- ============ GAME ============ -->
@@ -71,6 +75,8 @@
     <span class="code" id="gameCode"></span>
     <button class="tbtn" id="btnSound" title="Ήχος">🔊</button>
     <button class="tbtn" id="btn3d" title="Όψη ταμπλό">3D</button>
+    <button class="tbtn" id="btnRules" title="Κανόνες">📜</button>
+    <button class="tbtn" id="btnLang" title="Language">🇬🇧</button>
     <span class="turnwho" id="turnWho"></span>
   </div>
   <div class="wrap">
@@ -83,7 +89,7 @@
         <div class="boardCenter" id="boardCenter"></div>
       </div>
       <div class="card" id="chatCard" style="margin-top:12px;">
-        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">💬 Συνομιλία</h3>
+        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;" id="lblChat">💬 Συνομιλία</h3>
         <div class="chatlog" id="chatLog"><div class="muted">Πες ένα γεια στους συμπαίκτες σου…</div></div>
         <div class="row" style="margin-top:8px;">
           <input id="chatInput" maxlength="200" placeholder="Γράψε μήνυμα…" autocomplete="off">
@@ -95,7 +101,7 @@
       <div class="card" id="myDash"></div>
       <div class="others" id="others" style="margin-bottom:12px;"></div>
       <div class="card">
-        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">Ιστορικό</h3>
+        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;" id="lblLog">Ιστορικό</h3>
         <div class="log" id="log"></div>
       </div>
     </div>
@@ -108,6 +114,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/bots.js"></script>
 <script src="js/net.js"></script>
