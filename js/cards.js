@@ -150,7 +150,7 @@
     { t: 'crash',    label: 'Crash', colors: ['G','Y','R'] }, // 4
     { t: 'moments',  label: 'Moments' },                 // 5
     { t: 'project',  label: 'Project' },                 // 6
-    { t: 'inflation',label: 'Inflation 5%' },            // 7 (γωνία)
+    { t: 'inflation',label: 'Inflation' },               // 7 (γωνία)
     { t: 'project',  label: 'Project' },                 // 8
     { t: 'bb',       label: 'Big Business' },            // 9
     { t: 'crash',    label: 'Crash', colors: ['R'] },    // 10
@@ -164,7 +164,7 @@
     { t: 'fundingfails', label: 'Funding Fails' },       // 18
     { t: 'moments',  label: 'Moments' },                 // 19
     { t: 'project',  label: 'Project' },                 // 20
-    { t: 'inflation',label: 'Inflation 5%' },            // 21 (γωνία)
+    { t: 'inflation',label: 'Inflation' },               // 21 (γωνία)
     { t: 'project',  label: 'Project' },                 // 22
     { t: 'moments',  label: 'Moments' },                 // 23
     { t: 'crash',    label: 'Crash', colors: ['Y','R'] },// 24

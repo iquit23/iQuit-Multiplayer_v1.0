@@ -101,11 +101,15 @@ h1,h2,h3{margin:0;}
   justify-content:center; pointer-events:none; z-index:4;}
 /* Στοίβες καρτών στα 4 διαγώνια κουτιά του ταμπλό */
 .stack{position:absolute; transform:translate(-50%,-50%) rotate(var(--rot)); z-index:2; pointer-events:none;}
-.stack .cardback{width:9.5vmin; max-width:74px; min-width:46px; aspect-ratio:0.68; border-radius:8px;
-  border:2px solid rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center;
-  font-size:8px; font-weight:900; letter-spacing:.5px; color:#fff; text-align:center; padding:3px;
-  text-shadow:0 1px 3px rgba(0,0,0,.8);
-  box-shadow:2px 2px 0 rgba(0,0,0,.25), 4px 4px 0 rgba(0,0,0,.18), 6px 6px 14px rgba(0,0,0,.5);}
+/* v1.0 (#2): οι πλάτες είναι η ΠΡΑΓΜΑΤΙΚΗ πίσω όψη — μαύρη κάρτα, λογότυπο I QUIT!, όνομα στοίβας */
+.stack .cardback{width:13vmin; max-width:104px; min-width:64px; aspect-ratio:1.55; border-radius:8px;
+  background:#0a0a0d; border:2px solid rgba(255,255,255,.7);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px;
+  box-shadow:2px 2px 0 rgba(0,0,0,.3), 4px 4px 0 rgba(0,0,0,.2), 6px 6px 14px rgba(0,0,0,.55);}
+.stack .cardback img{width:74%; display:block;}
+.stack .cardback span{font-size:8px; font-weight:900; letter-spacing:1px; color:#fff; text-shadow:0 1px 3px #000;}
+.st-lifestyle .cardback span{color:#ff8f88;} .st-moments .cardback span{color:#7fe09a;}
+.st-project .cardback span{color:#8fb8ff;} .st-bb .cardback span{color:#ffb377;}
 .stack .cnt{position:absolute; right:-9px; top:-9px; background:#0a1320; color:#fff; border:1px solid rgba(255,255,255,.5);
   font-size:10px; font-weight:800; min-width:20px; height:20px; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:0 4px;
   transform:rotate(calc(-1 * var(--rot)));}
@@ -114,16 +118,18 @@ h1,h2,h3{margin:0;}
 .st-project .cardback{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
 .st-bb .cardback{background:linear-gradient(160deg,#c46f2c,#7a4218);}
 /* Κάρτα που "τραβιέται" από τη στοίβα */
-.flycard{position:fixed; width:74px; aspect-ratio:0.68; border-radius:8px; z-index:300;
-  border:2px solid rgba(255,255,255,.8); box-shadow:0 18px 44px rgba(0,0,0,.7);
+.flycard{position:fixed; width:104px; aspect-ratio:1.55; border-radius:8px; z-index:300;
+  background:#0a0a0d; border:2px solid rgba(255,255,255,.8); box-shadow:0 18px 44px rgba(0,0,0,.7);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
   transform:translate(-50%,-50%) rotate(var(--rot,45deg)) scale(.7);
   transition:left .55s cubic-bezier(.3,.7,.3,1), top .55s cubic-bezier(.3,.7,.3,1), transform .55s cubic-bezier(.3,.7,.3,1);
   pointer-events:none;}
-.flycard.go{left:50vw !important; top:44vh !important; transform:translate(-50%,-50%) rotate(0deg) scale(1.9);}
-.fly-lifestyle{background:linear-gradient(160deg,#a63a34,#6e2420);}
-.fly-moments{background:linear-gradient(160deg,#2e7a44,#1b4a2a);}
-.fly-project{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
-.fly-bb{background:linear-gradient(160deg,#c46f2c,#7a4218);}
+.flycard img{width:74%; display:block;}
+.flycard span{font-size:9px; font-weight:900; letter-spacing:1px; color:#fff;}
+.flycard.go{left:34vw !important; top:44vh !important; transform:translate(-50%,-50%) rotate(0deg) scale(1.9);}
+@media(max-width:899px){ .flycard.go{left:50vw !important;} }
+.fly-lifestyle span{color:#ff8f88;} .fly-moments span{color:#7fe09a;}
+.fly-project span{color:#8fb8ff;} .fly-bb span{color:#ffb377;}
 .board{display:grid; width:100%; height:100%;
   grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); gap:3px;}
 .sq{position:relative; border-radius:7px; background:var(--card2); border:1px solid var(--line);
@@ -157,6 +163,13 @@ h1,h2,h3{margin:0;}
 }
 .pawn.emo{font-size:11px; background-clip:padding-box;}
 @media(min-width:520px){ .pawn{width:27px; height:27px; font-size:13px; margin:0 -6px;} .pawn.emo{font-size:17px;} }
+/* v1.0 (#9): με έως 3 παίκτες, ΜΕΓΑΛΑ πιόνια — να φαίνονται με την πρώτη ματιά */
+.boardOverlay.bigpawns .pawn{width:24px; height:24px; font-size:13px;}
+.boardOverlay.bigpawns .pawn.emo{font-size:16px;}
+@media(min-width:520px){
+  .boardOverlay.bigpawns .pawn{width:36px; height:36px; font-size:17px; margin:0 -8px; border-width:2.5px;}
+  .boardOverlay.bigpawns .pawn.emo{font-size:23px;}
+}
 
 /* ---------- 3D ΟΨΗ ΤΑΜΠΛΟ (v0.7: πάνω στο board art) ---------- */
 .boardbox.tilt{perspective:1600px;}
@@ -225,6 +238,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 /* ---------- MODAL ---------- */
 #overlay{position:fixed; inset:0; background:rgba(4,9,18,.72); display:flex; align-items:center;
   justify-content:center; padding:16px; z-index:100;}
+/* v1.0 (#7): σε laptop η κάρτα ανοίγει ΑΡΙΣΤΕΡΑ, πάνω από το ταμπλό —
+   ώστε να βλέπεις δεξιά τα δικά σου στοιχεία (χαρτοφυλάκιο, δάνεια) όσο αποφασίζεις */
+@media(min-width:900px){
+  #overlay{justify-content:flex-start;}
+  #overlay .modal{margin-left:6vw;}
+  #overlay .modal.wide{margin-left:auto; margin-right:auto;} /* κανόνες/ερωτηματολόγιο: κεντραρισμένα */
+}
 #overlay.hidden{display:none;}
 .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
   max-width:400px; width:100%; max-height:88vh; overflow:auto;}
@@ -381,7 +401,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       <div class="card" id="myDash"></div>
       <div class="others" id="others" style="margin-bottom:12px;"></div>
       <div class="card">
-        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;" id="lblLog">Ιστορικό</h3>
+        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px; display:flex; align-items:center;"><span id="lblLog">Ιστορικό</span><span style="flex:1"></span><button class="mini" id="btnLogToggle">—</button></h3>
         <div class="log" id="log"></div>
       </div>
     </div>
@@ -546,7 +566,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
     { t: 'crash',    label: 'Crash', colors: ['G','Y','R'] }, // 4
     { t: 'moments',  label: 'Moments' },                 // 5
     { t: 'project',  label: 'Project' },                 // 6
-    { t: 'inflation',label: 'Inflation 5%' },            // 7 (γωνία)
+    { t: 'inflation',label: 'Inflation' },               // 7 (γωνία)
     { t: 'project',  label: 'Project' },                 // 8
     { t: 'bb',       label: 'Big Business' },            // 9
     { t: 'crash',    label: 'Crash', colors: ['R'] },    // 10
@@ -560,7 +580,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
     { t: 'fundingfails', label: 'Funding Fails' },       // 18
     { t: 'moments',  label: 'Moments' },                 // 19
     { t: 'project',  label: 'Project' },                 // 20
-    { t: 'inflation',label: 'Inflation 5%' },            // 21 (γωνία)
+    { t: 'inflation',label: 'Inflation' },               // 21 (γωνία)
     { t: 'project',  label: 'Project' },                 // 22
     { t: 'moments',  label: 'Moments' },                 // 23
     { t: 'crash',    label: 'Crash', colors: ['Y','R'] },// 24
@@ -614,7 +634,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       cash: 'Μετρητά', passive: 'Παθητικό', salary: 'Μισθός', expenses: 'Έξοδα',
       netPer: 'Καθαρό ανά είσπραξη:', wild: 'Wild',
       expByCat: 'Έξοδα ανά κατηγορία', inflatedTag: '(πληθωρισμένα ×{m})', totalExp: 'Σύνολο εξόδων',
-      portfolio: 'Χαρτοφυλάκιο', totalInv: 'Σύνολο επενδύσεων', noInv: 'Δεν έχεις επενδύσεις ακόμα.',
+      portfolio: 'Χαρτοφυλάκιο', totalInv: 'Σύνολο επενδύσεων', totalInvInc: 'Σύνολο εισπράξεων από επενδύσεις', valueTag: 'αξία {v}', noInv: 'Δεν έχεις επενδύσεις ακόμα.',
       perCollect: '/εισπρ.', sellBond: 'Πώληση +{v}', sellToPlayer: 'Πώληση σε παίκτη',
       loans: '🏦 Δάνεια', debt: '(χρέος {v})', loanRow: 'Δάνειο {v}', installments: '{n} δόσεις × {p}',
       pay1: '1 δόση', payoff: 'Εξόφληση {v}', newLoanPh: 'Νέο δάνειο έως {v}', loanBtn: '+ Δάνειο',
@@ -627,6 +647,8 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       yourCash: 'Μετρητά σου: {v}', buy: '✔ Αγορά {v}', decline: '✋ Όχι, ευχαριστώ',
       buyLoan: '🏦 Αγορά με δάνειο (λείπουν {v})',
       buyLoanInfo: 'Θα πάρεις δάνειο {a} → θα αποπληρώσεις {t} σε {n} δόσεις των {p}',
+      buyLoanBtn: '🏦 Αγορά με δάνειο',
+      buyLoanFlex: 'Διάλεξε ποσό (πολλαπλάσια 100€, έως {max}) — μπορείς να πάρεις παραπάνω για μαξιλάρι ρευστότητας. {n} δόσεις × 10% του ποσού.',
       wildBtn: '🃏 Wild Card → τράβα {deck} ({n} διαθέσιμες)',
       sellBondModal: '🏛️ Πώληση ομολόγου ({t}/10) → +{v}',
       discountOffer: 'Ο προηγούμενος παίκτης δεν την αγόρασε — τη θέλεις με έκπτωση 10%;',
@@ -664,6 +686,63 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       color_G: 'ΠΡΑΣΙΝΟ', color_Y: 'ΚΙΤΡΙΝΟ', color_R: 'ΚΟΚΚΙΝΟ',
       cat_funding: 'PROJECT — ΧΡΗΜΑΤΟΔΟΤΗΣΗ', cat_bond: 'PROJECT — ΟΜΟΛΟΓΟ', cat_masters: 'PROJECT — ΜΕΤΑΠΤΥΧΙΑΚΟ',
       cat_taxprepay: 'PROJECT — ΦΟΡΟΣ', cat_betterloan: 'PROJECT — ΔΑΝΕΙΟ',
+      hideLog: 'Απόκρυψη', showLog: 'Εμφάνιση',
+      // ---- Ιστορικό (δομημένα events v1.0) ----
+      lg_start: '🎲 Το παιχνίδι ξεκίνησε! Η κλήρωση έδειξε: πρώτος παίζει ο {n}.',
+      lg_endRet: '🏁 Τέλος παιχνιδιού! Νικητής: {n} (παραίτηση στα {age})',
+      lg_endNo: '🏁 Τέλος παιχνιδιού! Νικητής: {n}',
+      lg_roll: '🎲 {n} έριξε {d1}+{d2} = {s}',
+      lg_collect: '💰 {n}: είσπραξη {net} · ηλικία {age}',
+      lg_collectB: '💰 {n}: είσπραξη {net} (+{bi} τόκοι ομολόγων) · ηλικία {age}',
+      lg_collectL: '💰 {n}: είσπραξη {net} (−{lp} δόσεις δανείων) · ηλικία {age}',
+      lg_collectBL: '💰 {n}: είσπραξη {net} (+{bi} τόκοι ομολόγων, −{lp} δόσεις δανείων) · ηλικία {age}',
+      lg_career: '🎖️ Career Bonus! Ο {n} έκλεισε τα {age} → μισθός +500€ (νέος: {s})',
+      lg_bondMature: '🏛️ {n}: λήξη ομολόγου → επιστροφή κεφαλαίου +{v}',
+      lg_quitBlocked: '⚠️ {n}: το παθητικό ({pas}) καλύπτει τα έξοδα ({exp}), αλλά για I QUIT πρέπει πρώτα να εξοφλήσει τα δάνειά του ({owed})!',
+      lg_iquit: '🎉 I QUIT! Ο {n} παραιτήθηκε στα {age} (παθητικό {pas} ≥ έξοδα {exp}, χωρίς χρέη)',
+      lg_iquitInstant: '🎉 I QUIT! Ο {n} πέτυχε την οικονομική ελευθερία στα {age} — παθητικό {pas} ≥ έξοδα {exp} και μηδέν χρέη!',
+      lg_forcedLoanSettle: '🏦 {n}: υποχρεωτική εξόφληση δανείων −{v}',
+      lg_reached65: '⏳ Ο {n} έφτασε τα 65 χωρίς παραίτηση.',
+      lg_inflation: '📈 Πληθωρισμός 5%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      lg_forcedNeeded: '⚠️ {n}: δεν επαρκούν τα μετρητά ({v}) — αναγκαστική πώληση στο 80%.',
+      lg_negNoAssets: '🔴 {n}: αρνητικά μετρητά χωρίς περιουσιακά στοιχεία ({v}).',
+      lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
+      lg_emptyLifestyle: 'ℹ️ Η στοίβα Lifestyle είναι άδεια.', lg_emptyMoments: 'ℹ️ Η στοίβα Moments είναι άδεια.',
+      lg_tax: '🧾 Tax: {n} πληρώνει 50% του εισοδήματος BB = −{v}',
+      lg_taxNone: '🧾 Tax: ο {n} δεν έχει εισόδημα από Big Business.',
+      lg_crashMiss: '💥 Crash ({colors}): ο {n} δεν έχει Project σε αυτά τα χρώματα — τη γλίτωσε!',
+      lg_crashHit: '💥 Crash! Ο {n} χάνει: {title} ({v}, −{inc}/κύκλο)',
+      lg_ffMiss: '💥 Funding Fails: ο {n} δεν έχει Χρηματοδοτήσεις — τη γλίτωσε!',
+      lg_ffHit: '💥 Funding Fails! Ο {n} χάνει: {title} ({v})',
+      lg_lifestyle: '🏠 Lifestyle: {n} — «{title}» → {cat} {d}€',
+      lg_lifestyleInfl: '🏠 Lifestyle: {n} — «{title}» → {cat} {d}€ (με πληθωρισμό)',
+      lg_lifestyleEach: '🏠 Lifestyle (Έκαστος): «{title}» → {n} & {n2}: {cat} {d}€ ο καθένας',
+      lg_momentCancel: '🌱 Moment: {n} — «{title}» → αναιρέθηκε: {list}',
+      lg_momentCancelNone: '🌱 Moment: {n} — «{title}» (δεν είχε τις αντίστοιχες κάρτες — καμία επίδραση)',
+      lg_moment: '{e} Moment: {n} — «{title}» → {v}',
+      lg_momentInfl: '{e} Moment: {n} — «{title}» → {v} (με πληθωρισμό)',
+      lg_buyBB: '🏆 {n} αγόρασε Big Business: «{title}» {v} → +{inc}/κύκλο',
+      lg_buyBBDisc: '🏆 {n} αγόρασε Big Business: «{title}» {v} (έκπτωση -10%) → +{inc}/κύκλο',
+      lg_buyP: '📊 {n} αγόρασε Project {colors}: «{title}» {v} → +{inc}/κύκλο',
+      lg_buyF: '🤝 {n} αγόρασε Χρηματοδότηση: «{title}» {v} → +{inc}/κύκλο',
+      lg_buyBond: '🏛️ {n} αγόρασε Κρατικό Ομόλογο {v} (4%/είσπραξη, λήξη στα 10 tokens)',
+      lg_masters: '🎓 {n} έκανε Μεταπτυχιακό ({v}) → μισθός +{up} (νέος: {s})',
+      lg_taxprepay: '🧾 {n} πλήρωσε Προκαταβολή Φόρου ({v}) → Φόροι −{d}/κύκλο',
+      lg_blActive: '🏦 {n} — Ευνοϊκότερο Δάνειο: −{f} δόσεις στο δάνειο των {a} (μένουν {r})',
+      lg_blFuture: '🏦 {n} — Ευνοϊκότερο Δάνειο: −{f} δόσεις στο μελλοντικό δάνειο',
+      lg_loanTaken: '🏦 {n} πήρε δάνειο {a} ({r} δόσεις × {pay})',
+      lg_loanDone: '🏦 {n} εξόφλησε πλήρως το δάνειο των {a} ✓',
+      lg_repayFull: '🏦 {n} εξόφλησε πλήρως το δάνειο των {a} (−{v}) ✓',
+      lg_repayPart: '🏦 {n} πλήρωσε {c} δόσεις (−{v}) · μένουν {r}',
+      lg_bondSold: '🏛️ {n} πούλησε ομόλογο ({t}/10 tokens) → επιστροφή κεφαλαίου +{v}',
+      lg_offer: '🤝 {n} προσφέρει τη Χρηματοδότηση «{title}» στον {n2} για {v}',
+      lg_wildToBB: '🃏 {n} έπαιξε Wild Card: Project → Big Business ({w} απομένουν)',
+      lg_wildToP: '🃏 {n} έπαιξε Wild Card: Big Business → Project ({w} απομένουν)',
+      lg_passDisc: '➡️ Ο {n} δεν αγόρασε «{title}» — ο {n2} μπορεί να την πάρει με -10% ({v})',
+      lg_declined: '✋ {n} δεν αγόρασε: «{title}»',
+      lg_forcedSold: '🔻 Αναγκαστική πώληση: {n} — «{title}» → +{v}',
+      lg_offerAccepted: '🤝 Ο {n} αγόρασε τη «{title}» από τον {n2} για {v}',
+      lg_offerDeclined: '✋ Ο {n} αρνήθηκε την προσφορά Χρηματοδότησης.',
     },
     en: {
       tagline: 'The financial-literacy board game — online with friends',
@@ -692,7 +771,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       cash: 'Cash', passive: 'Passive', salary: 'Salary', expenses: 'Expenses',
       netPer: 'Net per payday:', wild: 'Wild',
       expByCat: 'Expenses by category', inflatedTag: '(inflated ×{m})', totalExp: 'Total expenses',
-      portfolio: 'Portfolio', totalInv: 'Total investments', noInv: 'No investments yet.',
+      portfolio: 'Portfolio', totalInv: 'Total investments', totalInvInc: 'Total income from investments', valueTag: 'value {v}', noInv: 'No investments yet.',
       perCollect: '/payday', sellBond: 'Sell +{v}', sellToPlayer: 'Sell to player',
       loans: '🏦 Loans', debt: '(debt {v})', loanRow: 'Loan {v}', installments: '{n} payments × {p}',
       pay1: '1 payment', payoff: 'Pay off {v}', newLoanPh: 'New loan up to {v}', loanBtn: '+ Loan',
@@ -704,6 +783,8 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       yourCash: 'Your cash: {v}', buy: '✔ Buy {v}', decline: '✋ No, thanks',
       buyLoan: '🏦 Buy with a loan (missing {v})',
       buyLoanInfo: 'You will borrow {a} → repay {t} in {n} payments of {p}',
+      buyLoanBtn: '🏦 Buy with a loan',
+      buyLoanFlex: 'Pick an amount (multiples of €100, up to {max}) — you may borrow extra as a cash cushion. {n} payments × 10% of the amount.',
       wildBtn: '🃏 Wild Card → draw {deck} ({n} left)',
       sellBondModal: '🏛️ Sell bond ({t}/10) → +{v}',
       discountOffer: 'The previous player passed — want it at a 10% discount?',
@@ -738,6 +819,63 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       color_G: 'GREEN', color_Y: 'YELLOW', color_R: 'RED',
       cat_funding: 'PROJECT — FUNDING', cat_bond: 'PROJECT — BOND', cat_masters: 'PROJECT — MASTER’S',
       cat_taxprepay: 'PROJECT — TAX', cat_betterloan: 'PROJECT — LOAN',
+      hideLog: 'Hide', showLog: 'Show',
+      // ---- History (structured events v1.0) ----
+      lg_start: '🎲 The game begins! The lottery picked {n} to go first.',
+      lg_endRet: '🏁 Game over! Winner: {n} (retired at {age})',
+      lg_endNo: '🏁 Game over! Winner: {n}',
+      lg_roll: '🎲 {n} rolled {d1}+{d2} = {s}',
+      lg_collect: '💰 {n}: payday {net} · age {age}',
+      lg_collectB: '💰 {n}: payday {net} (+{bi} bond interest) · age {age}',
+      lg_collectL: '💰 {n}: payday {net} (−{lp} loan payments) · age {age}',
+      lg_collectBL: '💰 {n}: payday {net} (+{bi} bond interest, −{lp} loan payments) · age {age}',
+      lg_career: '🎖️ Career Bonus! {n} turned {age} → salary +€500 (now {s})',
+      lg_bondMature: '🏛️ {n}: bond matured → principal returned +{v}',
+      lg_quitBlocked: '⚠️ {n}: passive income ({pas}) covers expenses ({exp}), but the loans ({owed}) must be repaid before I QUIT!',
+      lg_iquit: '🎉 I QUIT! {n} retired at {age} (passive {pas} ≥ expenses {exp}, debt-free)',
+      lg_iquitInstant: '🎉 I QUIT! {n} reached financial freedom at {age} — passive {pas} ≥ expenses {exp} and zero debt!',
+      lg_forcedLoanSettle: '🏦 {n}: mandatory loan settlement −{v}',
+      lg_reached65: '⏳ {n} reached 65 without retiring.',
+      lg_inflation: '📈 Inflation 5%: everyone’s monthly expenses rose by 5%, and so did all Lifestyle & Moments cards.',
+      lg_forcedNeeded: '⚠️ {n}: not enough cash ({v}) — forced sale at 80%.',
+      lg_negNoAssets: '🔴 {n}: negative cash with no assets left ({v}).',
+      lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
+      lg_emptyLifestyle: 'ℹ️ The Lifestyle deck is empty.', lg_emptyMoments: 'ℹ️ The Moments deck is empty.',
+      lg_tax: '🧾 Tax: {n} pays 50% of BB income = −{v}',
+      lg_taxNone: '🧾 Tax: {n} has no Big Business income.',
+      lg_crashMiss: '💥 Crash ({colors}): {n} holds no Projects in these colours — lucky escape!',
+      lg_crashHit: '💥 Crash! {n} loses: {title} ({v}, −{inc}/cycle)',
+      lg_ffMiss: '💥 Funding Fails: {n} holds no Funding cards — lucky escape!',
+      lg_ffHit: '💥 Funding Fails! {n} loses: {title} ({v})',
+      lg_lifestyle: '🏠 Lifestyle: {n} — “{title}” → {cat} {d}€',
+      lg_lifestyleInfl: '🏠 Lifestyle: {n} — “{title}” → {cat} {d}€ (inflation-adjusted)',
+      lg_lifestyleEach: '🏠 Lifestyle (Each): “{title}” → {n} & {n2}: {cat} {d}€ each',
+      lg_momentCancel: '🌱 Moment: {n} — “{title}” → cancelled: {list}',
+      lg_momentCancelNone: '🌱 Moment: {n} — “{title}” (no matching cards — no effect)',
+      lg_moment: '{e} Moment: {n} — “{title}” → {v}',
+      lg_momentInfl: '{e} Moment: {n} — “{title}” → {v} (inflation-adjusted)',
+      lg_buyBB: '🏆 {n} bought Big Business: “{title}” {v} → +{inc}/cycle',
+      lg_buyBBDisc: '🏆 {n} bought Big Business: “{title}” {v} (10% off) → +{inc}/cycle',
+      lg_buyP: '📊 {n} bought a {colors} Project: “{title}” {v} → +{inc}/cycle',
+      lg_buyF: '🤝 {n} bought Funding: “{title}” {v} → +{inc}/cycle',
+      lg_buyBond: '🏛️ {n} bought a Government Bond {v} (4%/payday, matures at 10 tokens)',
+      lg_masters: '🎓 {n} earned a Master’s ({v}) → salary +{up} (now {s})',
+      lg_taxprepay: '🧾 {n} paid a Tax Prepayment ({v}) → Taxes −{d}/cycle',
+      lg_blActive: '🏦 {n} — Better Loan: −{f} payments on the {a} loan ({r} left)',
+      lg_blFuture: '🏦 {n} — Better Loan: −{f} payments on their next loan',
+      lg_loanTaken: '🏦 {n} took a loan of {a} ({r} payments × {pay})',
+      lg_loanDone: '🏦 {n} fully repaid the {a} loan ✓',
+      lg_repayFull: '🏦 {n} fully repaid the {a} loan (−{v}) ✓',
+      lg_repayPart: '🏦 {n} paid {c} installments (−{v}) · {r} left',
+      lg_bondSold: '🏛️ {n} sold a bond ({t}/10 tokens) → principal returned +{v}',
+      lg_offer: '🤝 {n} offers the Funding “{title}” to {n2} for {v}',
+      lg_wildToBB: '🃏 {n} played a Wild Card: Project → Big Business ({w} left)',
+      lg_wildToP: '🃏 {n} played a Wild Card: Big Business → Project ({w} left)',
+      lg_passDisc: '➡️ {n} passed on “{title}” — {n2} may take it at −10% ({v})',
+      lg_declined: '✋ {n} passed on: “{title}”',
+      lg_forcedSold: '🔻 Forced sale: {n} — “{title}” → +{v}',
+      lg_offerAccepted: '🤝 {n} bought “{title}” from {n2} for {v}',
+      lg_offerDeclined: '✋ {n} declined the Funding offer.',
     },
   };
 
@@ -931,12 +1069,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     state.invSeq = (state.invSeq || 0) + 1;
     p.loans.push({ uid: 'ln' + state.invSeq, amount, payment: amount * 0.1, remaining });
     p.cash += amount;
-    log(state, '🏦 ' + pname(p) + ' πήρε δάνειο ' + fmt(amount) + ' (' + remaining + ' δόσεις × ' + fmt(amount * 0.1) + ')');
+    log(state, 'lg_loanTaken', { n: pname(p), a: fmt(amount), r: remaining, pay: fmt(amount * 0.1) });
   }
   function fmt(n) { return Math.round(n).toLocaleString('el-GR') + '€'; }
 
-  function log(state, msg) {
-    state.log.push(msg);
+  // v1.0: δομημένα log events {k, p} — μεταφράζονται στη γλώσσα ΚΑΘΕ παίκτη στο UI
+  function log(state, k, p) {
+    state.log.push(p ? { k: k, p: p } : { k: k });
     if (state.log.length > 120) state.log.splice(0, state.log.length - 120);
     state.logSeq++;
   }
@@ -987,7 +1126,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const humans = state.players.map((p, i) => (p.isBot ? -1 : i)).filter(i => i >= 0);
     const pool = humans.length ? humans : state.players.map((_, i) => i);
     state.turn = pool[Math.floor(rnd(state) * pool.length)];
-    log(state, '🎲 Το παιχνίδι ξεκίνησε! Η κλήρωση έδειξε: πρώτος παίζει ο ' + pname(state.players[state.turn]) + '.');
+    log(state, 'lg_start', { n: pname(state.players[state.turn]) });
     return state;
   }
 
@@ -1028,7 +1167,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     state.phase = 'ended';
     state.rankings = computeRankings(state);
     const w = state.rankings[0];
-    log(state, '🏁 Τέλος παιχνιδιού! Νικητής: ' + w.name + (w.retiredAge ? ' (παραίτηση στα ' + w.retiredAge + ')' : ''));
+    log(state, w.retiredAge ? 'lg_endRet' : 'lg_endNo', { n: w.name, age: w.retiredAge });
   }
 
   function computeRankings(state) {
@@ -1058,22 +1197,20 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const exp = totalExp(p), pas = passive(p);
     const net = p.salary - exp + pas;
     p.cash += net;
-    let extra = bondInterest > 0 ? ' (+' + fmt(bondInterest) + ' τόκοι ομολόγων)' : '';
     let loanPay = 0;
     p.loans.forEach(l => { loanPay += l.payment; l.remaining--; });
-    if (loanPay > 0) {
-      p.cash -= loanPay;
-      extra += ' (−' + fmt(loanPay) + ' δόσεις δανείων)';
-    }
+    if (loanPay > 0) p.cash -= loanPay;
     const doneLoans = p.loans.filter(l => l.remaining <= 0);
     p.loans = p.loans.filter(l => l.remaining > 0);
-    doneLoans.forEach(l => log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(l.amount) + ' ✓'));
+    doneLoans.forEach(l => log(state, 'lg_loanDone', { n: pname(p), a: fmt(l.amount) }));
     p.age++;
-    log(state, '💰 ' + pname(p) + ': είσπραξη ' + fmt(net) + extra + ' · ηλικία ' + p.age);
+    // 4 παραλλαγές μηνύματος ανάλογα με τόκους ομολόγων/δόσεις (για σωστή μετάφραση)
+    const ck = bondInterest > 0 ? (loanPay > 0 ? 'lg_collectBL' : 'lg_collectB') : (loanPay > 0 ? 'lg_collectL' : 'lg_collect');
+    log(state, ck, { n: pname(p), net: fmt(net), age: p.age, bi: fmt(bondInterest), lp: fmt(loanPay) });
     // Career Bonus (v0.4 — επανήλθε με απόφαση Γιώργου): +500€ μισθός στα 35, 45, 55
     if (p.age === 35 || p.age === 45 || p.age === 55) {
       p.salary += 500;
-      log(state, '🎖️ Career Bonus! Ο ' + pname(p) + ' έκλεισε τα ' + p.age + ' → μισθός +500€ (νέος: ' + fmt(p.salary) + ')');
+      log(state, 'lg_career', { n: pname(p), age: p.age, s: fmt(p.salary) });
     }
     // Υποχρεωτική λήξη ομολόγων στα 10 tokens → επιστροφή κεφαλαίου
     for (let i = p.inv.length - 1; i >= 0; i--) {
@@ -1082,17 +1219,17 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.cash += b.cost;
         p.inv.splice(i, 1);
         discard(state, 'project', b.cardId);
-        log(state, '🏛️ ' + pname(p) + ': λήξη ομολόγου → επιστροφή κεφαλαίου +' + fmt(b.cost));
+        log(state, 'lg_bondMature', { n: pname(p), v: fmt(b.cost) });
       }
     }
     // Έλεγχος παραίτησης (I QUIT) στο σημείο είσπραξης.
     // v0.5: ΑΠΑΙΤΕΙΤΑΙ πλήρης εξόφληση δανείων πριν την παραίτηση!
     if (p.retiredAge === null && pas >= exp) {
       if (p.loans.length > 0) {
-        log(state, '⚠️ ' + pname(p) + ': το παθητικό (' + fmt(pas) + ') καλύπτει τα έξοδα (' + fmt(exp) + '), αλλά για I QUIT πρέπει πρώτα να εξοφλήσει τα δάνειά του (' + fmt(loanOwedNow(p)) + ')!');
+        log(state, 'lg_quitBlocked', { n: pname(p), pas: fmt(pas), exp: fmt(exp), owed: fmt(loanOwedNow(p)) });
       } else {
         p.retiredAge = p.age;
-        log(state, '🎉 I QUIT! Ο ' + pname(p) + ' παραιτήθηκε στα ' + p.age + ' (παθητικό ' + fmt(pas) + ' ≥ έξοδα ' + fmt(exp) + ', χωρίς χρέη)');
+        log(state, 'lg_iquit', { n: pname(p), age: p.age, pas: fmt(pas), exp: fmt(exp) });
         return;
       }
     }
@@ -1103,9 +1240,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       const owed = loanOwedNow(p);
       if (owed > 0) {
         p.cash -= owed; p.loans = [];
-        log(state, '🏦 ' + pname(p) + ': υποχρεωτική εξόφληση δανείων −' + fmt(owed));
+        log(state, 'lg_forcedLoanSettle', { n: pname(p), v: fmt(owed) });
       }
-      log(state, '⏳ Ο ' + pname(p) + ' έφτασε τα 65 χωρίς παραίτηση.');
+      log(state, 'lg_reached65', { n: pname(p) });
     }
   }
 
@@ -1128,7 +1265,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     state.players.forEach(pl => {
       Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * 1.05); });
     });
-    log(state, '📈 Πληθωρισμός 5%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.');
+    log(state, 'lg_inflation');
   }
   // v0.5: οι τιμές των καρτών στις στοίβες ΔΕΝ πληθωρίζονται πια
   function priceOf(state, c) { return c.cost; }
@@ -1142,10 +1279,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function queueForcedSaleIfNeeded(state, p) {
     if (needForcedSale(p)) {
       state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash };
-      log(state, '⚠️ ' + pname(p) + ': δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ') — αναγκαστική πώληση στο 80%.');
+      log(state, 'lg_forcedNeeded', { n: pname(p), v: fmt(p.cash) });
       return true;
     }
-    if (p.cash < 0) log(state, '🔴 ' + pname(p) + ': αρνητικά μετρητά χωρίς περιουσιακά στοιχεία (' + fmt(p.cash) + ').');
+    if (p.cash < 0) log(state, 'lg_negNoAssets', { n: pname(p), v: fmt(p.cash) });
     return false;
   }
 
@@ -1157,24 +1294,24 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         return finishTurn(state); // η είσπραξη έγινε ήδη στο πέρασμα
       case 'project': {
         const cid = draw(state, 'project');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Project είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyProject'); return finishTurn(state); }
         state.pending = { type: 'card', playerId: p.id, deck: 'project', cardId: cid, discount: 0, canWild: p.wilds > 0 && state.decks.bb.length > 0, viaWild: false };
         return;
       }
       case 'bb': {
         const cid = draw(state, 'bb');
-        if (!cid) { log(state, 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyBB'); return finishTurn(state); }
         state.pending = { type: 'card', playerId: p.id, deck: 'bb', cardId: cid, discount: 0, canWild: p.wilds > 0, viaWild: false };
         return;
       }
       case 'lifestyle': {
         const cid = draw(state, 'lifestyle');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Lifestyle είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyLifestyle'); return finishTurn(state); }
         return applyLifestyle(state, p, cid);
       }
       case 'moments': {
         const cid = draw(state, 'moments');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Moments είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyMoments'); return finishTurn(state); }
         return applyMoment(state, p, cid);
       }
       case 'inflation': {
@@ -1187,35 +1324,35 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
           p.cash -= t;
-          log(state, '🧾 Tax: ' + pname(p) + ' πληρώνει 50% του εισοδήματος BB = −' + fmt(t));
+          log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
           if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
         } else {
-          log(state, '🧾 Tax: ο ' + pname(p) + ' δεν έχει εισόδημα από Big Business.');
+          log(state, 'lg_taxNone', { n: pname(p) });
         }
         return finishTurn(state);
       }
       case 'crash': {
         const candidates = p.inv.filter(i => i.kind === 'P' && sq.colors.includes(i.color));
         if (!candidates.length) {
-          log(state, '💥 Crash (' + sq.colors.map(c => COLORNAME[c]).join('/') + '): ο ' + pname(p) + ' δεν έχει Project σε αυτά τα χρώματα — τη γλίτωσε!');
+          log(state, 'lg_crashMiss', { n: pname(p), colors: sq.colors.join(',') });
           return finishTurn(state);
         }
         const victim = pickVictim(candidates);
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
-        log(state, '💥 Crash! Ο ' + pname(p) + ' χάνει: ' + victim.title + ' (' + fmt(victim.cost) + ', −' + fmt(victim.income) + '/κύκλο)');
+        log(state, 'lg_crashHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost), inc: fmt(victim.income) });
         return finishTurn(state);
       }
       case 'fundingfails': {
         const funds = p.inv.filter(i => i.kind === 'funding');
         if (!funds.length) {
-          log(state, '💥 Funding Fails: ο ' + pname(p) + ' δεν έχει Χρηματοδοτήσεις — τη γλίτωσε!');
+          log(state, 'lg_ffMiss', { n: pname(p) });
           return finishTurn(state);
         }
         const victim = pickVictim(funds);
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
-        log(state, '💥 Funding Fails! Ο ' + pname(p) + ' χάνει: ' + victim.title + ' (' + fmt(victim.cost) + ')');
+        log(state, 'lg_ffHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost) });
         return finishTurn(state);
       }
     }
@@ -1228,7 +1365,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       return;
     }
     const applied = applyLifestyleTo(state, p, c);
-    log(state, '🏠 Lifestyle: ' + pname(p) + ' — «' + c.title + '» → ' + c.cat + ' ' + (applied > 0 ? '+' : '') + applied + '€' + (applied !== c.delta ? ' (με πληθωρισμό)' : ''));
+    log(state, applied !== c.delta ? 'lg_lifestyleInfl' : 'lg_lifestyle', { n: pname(p), cid: c.id, catKey: c.cat, d: (applied > 0 ? '+' : '') + applied });
     // v0.2: για ανθρώπους η κάρτα εμφανίζεται σε ΟΛΟΥΣ και κλείνει με κλικ του παίκτη
     if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, cardId: c.id, deck: 'lifestyle' }; return; }
     return finishTurn(state);
@@ -1254,11 +1391,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           undone.push(lc.title);
         }
       });
-      log(state, '🌱 Moment: ' + pname(p) + ' — «' + c.title + '»' + (undone.length ? ' → αναιρέθηκε: ' + undone.join(' & ') : ' (δεν είχε τις αντίστοιχες κάρτες — καμία επίδραση)'));
+      log(state, undone.length ? 'lg_momentCancel' : 'lg_momentCancelNone', { n: pname(p), cid: c.id, cids: undone.join(',') });
     } else {
       const amt = momentAmount(state, c);
       p.cash += amt;
-      log(state, (amt >= 0 ? '🟢' : '🔻') + ' Moment: ' + pname(p) + ' — «' + c.title + '» → ' + (amt > 0 ? '+' : '') + fmt(amt) + (amt !== c.amount ? ' (με πληθωρισμό)' : ''));
+      log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
     }
     discard(state, 'moments', cid);
     // v0.2: reveal για ανθρώπους — το forced sale (αν χρειάζεται) ακολουθεί μετά το κλείσιμο της κάρτας
@@ -1279,11 +1416,15 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const c = card(pend.cardId);
     let price = Math.round(priceOf(state, c) * (1 - (pend.discount || 0)));
     if (withLoan) {
-      const shortfall = price - p.cash;
-      if (shortfall <= 0) return err('Δεν χρειάζεσαι δάνειο για αυτή την αγορά.');
-      const amount = Math.min(Math.ceil(shortfall / 100) * 100, maxLoan(p));
-      if (maxLoan(p) <= 0) return err('Δεν υπάρχει περιθώριο δανείου (αξία επενδύσεων − χρέος).');
-      if (amount < shortfall) return err('Το μέγιστο δάνειο (' + fmt(maxLoan(p)) + ') δεν καλύπτει τη διαφορά.');
+      // v1.0 (#8): ο παίκτης επιλέγει ΠΟΣΟ δάνειο θα πάρει (και μεγαλύτερο από τη διαφορά,
+      // για μαξιλάρι ρευστότητας) — ακόμα κι αν του φτάνουν τα μετρητά. Πάντα εντός ορίου.
+      const shortfall = Math.max(0, price - p.cash);
+      let amount = Math.floor(withLoan.loanAmount || 0);
+      if (!amount) amount = Math.max(100, Math.ceil(shortfall / 100) * 100);
+      if (amount % 100 !== 0) return err('Το δάνειο δίνεται σε πολλαπλάσια του 100€.');
+      if (maxLoan(p) < 100) return err('Δεν υπάρχει περιθώριο δανείου (αξία επενδύσεων − χρέος).');
+      if (amount > maxLoan(p)) return err('Μέγιστο δάνειο: ' + fmt(maxLoan(p)) + '.');
+      if (p.cash + amount < price) return err('Το δάνειο (' + fmt(amount) + ') δεν καλύπτει την αγορά.');
       takeLoanInternalV2(state, p, amount);
     }
     if (p.cash < price) return err('Δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ' / ' + fmt(price) + ').');
@@ -1297,30 +1438,30 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const isBB = c.id.startsWith('BB');
     if (isBB) {
       p.inv.push({ uid: uid(state), cardId: c.id, kind: 'bb', title: c.title, cost: value, income: c.income });
-      log(state, '🏆 ' + pname(p) + ' αγόρασε Big Business: «' + c.title + '» ' + fmt(pricePaid) + (discount ? ' (έκπτωση -10%)' : '') + ' → +' + fmt(c.income) + '/κύκλο');
+      log(state, discount ? 'lg_buyBBDisc' : 'lg_buyBB', { n: pname(p), cid: c.id, v: fmt(pricePaid), inc: fmt(c.income) });
       return;
     }
     switch (c.kind) {
       case 'P':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'P', color: c.color, title: c.title, cost: value, income: c.income });
-        log(state, '📊 ' + pname(p) + ' αγόρασε Project ' + COLORNAME[c.color] + ': «' + c.title + '» ' + fmt(value) + ' → +' + fmt(c.income) + '/κύκλο');
+        log(state, 'lg_buyP', { n: pname(p), colors: c.color, cid: c.id, v: fmt(value), inc: fmt(c.income) });
         break;
       case 'funding':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'funding', title: c.title, cost: value, income: c.income });
-        log(state, '🤝 ' + pname(p) + ' αγόρασε Χρηματοδότηση: «' + c.title + '» ' + fmt(value) + ' → +' + fmt(c.income) + '/κύκλο');
+        log(state, 'lg_buyF', { n: pname(p), cid: c.id, v: fmt(value), inc: fmt(c.income) });
         break;
       case 'bond':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'bond', title: c.title, cost: c.cost, income: 0, tokens: 0 });
-        log(state, '🏛️ ' + pname(p) + ' αγόρασε Κρατικό Ομόλογο ' + fmt(c.cost) + ' (4%/είσπραξη, λήξη στα 10 tokens)');
+        log(state, 'lg_buyBond', { n: pname(p), v: fmt(c.cost) });
         break;
       case 'masters':
         p.salary += c.salaryUp;
-        log(state, '🎓 ' + pname(p) + ' έκανε Μεταπτυχιακό (' + fmt(c.cost) + ') → μισθός +' + fmt(c.salaryUp) + ' (νέος: ' + fmt(p.salary) + ')');
+        log(state, 'lg_masters', { n: pname(p), v: fmt(c.cost), up: fmt(c.salaryUp), s: fmt(p.salary) });
         discard(state, 'project', c.id);
         break;
       case 'taxprepay':
         p.expenses['Φόροι'] = Math.max(0, p.expenses['Φόροι'] - c.taxDown);
-        log(state, '🧾 ' + pname(p) + ' πλήρωσε Προκαταβολή Φόρου (' + fmt(c.cost) + ') → Φόροι −' + fmt(c.taxDown) + '/κύκλο');
+        log(state, 'lg_taxprepay', { n: pname(p), v: fmt(c.cost), d: fmt(c.taxDown) });
         discard(state, 'project', c.id);
         break;
       case 'betterloan': {
@@ -1328,14 +1469,14 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         const active = p.loans.slice().sort((a, b) => b.remaining - a.remaining)[0];
         if (active) {
           active.remaining = Math.max(0, active.remaining - c.fewerPayments);
-          log(state, '🏦 ' + pname(p) + ' — Ευνοϊκότερο Δάνειο: −' + c.fewerPayments + ' δόσεις στο δάνειο των ' + fmt(active.amount) + ' (μένουν ' + active.remaining + ')');
+          log(state, 'lg_blActive', { n: pname(p), f: c.fewerPayments, a: fmt(active.amount), r: active.remaining });
           if (active.remaining <= 0) {
             p.loans = p.loans.filter(x => x.uid !== active.uid);
-            log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(active.amount) + ' ✓');
+            log(state, 'lg_loanDone', { n: pname(p), a: fmt(active.amount) });
           }
         } else {
           p.loanBonusFewer += c.fewerPayments;
-          log(state, '🏦 ' + pname(p) + ' — Ευνοϊκότερο Δάνειο: −' + c.fewerPayments + ' δόσεις στο μελλοντικό δάνειο');
+          log(state, 'lg_blFuture', { n: pname(p), f: c.fewerPayments });
         }
         discard(state, 'project', c.id);
         break;
@@ -1348,9 +1489,30 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
   function err(message) { return { error: message }; }
 
+  // v1.0 (#4β): ΑΜΕΣΟ I QUIT — τη στιγμή που το παθητικό καλύπτει τα έξοδα ΚΑΙ δεν υπάρχουν
+  // χρέη, ο παίκτης παραιτείται αυτόματα, χωρίς να περιμένει το επόμενο πέρασμα από Salary.
+  function sweepInstantQuit(state) {
+    if (state.phase !== 'playing') return;
+    state.players.forEach(p => {
+      if (!isActive(p)) return;
+      if (state.pending && state.pending.playerId === p.id) return; // όχι στη μέση δικής του απόφασης
+      if (p.loans.length === 0 && passive(p) >= totalExp(p)) {
+        p.retiredAge = p.age;
+        log(state, 'lg_iquitInstant', { n: pname(p), age: p.age, pas: fmt(passive(p)), exp: fmt(totalExp(p)) });
+      }
+    });
+    // Αν αυτός που έχει σειρά μόλις παραιτήθηκε (και δεν εκκρεμεί τίποτα), προχώρα τη σειρά
+    if (state.phase === 'playing' && !state.pending && !isActive(currentPlayer(state))) advanceTurn(state);
+  }
+
   // ---------- Actions ----------
   // applyAction(state, playerId, action) → null (ok) ή {error}
   function applyAction(state, playerId, action) {
+    const r = applyActionInner(state, playerId, action);
+    if (!r || !r.error) sweepInstantQuit(state);
+    return r;
+  }
+  function applyActionInner(state, playerId, action) {
     if (state.phase !== 'playing') return err('Το παιχνίδι δεν είναι σε εξέλιξη.');
     const p = state.players.find(x => x.id === playerId);
     if (!p) return err('Άγνωστος παίκτης.');
@@ -1363,7 +1525,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         const d1 = rollDie(state), d2 = rollDie(state);
         const from = p.pos, steps = d1 + d2;
         state.lastRoll = { playerId, d1, d2, from, to: (from + steps) % 28, seq: state.logSeq };
-        log(state, '🎲 ' + pname(p) + ' έριξε ' + d1 + '+' + d2 + ' = ' + steps);
+        log(state, 'lg_roll', { n: pname(p), d1: d1, d2: d2, s: steps });
         for (let s = 1; s <= steps; s++) {
           const pos = (from + s) % 28;
           if (pos === 0 || pos === 14) {
@@ -1408,9 +1570,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         l.remaining -= count;
         if (l.remaining <= 0) {
           p.loans = p.loans.filter(x => x.uid !== l.uid);
-          log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(l.amount) + ' (−' + fmt(pay) + ') ✓');
+          log(state, 'lg_repayFull', { n: pname(p), a: fmt(l.amount), v: fmt(pay) });
         } else {
-          log(state, '🏦 ' + pname(p) + ' πλήρωσε ' + count + ' δόσεις (−' + fmt(pay) + ') · μένουν ' + l.remaining);
+          log(state, 'lg_repayPart', { n: pname(p), c: count, v: fmt(pay), r: l.remaining });
         }
         return null;
       }
@@ -1427,7 +1589,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.cash += b.cost;
         p.inv = p.inv.filter(i => i.uid !== b.uid);
         discard(state, 'project', b.cardId);
-        log(state, '🏛️ ' + pname(p) + ' πούλησε ομόλογο (' + b.tokens + '/10 tokens) → επιστροφή κεφαλαίου +' + fmt(b.cost));
+        log(state, 'lg_bondSold', { n: pname(p), t: b.tokens, v: fmt(b.cost) });
         return null;
       }
 
@@ -1440,7 +1602,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         const price = Math.floor(action.price);
         if (!price || price < inv.cost) return err('Η τιμή πρέπει να είναι ≥ ' + fmt(inv.cost) + '.');
         state.pending = { type: 'funding-offer', playerId: target.id, fromId: p.id, uid: inv.uid, price, title: inv.title, income: inv.income, cost: inv.cost };
-        log(state, '🤝 ' + pname(p) + ' προσφέρει τη Χρηματοδότηση «' + inv.title + '» στον ' + pname(target) + ' για ' + fmt(price));
+        log(state, 'lg_offer', { n: pname(p), cid: inv.cardId, n2: pname(target), v: fmt(price) });
         return null;
       }
 
@@ -1461,12 +1623,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           if (!ncid) return err('Η άλλη στοίβα είναι άδεια.');
           p.wilds--;
           discard(state, pend.deck, pend.cardId); // η αρχική στον πάτο/discard
-          log(state, '🃏 ' + pname(p) + ' έπαιξε Wild Card: ' + (pend.deck === 'project' ? 'Project → Big Business' : 'Big Business → Project') + ' (' + p.wilds + ' απομένουν)');
+          log(state, pend.deck === 'project' ? 'lg_wildToBB' : 'lg_wildToP', { n: pname(p), w: p.wilds });
           state.pending = { type: 'card', playerId: p.id, deck: otherDeck, cardId: ncid, discount: 0, canWild: false, viaWild: true };
           return null;
         }
         if (ch === 'buy' || ch === 'buy-loan') {
-          const e = buyCard(state, p, pend, ch === 'buy-loan');
+          const e = buyCard(state, p, pend, ch === 'buy-loan' ? { loanAmount: action.loanAmount } : null);
           if (e) return e;
           return finishTurn(state), null;
         }
@@ -1477,14 +1639,14 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
             const np = ni >= 0 ? state.players[ni] : null;
             if (np && np.id !== p.id) {
               state.pending = { type: 'card', playerId: np.id, deck: 'bb', cardId: pend.cardId, discount: 0.10, canWild: false, viaWild: false, isDiscountOffer: true, declinedBy: p.id };
-              log(state, '➡️ Ο ' + pname(p) + ' δεν αγόρασε «' + c.title + '» — ο ' + pname(np) + ' μπορεί να την πάρει με -10% (' + fmt(c.cost * 0.9) + ')');
+              log(state, 'lg_passDisc', { n: pname(p), cid: c.id, n2: pname(np), v: fmt(c.cost * 0.9) });
               return null;
             }
             discard(state, 'bb', pend.cardId);
           } else {
             discard(state, pend.deck === 'bb' ? 'bb' : 'project', pend.cardId);
           }
-          log(state, '✋ ' + pname(p) + ' δεν αγόρασε: «' + c.title + '»');
+          log(state, 'lg_declined', { n: pname(p), cid: c.id });
           return finishTurn(state), null;
         }
         return err('Μη έγκυρη επιλογή.');
@@ -1496,7 +1658,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         if (!partner || partner.id === p.id || !isActive(partner)) return err('Διάλεξε έναν άλλον ενεργό παίκτη.');
         const applied = applyLifestyleTo(state, p, c);
         partner.expenses[c.cat] = Math.max(0, (partner.expenses[c.cat] || 0) + applied);
-        log(state, '🏠 Lifestyle (Έκαστος): «' + c.title + '» → ' + pname(p) + ' & ' + pname(partner) + ': ' + c.cat + ' ' + applied + '€ ο καθένας');
+        log(state, 'lg_lifestyleEach', { cid: c.id, n: pname(p), n2: pname(partner), catKey: c.cat, d: applied });
         return finishTurn(state), null;
       }
 
@@ -1508,7 +1670,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.inv = p.inv.filter(i => i.uid !== inv.uid);
         if (inv.kind === 'bb') { /* BB αφαιρούνται οριστικά */ }
         else discard(state, 'project', inv.cardId);
-        log(state, '🔻 Αναγκαστική πώληση: ' + pname(p) + ' — «' + inv.title + '» → +' + fmt(val));
+        log(state, 'lg_forcedSold', { n: pname(p), cid: inv.cardId, v: fmt(val) });
         if (needForcedSale(p)) {
           state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash, then: pend.then };
           return null;
@@ -1534,9 +1696,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           from.cash += pend.price;
           from.inv = from.inv.filter(i => i.uid !== inv.uid);
           p.inv.push(Object.assign({}, inv, { uid: uid(state) }));
-          log(state, '🤝 Ο ' + pname(p) + ' αγόρασε τη «' + inv.title + '» από τον ' + pname(from) + ' για ' + fmt(pend.price));
+          log(state, 'lg_offerAccepted', { n: pname(p), cid: inv.cardId, n2: pname(from), v: fmt(pend.price) });
         } else {
-          log(state, '✋ Ο ' + pname(p) + ' αρνήθηκε την προσφορά Χρηματοδότησης.');
+          log(state, 'lg_offerDeclined', { n: pname(p) });
         }
         state.pending = null;
         return null;
@@ -1553,7 +1715,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE,
-    _internals: { pickVictim, doInflation, collect },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
   };
 });
 
@@ -1669,13 +1831,19 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const prof = profileOf(p);
     const price = Math.round(E.priceOf(state, c) * (1 - (pend.discount || 0)));
     const affordable = p.cash - price >= prof.cushion;
-    const canLoanCover = E.maxLoan(p) >= price - p.cash && price > p.cash;
+    const shortfall = Math.max(0, price - p.cash);
+    const loanAmount = Math.ceil(shortfall / 100) * 100;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0;
     const isBB = pend.deck === 'bb';
+
+    // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι
+    // η εξόφληση των δανείων — καμία νέα αγορά, κανένα νέο δάνειο!
+    if (E.passive(p) >= E.totalExp(p)) return { a: 'resolve', choice: 'decline' };
 
     if (isBB) {
       if (p.age >= prof.bbAge) {
         if (p.cash >= price) return { a: 'resolve', choice: 'buy' };
-        if (canLoanCover && p.cash > 0) return { a: 'resolve', choice: 'buy-loan' };
+        if (canLoanCover && p.cash > 0) return { a: 'resolve', choice: 'buy-loan', loanAmount: loanAmount };
         return { a: 'resolve', choice: 'decline' };
       }
       if (p.cash >= prof.bbEarlyMult * price) return { a: 'resolve', choice: 'buy' };
@@ -1883,6 +2051,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     myPawn: localStorage.getItem('iquit_pawn') || null,
     guestLobby: null, // τελευταίο lobby snapshot (guest)
     anim: null, lastAnimSeq: null,
+    logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
   };
@@ -2045,7 +2214,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (App.anim.remaining <= 0) {
       // v0.7 (#1): το πιόνι ΠΑΤΑΕΙ το κουτάκι και μένει εκεί λίγο —
       // η κάρτα/απόφαση ανοίγει ΜΕΤΑ, όχι ενώ ακόμα προσγειώνεται.
-      setTimeout(() => { App.anim = null; render(); }, 750);
+      setTimeout(() => { App.anim = null; render(); maybeToastNewLog(); }, 750);
       return;
     }
     setTimeout(tickAnim, 340); // v0.5: πιο αργό βήμα για να φαίνεται η διαδρομή
@@ -2379,15 +2548,24 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         }
       });
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
-      fetch('https://formsubmit.co/ajax/' + I.FEEDBACK_EMAIL, {
+      // v1.0 (#1): ελέγχουμε το ΠΕΡΙΕΧΟΜΕΝΟ της απάντησης — το FormSubmit επιστρέφει 200
+      // ακόμα κι όταν απλώς ζητά ενεργοποίηση, οπότε το 200 ΔΕΝ σημαίνει «στάλθηκε email».
+      fetch('https://formsubmit.co/ajax/' + I.FEEDBACK_EMAIL.toLowerCase(), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(data),
-      }).then(r => {
-        closeOverlay(); toast(t('fbThanks')); if (App.game) render();
-      }).catch(() => {
-        $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
-        toast('⚠️ ' + t('fbErr'));
-      });
+      }).then(r => r.json().catch(() => ({})).then(j => ({ httpOk: r.ok, j })))
+        .then(({ httpOk, j }) => {
+          const ok = httpOk && j && (j.success === 'true' || j.success === true);
+          if (ok) { closeOverlay(); toast(t('fbThanks')); if (App.game) render(); }
+          else {
+            $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
+            toast('⚠️ ' + ((j && j.message) ? j.message : t('fbErr')));
+          }
+        })
+        .catch(() => {
+          $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
+          toast('⚠️ ' + t('fbErr'));
+        });
     };
   }
 
@@ -2454,6 +2632,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (!g) return;
     checkAnim(g);
     $('boardbox').classList.toggle('tilt', App.board3d);
+    // v1.0 (#6): όσο το πιόνι περπατάει, ΔΕΝ αποκαλύπτουμε ιστορικό/ταμεία/κάρτες — μόνο ταμπλό & ζάρια
+    if (App.anim && g.phase === 'playing') {
+      renderBoard(g);
+      renderCenter(g, g.pending ? g.pending.playerId : g.players[g.turn].id);
+      return;
+    }
     $('gameCode').textContent = App.lobby ? App.lobby.code : (JSON.parse(localStorage.getItem(GUEST_KEY) || '{}').code || '');
     const cur = g.players[g.turn];
     const actorId = g.pending ? g.pending.playerId : cur.id;
@@ -2483,13 +2667,15 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function renderBoard(g) {
     const b = $('boardOverlay');
     if (!b) return;
+    b.classList.toggle('bigpawns', g.players.length <= 3); // v1.0 (#9)
     const curId = g.phase === 'playing' ? g.players[g.turn].id : null;
     let html = '';
     // Στοίβες καρτών με μετρητή υπολοίπων
+    // v1.0 (#2): οι στοίβες δείχνουν την ΠΡΑΓΜΑΤΙΚΗ πίσω όψη των καρτών (λογότυπο + όνομα)
     STACKS.forEach(s => {
       const cnt = s.deck === 'bb' ? g.decks.bb.length : (g.decks[s.deck].length + g.decks[s.deck + 'Discard'].length);
       html += '<div class="stack st-' + s.deck + '" id="stack-' + s.deck + '" style="left:' + s.x + '%; top:' + s.y + '%; --rot:' + s.rot + 'deg">' +
-        '<div class="cardback">' + STACK_LABEL[s.deck] + '</div><span class="cnt">' + cnt + '</span></div>';
+        '<div class="cardback"><img src="data:image/png;base64,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" alt=""><span>' + STACK_LABEL[s.deck] + '</span></div><span class="cnt">' + cnt + '</span></div>';
     });
     // Highlight στο κουτάκι προορισμού (όταν έχει ολοκληρωθεί η κίνηση)
     if (!App.anim && g.lastRoll && g.phase === 'playing') {
@@ -2537,7 +2723,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const box = $('myDash');
     if (!p) { box.innerHTML = '<div class="muted">' + t('spectating') + '</div>'; return; }
     const exp = E.totalExp(p), pas = E.passive(p), pct = E.quitPct(p);
-    const net = p.salary - exp + pas;
+    // v1.0 (#4α): Καθαρό = Μισθός − Έξοδα + Επενδύσεις (παθητικό + τόκοι ομολόγων) − Δόσεις δανείων
+    const bondInc = p.inv.filter(i => i.kind === 'bond').reduce((s, i) => s + E.bondInterestOf(i), 0);
+    const loanPay = p.loans.reduce((s, l) => s + l.payment, 0);
+    const net = p.salary - exp + pas + bondInc - loanPay;
     const myTurn = g.phase === 'playing' && !g.pending && g.players[g.turn].id === p.id;
 
     let status = '';
@@ -2602,7 +2791,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       '</details>' +
       '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">' + t('portfolio') + '</h3>' +
       inv +
-      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInv') + '</b></span><b style="color:var(--accent)">' + fmt(E.invTotalCost(p)) + '</b></div>' : '') +
+      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInvInc') + '</b></span><b style="color:var(--accent)">+' + fmt(pas + bondInc) + t('perCycle') + ' <span class="muted" style="font-weight:400;">(' + t('valueTag', { v: fmt(E.invTotalCost(p)) }) + ')</span></b></div>' : '') +
       loanHtml;
 
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
@@ -2652,19 +2841,35 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     }).join('');
   }
 
+  // v1.0 (#6): τα log entries είναι δομημένα {k, p} — μεταφράζονται εδώ, στη γλώσσα ΤΟΥ παίκτη
+  function logText(e) {
+    if (typeof e === 'string') return e; // συμβατότητα με παλιές παρτίδες
+    const P = Object.assign({}, e.p);
+    if (P.cid) { const c = E.card(P.cid); P.title = c ? I.cardTitle(c) : ''; }
+    if (P.cids != null) P.list = String(P.cids).split(',').filter(Boolean).map(id => { const c = E.card(id); return c ? I.cardTitle(c) : id; }).join(' & ');
+    if (P.colors) P.colors = String(P.colors).split(',').map(cc => t('color_' + cc)).join('/');
+    if (P.catKey) P.cat = I.expName(P.catKey);
+    return t(e.k, P);
+  }
+
   function renderLog(g) {
     const el = $('log');
-    el.innerHTML = g.log.slice().reverse().map(l => '<div>' + l + '</div>').join('');
+    if (!el) return;
+    el.classList.toggle('hidden', !App.logOpen);
+    const bt = $('btnLogToggle');
+    if (bt) bt.textContent = App.logOpen ? '— ' + t('hideLog') : '+ ' + t('showLog');
+    if (App.logOpen) el.innerHTML = g.log.slice().reverse().map(l => '<div>' + logText(l) + '</div>').join('');
   }
 
   function maybeToastNewLog() {
     const g = App.game;
     if (!g) return;
+    if (App.anim || App.drawAnimBusy) return; // v1.0: κανένα spoiler όσο κινείται το πιόνι/η κάρτα
     if (App.lastToastSeq === 0) { App.lastToastSeq = g.logSeq; return; }
     const fresh = g.logSeq - App.lastToastSeq;
     if (fresh > 0) {
       const important = /^(🎉|💥|📈|🧾|➡️|🤝|⏳|🏁|🔻|🏦)/;
-      g.log.slice(-fresh).forEach(l => { if (important.test(l)) toast(l); });
+      g.log.slice(-fresh).forEach(l => { const s = logText(l); if (important.test(s)) toast(s); });
       App.lastToastSeq = g.logSeq;
     }
   }
@@ -2727,6 +2932,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const stack = document.getElementById('stack-' + deck);
     const fly = document.createElement('div');
     fly.className = 'flycard fly-' + deck;
+    fly.innerHTML = '<img src="data:image/png;base64,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" alt=""><span>' + STACK_LABEL[deck] + '</span>';
     if (stack) {
       const r = stack.getBoundingClientRect();
       fly.style.left = (r.left + r.width / 2) + 'px';
@@ -2814,16 +3020,22 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           html += '<button class="wildbtn" style="border-color:var(--bond); color:#bfe3ef;" data-sellbond="' + b.uid + '">' + t('sellBondModal', { t: b.tokens, v: fmt(b.cost) }) + '</button>';
         });
       }
-      if (canLoan) {
-        const lnAmount = Math.ceil(short / 100) * 100;
+      // v1.0 (#8): επιλέγεις ΠΟΣΟ δάνειο — μεγαλύτερο από τη διαφορά για μαξιλάρι,
+      // ή δάνειο ακόμα κι αν σου φτάνουν τα μετρητά (πάντα εντός ορίου)
+      const maxLn = E.maxLoan(p);
+      if (maxLn >= 100) {
+        const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
-        html += '<button class="wildbtn" data-ch="buy-loan">' + t('buyLoan', { v: fmt(short) }) + '</button>' +
-          '<div class="muted" style="font-size:11px; margin-top:-4px;">' + t('buyLoanInfo', { a: fmt(lnAmount), t: fmt(lnN * lnAmount * 0.1), n: lnN, p: fmt(lnAmount * 0.1) }) + '</div>';
+        html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +
+          '<button class="wildbtn" id="blGo" style="flex:0 0 auto; padding:12px;">' + t('buyLoanBtn') + '</button></div>' +
+          '<div class="muted" style="font-size:11px;">' + t('buyLoanFlex', { max: fmt(maxLn), n: lnN }) + '</div>';
       }
       if (pend.canWild) html += '<button class="wildbtn" data-ch="wild">' + t('wildBtn', { deck: pend.deck === 'project' ? 'Big Business' : 'Project', n: p.wilds }) + '</button>';
       html += '<button class="ghost" data-ch="decline">' + t('decline') + '</button></div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-sellbond]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.sellbond }));
+      const blGo = $('blGo');
+      if (blGo) blGo.onclick = () => { const v = Math.floor(parseFloat($('blAmt').value)); if (v >= 100) act({ a: 'resolve', choice: 'buy-loan', loanAmount: v }); };
     } else if (pend.type === 'lifestyle-partner') {
       const c = E.card(pend.cardId);
       const d = E.lifestyleDelta(g, c);
@@ -2932,6 +3144,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     ['btnRules', 'btnRulesHome', 'btnRulesLobby'].forEach(id => { const b = $(id); if (b) b.onclick = showRules; });
     ['btnLang', 'btnLangHome'].forEach(id => { const b = $(id); if (b) b.onclick = toggleLang; });
     applyStatic();
+
+    // Ιστορικό: απόκρυψη/εμφάνιση (v1.0 #6)
+    const blt = $('btnLogToggle');
+    if (blt) blt.onclick = () => { App.logOpen = !App.logOpen; localStorage.setItem('iquit_log', App.logOpen ? '1' : '0'); if (App.game) renderLog(App.game); };
 
     // Chat
     $('chatSend').onclick = sendChat;
