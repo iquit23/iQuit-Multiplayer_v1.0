@@ -1113,7 +1113,7 @@
     $('btnPremium').onclick = () => {
       App.localModal = true;
       overlay('<div style="text-align:center; padding:6px 4px;">' +
-        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#ffd7ad; margin-bottom:6px;">IQuit Premium</div>' +
+        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#f2d9a0; margin-bottom:6px;">I QUIT! Premium</div>' +
         '<div class="muted" style="font-size:15px; margin-bottom:16px;">Coming Soon</div>' +
         '<button class="primary" id="premOk" style="width:auto; padding:12px 30px;">OK</button></div>');
       $('premOk').onclick = closeOverlay;
