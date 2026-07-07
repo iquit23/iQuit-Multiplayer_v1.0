@@ -24,6 +24,15 @@ h1,h2,h3{margin:0;}
 .primary:active{transform:translateY(1px);}
 .ghost{background:var(--card2); border:1px solid var(--line); padding:12px 14px;}
 .danger{border:1px solid #5a2a28; color:#e8847f; background:var(--card2);}
+/* Premium (placeholder) — διακριτικό, δευτερεύον ως προς το «Δημιουργία δωματίου».
+   Outline με κόκκινες αποχρώσεις & warm text, χωρίς γεμάτο έντονο fill ώστε να ΜΗΝ
+   επισκιάζει το κύριο primary κουμπί. */
+.premium{width:100%; margin-top:8px; padding:12px 18px; font-weight:700; letter-spacing:.4px;
+  color:#ffd7ad; background:linear-gradient(90deg,#2a1417,#37191d);
+  border:1px solid var(--red);
+  box-shadow:0 0 0 1px rgba(226,91,84,.12), 0 6px 16px -9px rgba(226,91,84,.55);}
+.premium:hover{background:linear-gradient(90deg,#341a1e,#432026); color:#ffe3c4;}
+.premium:active{transform:translateY(1px);}
 .row{display:flex; gap:8px; align-items:center;}
 .spacer{flex:1;}
 
@@ -92,11 +101,15 @@ h1,h2,h3{margin:0;}
   justify-content:center; pointer-events:none; z-index:4;}
 /* Στοίβες καρτών στα 4 διαγώνια κουτιά του ταμπλό */
 .stack{position:absolute; transform:translate(-50%,-50%) rotate(var(--rot)); z-index:2; pointer-events:none;}
-.stack .cardback{width:9.5vmin; max-width:74px; min-width:46px; aspect-ratio:0.68; border-radius:8px;
-  border:2px solid rgba(255,255,255,.75); display:flex; align-items:center; justify-content:center;
-  font-size:8px; font-weight:900; letter-spacing:.5px; color:#fff; text-align:center; padding:3px;
-  text-shadow:0 1px 3px rgba(0,0,0,.8);
-  box-shadow:2px 2px 0 rgba(0,0,0,.25), 4px 4px 0 rgba(0,0,0,.18), 6px 6px 14px rgba(0,0,0,.5);}
+/* v1.0 (#2): οι πλάτες είναι η ΠΡΑΓΜΑΤΙΚΗ πίσω όψη — μαύρη κάρτα, λογότυπο I QUIT!, όνομα στοίβας */
+.stack .cardback{width:13vmin; max-width:104px; min-width:64px; aspect-ratio:1.55; border-radius:8px;
+  background:#0a0a0d; border:2px solid rgba(255,255,255,.7);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px;
+  box-shadow:2px 2px 0 rgba(0,0,0,.3), 4px 4px 0 rgba(0,0,0,.2), 6px 6px 14px rgba(0,0,0,.55);}
+.stack .cardback img{width:74%; display:block;}
+.stack .cardback span{font-size:8px; font-weight:900; letter-spacing:1px; color:#fff; text-shadow:0 1px 3px #000;}
+.st-lifestyle .cardback span{color:#ff8f88;} .st-moments .cardback span{color:#7fe09a;}
+.st-project .cardback span{color:#8fb8ff;} .st-bb .cardback span{color:#ffb377;}
 .stack .cnt{position:absolute; right:-9px; top:-9px; background:#0a1320; color:#fff; border:1px solid rgba(255,255,255,.5);
   font-size:10px; font-weight:800; min-width:20px; height:20px; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:0 4px;
   transform:rotate(calc(-1 * var(--rot)));}
@@ -105,16 +118,18 @@ h1,h2,h3{margin:0;}
 .st-project .cardback{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
 .st-bb .cardback{background:linear-gradient(160deg,#c46f2c,#7a4218);}
 /* Κάρτα που "τραβιέται" από τη στοίβα */
-.flycard{position:fixed; width:74px; aspect-ratio:0.68; border-radius:8px; z-index:300;
-  border:2px solid rgba(255,255,255,.8); box-shadow:0 18px 44px rgba(0,0,0,.7);
+.flycard{position:fixed; width:104px; aspect-ratio:1.55; border-radius:8px; z-index:300;
+  background:#0a0a0d; border:2px solid rgba(255,255,255,.8); box-shadow:0 18px 44px rgba(0,0,0,.7);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
   transform:translate(-50%,-50%) rotate(var(--rot,45deg)) scale(.7);
   transition:left .55s cubic-bezier(.3,.7,.3,1), top .55s cubic-bezier(.3,.7,.3,1), transform .55s cubic-bezier(.3,.7,.3,1);
   pointer-events:none;}
-.flycard.go{left:50vw !important; top:44vh !important; transform:translate(-50%,-50%) rotate(0deg) scale(1.9);}
-.fly-lifestyle{background:linear-gradient(160deg,#a63a34,#6e2420);}
-.fly-moments{background:linear-gradient(160deg,#2e7a44,#1b4a2a);}
-.fly-project{background:linear-gradient(160deg,#2c4f8c,#1a3157);}
-.fly-bb{background:linear-gradient(160deg,#c46f2c,#7a4218);}
+.flycard img{width:74%; display:block;}
+.flycard span{font-size:9px; font-weight:900; letter-spacing:1px; color:#fff;}
+.flycard.go{left:34vw !important; top:44vh !important; transform:translate(-50%,-50%) rotate(0deg) scale(1.9);}
+@media(max-width:899px){ .flycard.go{left:50vw !important;} }
+.fly-lifestyle span{color:#ff8f88;} .fly-moments span{color:#7fe09a;}
+.fly-project span{color:#8fb8ff;} .fly-bb span{color:#ffb377;}
 .board{display:grid; width:100%; height:100%;
   grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); gap:3px;}
 .sq{position:relative; border-radius:7px; background:var(--card2); border:1px solid var(--line);
@@ -148,6 +163,13 @@ h1,h2,h3{margin:0;}
 }
 .pawn.emo{font-size:11px; background-clip:padding-box;}
 @media(min-width:520px){ .pawn{width:27px; height:27px; font-size:13px; margin:0 -6px;} .pawn.emo{font-size:17px;} }
+/* v1.0 (#9): με έως 3 παίκτες, ΜΕΓΑΛΑ πιόνια — να φαίνονται με την πρώτη ματιά */
+.boardOverlay.bigpawns .pawn{width:24px; height:24px; font-size:13px;}
+.boardOverlay.bigpawns .pawn.emo{font-size:16px;}
+@media(min-width:520px){
+  .boardOverlay.bigpawns .pawn{width:36px; height:36px; font-size:17px; margin:0 -8px; border-width:2.5px;}
+  .boardOverlay.bigpawns .pawn.emo{font-size:23px;}
+}
 
 /* ---------- 3D ΟΨΗ ΤΑΜΠΛΟ (v0.7: πάνω στο board art) ---------- */
 .boardbox.tilt{perspective:1600px;}
@@ -216,6 +238,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 /* ---------- MODAL ---------- */
 #overlay{position:fixed; inset:0; background:rgba(4,9,18,.72); display:flex; align-items:center;
   justify-content:center; padding:16px; z-index:100;}
+/* v1.0 (#7): σε laptop η κάρτα ανοίγει ΑΡΙΣΤΕΡΑ, πάνω από το ταμπλό —
+   ώστε να βλέπεις δεξιά τα δικά σου στοιχεία (χαρτοφυλάκιο, δάνεια) όσο αποφασίζεις */
+@media(min-width:900px){
+  #overlay{justify-content:flex-start;}
+  #overlay .modal{margin-left:6vw;}
+  #overlay .modal.wide{margin-left:auto; margin-right:auto;} /* κανόνες/ερωτηματολόγιο: κεντραρισμένα */
+}
 #overlay.hidden{display:none;}
 .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
   max-width:400px; width:100%; max-height:88vh; overflow:auto;}

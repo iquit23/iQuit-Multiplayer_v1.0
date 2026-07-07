@@ -1109,6 +1109,15 @@
       $('btnCreate').disabled = true; $('btnCreate').textContent = t('creating');
       hostCreate(false);
     };
+    // Premium (placeholder): μόνο ένα «Coming Soon» modal — καμία λογική/premium mode.
+    $('btnPremium').onclick = () => {
+      App.localModal = true;
+      overlay('<div style="text-align:center; padding:6px 4px;">' +
+        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#ffd7ad; margin-bottom:6px;">IQuit Premium</div>' +
+        '<div class="muted" style="font-size:15px; margin-bottom:16px;">Coming Soon</div>' +
+        '<button class="primary" id="premOk" style="width:auto; padding:12px 30px;">OK</button></div>');
+      $('premOk').onclick = closeOverlay;
+    };
     $('btnJoin').onclick = () => {
       const code = $('joinCode').value.trim();
       if (code.length !== 4) { homeErr(t('codeLen')); return; }

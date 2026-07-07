@@ -33,6 +33,15 @@ h1,h2,h3{margin:0;}
 .primary:active{transform:translateY(1px);}
 .ghost{background:var(--card2); border:1px solid var(--line); padding:12px 14px;}
 .danger{border:1px solid #5a2a28; color:#e8847f; background:var(--card2);}
+/* Premium (placeholder) — διακριτικό, δευτερεύον ως προς το «Δημιουργία δωματίου».
+   Outline με κόκκινες αποχρώσεις & warm text, χωρίς γεμάτο έντονο fill ώστε να ΜΗΝ
+   επισκιάζει το κύριο primary κουμπί. */
+.premium{width:100%; margin-top:8px; padding:12px 18px; font-weight:700; letter-spacing:.4px;
+  color:#ffd7ad; background:linear-gradient(90deg,#2a1417,#37191d);
+  border:1px solid var(--red);
+  box-shadow:0 0 0 1px rgba(226,91,84,.12), 0 6px 16px -9px rgba(226,91,84,.55);}
+.premium:hover{background:linear-gradient(90deg,#341a1e,#432026); color:#ffe3c4;}
+.premium:active{transform:translateY(1px);}
 .row{display:flex; gap:8px; align-items:center;}
 .spacer{flex:1;}
 
@@ -324,6 +333,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
+  <button class="premium" id="btnPremium">IQuit Premium</button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
   <div class="row">
@@ -3125,6 +3135,15 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       localStorage.removeItem(HOST_KEY);
       $('btnCreate').disabled = true; $('btnCreate').textContent = t('creating');
       hostCreate(false);
+    };
+    // Premium (placeholder): μόνο ένα «Coming Soon» modal — καμία λογική/premium mode.
+    $('btnPremium').onclick = () => {
+      App.localModal = true;
+      overlay('<div style="text-align:center; padding:6px 4px;">' +
+        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#ffd7ad; margin-bottom:6px;">IQuit Premium</div>' +
+        '<div class="muted" style="font-size:15px; margin-bottom:16px;">Coming Soon</div>' +
+        '<button class="primary" id="premOk" style="width:auto; padding:12px 30px;">OK</button></div>');
+      $('premOk').onclick = closeOverlay;
     };
     $('btnJoin').onclick = () => {
       const code = $('joinCode').value.trim();
