@@ -33,15 +33,21 @@ h1,h2,h3{margin:0;}
 .primary:active{transform:translateY(1px);}
 .ghost{background:var(--card2); border:1px solid var(--line); padding:12px 14px;}
 .danger{border:1px solid #5a2a28; color:#e8847f; background:var(--card2);}
-/* Premium (placeholder) — αίσθηση exclusive/gold edition, ΟΧΙ warning.
-   Βαθύ μπορντό με διακριτικό χρυσό περίγραμμα, χρυσό κείμενο & πολύ ελαφρύ glow.
-   Ίδια θέση/μέγεθος με πριν· δευτερεύον ως προς το primary κουμπί. */
-.premium{width:100%; margin-top:8px; padding:12px 18px; font-weight:700; letter-spacing:.6px;
-  color:#f2d9a0; background:linear-gradient(145deg,#4a1626,#2b0e17);
-  border:1px solid #b8912f;
-  box-shadow:0 4px 16px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(240,209,120,.15);}
-.premium:hover{background:linear-gradient(145deg,#57192d,#34111c); border-color:#d4af37; color:#ffe6b0;}
+/* Advanced Mode (placeholder) — αίσθηση στρατηγικής/πρόκλησης & υψηλότερης
+   δυσκολίας, ΟΧΙ «κουμπί αγοράς». Σκούρο μωβ gradient με διακριτικό neon purple
+   glow. Ίδια θέση/πλάτος με πριν, δευτερεύον ως προς το primary κουμπί. */
+.premium{width:100%; margin-top:8px; padding:11px 18px;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  background:linear-gradient(150deg,#2a1640,#180d24);
+  border:1px solid rgba(157,78,221,.5);
+  box-shadow:0 0 0 1px rgba(157,78,221,.08), 0 8px 22px -12px rgba(157,78,221,.55);}
+.premium:hover{border-color:rgba(157,78,221,.9);
+  box-shadow:0 0 0 1px rgba(157,78,221,.16), 0 10px 26px -10px rgba(157,78,221,.8);}
 .premium:active{transform:translateY(1px);}
+.premium .pm-ico{font-size:22px; line-height:1; filter:drop-shadow(0 0 6px rgba(157,78,221,.5));}
+.premium .pm-txt{display:flex; flex-direction:column; align-items:center; line-height:1.18;}
+.premium .pm-main{font-weight:800; font-size:16px; letter-spacing:1.6px; color:#ece0ff;}
+.premium .pm-sub{font-weight:600; font-size:11px; letter-spacing:.6px; color:#b688f0;}
 .row{display:flex; gap:8px; align-items:center;}
 .spacer{flex:1;}
 
@@ -333,7 +339,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
-  <button class="premium" id="btnPremium">I QUIT! Premium</button>
+  <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
   <div class="row">
@@ -3140,7 +3146,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     $('btnPremium').onclick = () => {
       App.localModal = true;
       overlay('<div style="text-align:center; padding:6px 4px;">' +
-        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#f2d9a0; margin-bottom:6px;">I QUIT! Premium</div>' +
+        '<div style="font-size:22px; font-weight:900; letter-spacing:1px; color:#ece0ff; margin-bottom:6px;">🧠 ADVANCED MODE</div>' +
         '<div class="muted" style="font-size:15px; margin-bottom:16px;">Coming Soon</div>' +
         '<button class="primary" id="premOk" style="width:auto; padding:12px 30px;">OK</button></div>');
       $('premOk').onclick = closeOverlay;
