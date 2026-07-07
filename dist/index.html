@@ -2656,11 +2656,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   // v0.7: το ταμπλό είναι πλέον το πραγματικό board art — τα πάντα τοποθετούνται σε % πάνω του
   function posPct(i) { const [r, c] = cellOf(i); return [(c - 0.5) * 12.5, (r - 0.5) * 12.5]; } // [x%, y%]
   // Οι 4 στοίβες καρτών στα διαγώνια κουτιά του ταμπλό (θέσεις πάνω στο artwork)
+  // Κάθε στοίβα στραμμένη προς τη ΔΙΚΗ ΤΗΣ γωνία (η κορυφή της κάρτας δείχνει προς
+  // τη γωνία όπου κάθεται), ώστε να "κάθεται" σωστά μέσα στον ρόμβο του ταμπλό.
   const STACKS = [
-    { deck: 'lifestyle', x: 27.2, y: 27.2, rot: 45 },
-    { deck: 'moments', x: 72.8, y: 27.2, rot: -45 },
-    { deck: 'project', x: 27.2, y: 72.8, rot: -45 },
-    { deck: 'bb', x: 72.8, y: 72.8, rot: 45 },
+    { deck: 'lifestyle', x: 27.2, y: 27.2, rot: -45 },  // πάνω-αριστερά
+    { deck: 'moments', x: 72.8, y: 27.2, rot: 45 },     // πάνω-δεξιά
+    { deck: 'project', x: 27.2, y: 72.8, rot: -135 },   // κάτω-αριστερά
+    { deck: 'bb', x: 72.8, y: 72.8, rot: 135 },         // κάτω-δεξιά
   ];
   const STACK_LABEL = { lifestyle: 'LIFESTYLE', moments: 'MOMENTS', project: 'PROJECT', bb: 'BIG BUSINESS' };
 

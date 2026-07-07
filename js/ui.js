@@ -34,6 +34,7 @@
     myPawn: localStorage.getItem('iquit_pawn') || null,
     guestLobby: null, // τελευταίο lobby snapshot (guest)
     anim: null, lastAnimSeq: null,
+    logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
   };
@@ -196,7 +197,7 @@
     if (App.anim.remaining <= 0) {
       // v0.7 (#1): το πιόνι ΠΑΤΑΕΙ το κουτάκι και μένει εκεί λίγο —
       // η κάρτα/απόφαση ανοίγει ΜΕΤΑ, όχι ενώ ακόμα προσγειώνεται.
-      setTimeout(() => { App.anim = null; render(); }, 750);
+      setTimeout(() => { App.anim = null; render(); maybeToastNewLog(); }, 750);
       return;
     }
     setTimeout(tickAnim, 340); // v0.5: πιο αργό βήμα για να φαίνεται η διαδρομή
@@ -530,15 +531,24 @@
         }
       });
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
-      fetch('https://formsubmit.co/ajax/' + I.FEEDBACK_EMAIL, {
+      // v1.0 (#1): ελέγχουμε το ΠΕΡΙΕΧΟΜΕΝΟ της απάντησης — το FormSubmit επιστρέφει 200
+      // ακόμα κι όταν απλώς ζητά ενεργοποίηση, οπότε το 200 ΔΕΝ σημαίνει «στάλθηκε email».
+      fetch('https://formsubmit.co/ajax/' + I.FEEDBACK_EMAIL.toLowerCase(), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(data),
-      }).then(r => {
-        closeOverlay(); toast(t('fbThanks')); if (App.game) render();
-      }).catch(() => {
-        $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
-        toast('⚠️ ' + t('fbErr'));
-      });
+      }).then(r => r.json().catch(() => ({})).then(j => ({ httpOk: r.ok, j })))
+        .then(({ httpOk, j }) => {
+          const ok = httpOk && j && (j.success === 'true' || j.success === true);
+          if (ok) { closeOverlay(); toast(t('fbThanks')); if (App.game) render(); }
+          else {
+            $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
+            toast('⚠️ ' + ((j && j.message) ? j.message : t('fbErr')));
+          }
+        })
+        .catch(() => {
+          $('fbSend').disabled = false; $('fbSend').textContent = t('fbSubmit');
+          toast('⚠️ ' + t('fbErr'));
+        });
     };
   }
 
@@ -605,6 +615,12 @@
     if (!g) return;
     checkAnim(g);
     $('boardbox').classList.toggle('tilt', App.board3d);
+    // v1.0 (#6): όσο το πιόνι περπατάει, ΔΕΝ αποκαλύπτουμε ιστορικό/ταμεία/κάρτες — μόνο ταμπλό & ζάρια
+    if (App.anim && g.phase === 'playing') {
+      renderBoard(g);
+      renderCenter(g, g.pending ? g.pending.playerId : g.players[g.turn].id);
+      return;
+    }
     $('gameCode').textContent = App.lobby ? App.lobby.code : (JSON.parse(localStorage.getItem(GUEST_KEY) || '{}').code || '');
     const cur = g.players[g.turn];
     const actorId = g.pending ? g.pending.playerId : cur.id;
@@ -623,24 +639,28 @@
   // v0.7: το ταμπλό είναι πλέον το πραγματικό board art — τα πάντα τοποθετούνται σε % πάνω του
   function posPct(i) { const [r, c] = cellOf(i); return [(c - 0.5) * 12.5, (r - 0.5) * 12.5]; } // [x%, y%]
   // Οι 4 στοίβες καρτών στα διαγώνια κουτιά του ταμπλό (θέσεις πάνω στο artwork)
+  // Κάθε στοίβα στραμμένη προς τη ΔΙΚΗ ΤΗΣ γωνία (η κορυφή της κάρτας δείχνει προς
+  // τη γωνία όπου κάθεται), ώστε να "κάθεται" σωστά μέσα στον ρόμβο του ταμπλό.
   const STACKS = [
-    { deck: 'lifestyle', x: 27.2, y: 27.2, rot: 45 },
-    { deck: 'moments', x: 72.8, y: 27.2, rot: -45 },
-    { deck: 'project', x: 27.2, y: 72.8, rot: -45 },
-    { deck: 'bb', x: 72.8, y: 72.8, rot: 45 },
+    { deck: 'lifestyle', x: 27.2, y: 27.2, rot: -45 },  // πάνω-αριστερά
+    { deck: 'moments', x: 72.8, y: 27.2, rot: 45 },     // πάνω-δεξιά
+    { deck: 'project', x: 27.2, y: 72.8, rot: -135 },   // κάτω-αριστερά
+    { deck: 'bb', x: 72.8, y: 72.8, rot: 135 },         // κάτω-δεξιά
   ];
   const STACK_LABEL = { lifestyle: 'LIFESTYLE', moments: 'MOMENTS', project: 'PROJECT', bb: 'BIG BUSINESS' };
 
   function renderBoard(g) {
     const b = $('boardOverlay');
     if (!b) return;
+    b.classList.toggle('bigpawns', g.players.length <= 3); // v1.0 (#9)
     const curId = g.phase === 'playing' ? g.players[g.turn].id : null;
     let html = '';
     // Στοίβες καρτών με μετρητή υπολοίπων
+    // v1.0 (#2): οι στοίβες δείχνουν την ΠΡΑΓΜΑΤΙΚΗ πίσω όψη των καρτών (λογότυπο + όνομα)
     STACKS.forEach(s => {
       const cnt = s.deck === 'bb' ? g.decks.bb.length : (g.decks[s.deck].length + g.decks[s.deck + 'Discard'].length);
       html += '<div class="stack st-' + s.deck + '" id="stack-' + s.deck + '" style="left:' + s.x + '%; top:' + s.y + '%; --rot:' + s.rot + 'deg">' +
-        '<div class="cardback">' + STACK_LABEL[s.deck] + '</div><span class="cnt">' + cnt + '</span></div>';
+        '<div class="cardback"><img src="cardback.png" alt=""><span>' + STACK_LABEL[s.deck] + '</span></div><span class="cnt">' + cnt + '</span></div>';
     });
     // Highlight στο κουτάκι προορισμού (όταν έχει ολοκληρωθεί η κίνηση)
     if (!App.anim && g.lastRoll && g.phase === 'playing') {
@@ -688,7 +708,10 @@
     const box = $('myDash');
     if (!p) { box.innerHTML = '<div class="muted">' + t('spectating') + '</div>'; return; }
     const exp = E.totalExp(p), pas = E.passive(p), pct = E.quitPct(p);
-    const net = p.salary - exp + pas;
+    // v1.0 (#4α): Καθαρό = Μισθός − Έξοδα + Επενδύσεις (παθητικό + τόκοι ομολόγων) − Δόσεις δανείων
+    const bondInc = p.inv.filter(i => i.kind === 'bond').reduce((s, i) => s + E.bondInterestOf(i), 0);
+    const loanPay = p.loans.reduce((s, l) => s + l.payment, 0);
+    const net = p.salary - exp + pas + bondInc - loanPay;
     const myTurn = g.phase === 'playing' && !g.pending && g.players[g.turn].id === p.id;
 
     let status = '';
@@ -753,7 +776,7 @@
       '</details>' +
       '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">' + t('portfolio') + '</h3>' +
       inv +
-      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInv') + '</b></span><b style="color:var(--accent)">' + fmt(E.invTotalCost(p)) + '</b></div>' : '') +
+      (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInvInc') + '</b></span><b style="color:var(--accent)">+' + fmt(pas + bondInc) + t('perCycle') + ' <span class="muted" style="font-weight:400;">(' + t('valueTag', { v: fmt(E.invTotalCost(p)) }) + ')</span></b></div>' : '') +
       loanHtml;
 
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
@@ -803,19 +826,35 @@
     }).join('');
   }
 
+  // v1.0 (#6): τα log entries είναι δομημένα {k, p} — μεταφράζονται εδώ, στη γλώσσα ΤΟΥ παίκτη
+  function logText(e) {
+    if (typeof e === 'string') return e; // συμβατότητα με παλιές παρτίδες
+    const P = Object.assign({}, e.p);
+    if (P.cid) { const c = E.card(P.cid); P.title = c ? I.cardTitle(c) : ''; }
+    if (P.cids != null) P.list = String(P.cids).split(',').filter(Boolean).map(id => { const c = E.card(id); return c ? I.cardTitle(c) : id; }).join(' & ');
+    if (P.colors) P.colors = String(P.colors).split(',').map(cc => t('color_' + cc)).join('/');
+    if (P.catKey) P.cat = I.expName(P.catKey);
+    return t(e.k, P);
+  }
+
   function renderLog(g) {
     const el = $('log');
-    el.innerHTML = g.log.slice().reverse().map(l => '<div>' + l + '</div>').join('');
+    if (!el) return;
+    el.classList.toggle('hidden', !App.logOpen);
+    const bt = $('btnLogToggle');
+    if (bt) bt.textContent = App.logOpen ? '— ' + t('hideLog') : '+ ' + t('showLog');
+    if (App.logOpen) el.innerHTML = g.log.slice().reverse().map(l => '<div>' + logText(l) + '</div>').join('');
   }
 
   function maybeToastNewLog() {
     const g = App.game;
     if (!g) return;
+    if (App.anim || App.drawAnimBusy) return; // v1.0: κανένα spoiler όσο κινείται το πιόνι/η κάρτα
     if (App.lastToastSeq === 0) { App.lastToastSeq = g.logSeq; return; }
     const fresh = g.logSeq - App.lastToastSeq;
     if (fresh > 0) {
       const important = /^(🎉|💥|📈|🧾|➡️|🤝|⏳|🏁|🔻|🏦)/;
-      g.log.slice(-fresh).forEach(l => { if (important.test(l)) toast(l); });
+      g.log.slice(-fresh).forEach(l => { const s = logText(l); if (important.test(s)) toast(s); });
       App.lastToastSeq = g.logSeq;
     }
   }
@@ -878,6 +917,7 @@
     const stack = document.getElementById('stack-' + deck);
     const fly = document.createElement('div');
     fly.className = 'flycard fly-' + deck;
+    fly.innerHTML = '<img src="cardback.png" alt=""><span>' + STACK_LABEL[deck] + '</span>';
     if (stack) {
       const r = stack.getBoundingClientRect();
       fly.style.left = (r.left + r.width / 2) + 'px';
@@ -965,16 +1005,22 @@
           html += '<button class="wildbtn" style="border-color:var(--bond); color:#bfe3ef;" data-sellbond="' + b.uid + '">' + t('sellBondModal', { t: b.tokens, v: fmt(b.cost) }) + '</button>';
         });
       }
-      if (canLoan) {
-        const lnAmount = Math.ceil(short / 100) * 100;
+      // v1.0 (#8): επιλέγεις ΠΟΣΟ δάνειο — μεγαλύτερο από τη διαφορά για μαξιλάρι,
+      // ή δάνειο ακόμα κι αν σου φτάνουν τα μετρητά (πάντα εντός ορίου)
+      const maxLn = E.maxLoan(p);
+      if (maxLn >= 100) {
+        const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
-        html += '<button class="wildbtn" data-ch="buy-loan">' + t('buyLoan', { v: fmt(short) }) + '</button>' +
-          '<div class="muted" style="font-size:11px; margin-top:-4px;">' + t('buyLoanInfo', { a: fmt(lnAmount), t: fmt(lnN * lnAmount * 0.1), n: lnN, p: fmt(lnAmount * 0.1) }) + '</div>';
+        html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +
+          '<button class="wildbtn" id="blGo" style="flex:0 0 auto; padding:12px;">' + t('buyLoanBtn') + '</button></div>' +
+          '<div class="muted" style="font-size:11px;">' + t('buyLoanFlex', { max: fmt(maxLn), n: lnN }) + '</div>';
       }
       if (pend.canWild) html += '<button class="wildbtn" data-ch="wild">' + t('wildBtn', { deck: pend.deck === 'project' ? 'Big Business' : 'Project', n: p.wilds }) + '</button>';
       html += '<button class="ghost" data-ch="decline">' + t('decline') + '</button></div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-sellbond]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.sellbond }));
+      const blGo = $('blGo');
+      if (blGo) blGo.onclick = () => { const v = Math.floor(parseFloat($('blAmt').value)); if (v >= 100) act({ a: 'resolve', choice: 'buy-loan', loanAmount: v }); };
     } else if (pend.type === 'lifestyle-partner') {
       const c = E.card(pend.cardId);
       const d = E.lifestyleDelta(g, c);
@@ -1083,6 +1129,10 @@
     ['btnRules', 'btnRulesHome', 'btnRulesLobby'].forEach(id => { const b = $(id); if (b) b.onclick = showRules; });
     ['btnLang', 'btnLangHome'].forEach(id => { const b = $(id); if (b) b.onclick = toggleLang; });
     applyStatic();
+
+    // Ιστορικό: απόκρυψη/εμφάνιση (v1.0 #6)
+    const blt = $('btnLogToggle');
+    if (blt) blt.onclick = () => { App.logOpen = !App.logOpen; localStorage.setItem('iquit_log', App.logOpen ? '1' : '0'); if (App.game) renderLog(App.game); };
 
     // Chat
     $('chatSend').onclick = sendChat;
