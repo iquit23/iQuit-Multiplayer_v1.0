@@ -644,8 +644,8 @@
   const STACKS = [
     { deck: 'lifestyle', x: 27.2, y: 27.2, rot: -45 },  // πάνω-αριστερά
     { deck: 'moments', x: 72.8, y: 27.2, rot: 45 },     // πάνω-δεξιά
-    { deck: 'project', x: 27.2, y: 72.8, rot: -135 },   // κάτω-αριστερά
-    { deck: 'bb', x: 72.8, y: 72.8, rot: 135 },         // κάτω-δεξιά
+    { deck: 'project', x: 27.2, y: 72.8, rot: 45 },     // κάτω-αριστερά — ίδια διαγώνιος, όρθιο κείμενο
+    { deck: 'bb', x: 72.8, y: 72.8, rot: -45 },         // κάτω-δεξιά — ίδια διαγώνιος, όρθιο κείμενο
   ];
   const STACK_LABEL = { lifestyle: 'LIFESTYLE', moments: 'MOMENTS', project: 'PROJECT', bb: 'BIG BUSINESS' };
 
@@ -1007,8 +1007,10 @@
       }
       // v1.0 (#8): επιλέγεις ΠΟΣΟ δάνειο — μεγαλύτερο από τη διαφορά για μαξιλάρι,
       // ή δάνειο ακόμα κι αν σου φτάνουν τα μετρητά (πάντα εντός ορίου)
+      // v1.0.1 (#3): η επιλογή δανείου εμφανίζεται ΜΟΝΟ αν το μέγιστο δάνειο
+      // πράγματι αρκεί για να ολοκληρωθεί η αγορά (μετρητά + δάνειο ≥ τιμή)
       const maxLn = E.maxLoan(p);
-      if (maxLn >= 100) {
+      if (maxLn >= 100 && p.cash + maxLn >= price) {
         const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
         html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +

@@ -19,6 +19,10 @@ for (const f of ['cards.js', 'i18n.js', 'engine.js', 'bots.js', 'net.js', 'ui.js
 // v0.7: το board art γίνεται inline data-URI ώστε το dist να παραμένει ΕΝΑ αρχείο
 const img = fs.readFileSync(path.join(root, 'board-web.jpg'));
 html = html.replace('src="board-web.jpg"', () => 'src="data:image/jpeg;base64,' + img.toString('base64') + '"');
+// v1.0: και η πίσω όψη των καρτών (εμφανίζεται σε στοίβες & τράβηγμα — παράγεται από JS)
+const back = fs.readFileSync(path.join(root, 'cardback.png'));
+const backUri = 'data:image/png;base64,' + back.toString('base64');
+html = html.split('src="cardback.png"').join('src="' + backUri + '"');
 
 // Sanity checks: όλα τα scripts μπήκαν και είναι συντακτικά έγκυρα
 if (/src="js\//.test(html)) { console.error('❌ Έμεινε εξωτερικό js reference!'); process.exit(1); }

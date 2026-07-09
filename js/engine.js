@@ -63,12 +63,13 @@
     state.invSeq = (state.invSeq || 0) + 1;
     p.loans.push({ uid: 'ln' + state.invSeq, amount, payment: amount * 0.1, remaining });
     p.cash += amount;
-    log(state, '🏦 ' + pname(p) + ' πήρε δάνειο ' + fmt(amount) + ' (' + remaining + ' δόσεις × ' + fmt(amount * 0.1) + ')');
+    log(state, 'lg_loanTaken', { n: pname(p), a: fmt(amount), r: remaining, pay: fmt(amount * 0.1) });
   }
   function fmt(n) { return Math.round(n).toLocaleString('el-GR') + '€'; }
 
-  function log(state, msg) {
-    state.log.push(msg);
+  // v1.0: δομημένα log events {k, p} — μεταφράζονται στη γλώσσα ΚΑΘΕ παίκτη στο UI
+  function log(state, k, p) {
+    state.log.push(p ? { k: k, p: p } : { k: k });
     if (state.log.length > 120) state.log.splice(0, state.log.length - 120);
     state.logSeq++;
   }
@@ -119,7 +120,7 @@
     const humans = state.players.map((p, i) => (p.isBot ? -1 : i)).filter(i => i >= 0);
     const pool = humans.length ? humans : state.players.map((_, i) => i);
     state.turn = pool[Math.floor(rnd(state) * pool.length)];
-    log(state, '🎲 Το παιχνίδι ξεκίνησε! Η κλήρωση έδειξε: πρώτος παίζει ο ' + pname(state.players[state.turn]) + '.');
+    log(state, 'lg_start', { n: pname(state.players[state.turn]) });
     return state;
   }
 
@@ -160,7 +161,7 @@
     state.phase = 'ended';
     state.rankings = computeRankings(state);
     const w = state.rankings[0];
-    log(state, '🏁 Τέλος παιχνιδιού! Νικητής: ' + w.name + (w.retiredAge ? ' (παραίτηση στα ' + w.retiredAge + ')' : ''));
+    log(state, w.retiredAge ? 'lg_endRet' : 'lg_endNo', { n: w.name, age: w.retiredAge });
   }
 
   function computeRankings(state) {
@@ -190,22 +191,20 @@
     const exp = totalExp(p), pas = passive(p);
     const net = p.salary - exp + pas;
     p.cash += net;
-    let extra = bondInterest > 0 ? ' (+' + fmt(bondInterest) + ' τόκοι ομολόγων)' : '';
     let loanPay = 0;
     p.loans.forEach(l => { loanPay += l.payment; l.remaining--; });
-    if (loanPay > 0) {
-      p.cash -= loanPay;
-      extra += ' (−' + fmt(loanPay) + ' δόσεις δανείων)';
-    }
+    if (loanPay > 0) p.cash -= loanPay;
     const doneLoans = p.loans.filter(l => l.remaining <= 0);
     p.loans = p.loans.filter(l => l.remaining > 0);
-    doneLoans.forEach(l => log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(l.amount) + ' ✓'));
+    doneLoans.forEach(l => log(state, 'lg_loanDone', { n: pname(p), a: fmt(l.amount) }));
     p.age++;
-    log(state, '💰 ' + pname(p) + ': είσπραξη ' + fmt(net) + extra + ' · ηλικία ' + p.age);
+    // 4 παραλλαγές μηνύματος ανάλογα με τόκους ομολόγων/δόσεις (για σωστή μετάφραση)
+    const ck = bondInterest > 0 ? (loanPay > 0 ? 'lg_collectBL' : 'lg_collectB') : (loanPay > 0 ? 'lg_collectL' : 'lg_collect');
+    log(state, ck, { n: pname(p), net: fmt(net), age: p.age, bi: fmt(bondInterest), lp: fmt(loanPay) });
     // Career Bonus (v0.4 — επανήλθε με απόφαση Γιώργου): +500€ μισθός στα 35, 45, 55
     if (p.age === 35 || p.age === 45 || p.age === 55) {
       p.salary += 500;
-      log(state, '🎖️ Career Bonus! Ο ' + pname(p) + ' έκλεισε τα ' + p.age + ' → μισθός +500€ (νέος: ' + fmt(p.salary) + ')');
+      log(state, 'lg_career', { n: pname(p), age: p.age, s: fmt(p.salary) });
     }
     // Υποχρεωτική λήξη ομολόγων στα 10 tokens → επιστροφή κεφαλαίου
     for (let i = p.inv.length - 1; i >= 0; i--) {
@@ -214,17 +213,17 @@
         p.cash += b.cost;
         p.inv.splice(i, 1);
         discard(state, 'project', b.cardId);
-        log(state, '🏛️ ' + pname(p) + ': λήξη ομολόγου → επιστροφή κεφαλαίου +' + fmt(b.cost));
+        log(state, 'lg_bondMature', { n: pname(p), v: fmt(b.cost) });
       }
     }
     // Έλεγχος παραίτησης (I QUIT) στο σημείο είσπραξης.
     // v0.5: ΑΠΑΙΤΕΙΤΑΙ πλήρης εξόφληση δανείων πριν την παραίτηση!
     if (p.retiredAge === null && pas >= exp) {
       if (p.loans.length > 0) {
-        log(state, '⚠️ ' + pname(p) + ': το παθητικό (' + fmt(pas) + ') καλύπτει τα έξοδα (' + fmt(exp) + '), αλλά για I QUIT πρέπει πρώτα να εξοφλήσει τα δάνειά του (' + fmt(loanOwedNow(p)) + ')!');
+        log(state, 'lg_quitBlocked', { n: pname(p), pas: fmt(pas), exp: fmt(exp), owed: fmt(loanOwedNow(p)) });
       } else {
         p.retiredAge = p.age;
-        log(state, '🎉 I QUIT! Ο ' + pname(p) + ' παραιτήθηκε στα ' + p.age + ' (παθητικό ' + fmt(pas) + ' ≥ έξοδα ' + fmt(exp) + ', χωρίς χρέη)');
+        log(state, 'lg_iquit', { n: pname(p), age: p.age, pas: fmt(pas), exp: fmt(exp) });
         return;
       }
     }
@@ -235,9 +234,9 @@
       const owed = loanOwedNow(p);
       if (owed > 0) {
         p.cash -= owed; p.loans = [];
-        log(state, '🏦 ' + pname(p) + ': υποχρεωτική εξόφληση δανείων −' + fmt(owed));
+        log(state, 'lg_forcedLoanSettle', { n: pname(p), v: fmt(owed) });
       }
-      log(state, '⏳ Ο ' + pname(p) + ' έφτασε τα 65 χωρίς παραίτηση.');
+      log(state, 'lg_reached65', { n: pname(p) });
     }
   }
 
@@ -260,7 +259,7 @@
     state.players.forEach(pl => {
       Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * 1.05); });
     });
-    log(state, '📈 Πληθωρισμός 5%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.');
+    log(state, 'lg_inflation');
   }
   // v0.5: οι τιμές των καρτών στις στοίβες ΔΕΝ πληθωρίζονται πια
   function priceOf(state, c) { return c.cost; }
@@ -274,10 +273,10 @@
   function queueForcedSaleIfNeeded(state, p) {
     if (needForcedSale(p)) {
       state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash };
-      log(state, '⚠️ ' + pname(p) + ': δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ') — αναγκαστική πώληση στο 80%.');
+      log(state, 'lg_forcedNeeded', { n: pname(p), v: fmt(p.cash) });
       return true;
     }
-    if (p.cash < 0) log(state, '🔴 ' + pname(p) + ': αρνητικά μετρητά χωρίς περιουσιακά στοιχεία (' + fmt(p.cash) + ').');
+    if (p.cash < 0) log(state, 'lg_negNoAssets', { n: pname(p), v: fmt(p.cash) });
     return false;
   }
 
@@ -289,24 +288,24 @@
         return finishTurn(state); // η είσπραξη έγινε ήδη στο πέρασμα
       case 'project': {
         const cid = draw(state, 'project');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Project είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyProject'); return finishTurn(state); }
         state.pending = { type: 'card', playerId: p.id, deck: 'project', cardId: cid, discount: 0, canWild: p.wilds > 0 && state.decks.bb.length > 0, viaWild: false };
         return;
       }
       case 'bb': {
         const cid = draw(state, 'bb');
-        if (!cid) { log(state, 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyBB'); return finishTurn(state); }
         state.pending = { type: 'card', playerId: p.id, deck: 'bb', cardId: cid, discount: 0, canWild: p.wilds > 0, viaWild: false };
         return;
       }
       case 'lifestyle': {
         const cid = draw(state, 'lifestyle');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Lifestyle είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyLifestyle'); return finishTurn(state); }
         return applyLifestyle(state, p, cid);
       }
       case 'moments': {
         const cid = draw(state, 'moments');
-        if (!cid) { log(state, 'ℹ️ Η στοίβα Moments είναι άδεια.'); return finishTurn(state); }
+        if (!cid) { log(state, 'lg_emptyMoments'); return finishTurn(state); }
         return applyMoment(state, p, cid);
       }
       case 'inflation': {
@@ -319,35 +318,35 @@
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
           p.cash -= t;
-          log(state, '🧾 Tax: ' + pname(p) + ' πληρώνει 50% του εισοδήματος BB = −' + fmt(t));
+          log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
           if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
         } else {
-          log(state, '🧾 Tax: ο ' + pname(p) + ' δεν έχει εισόδημα από Big Business.');
+          log(state, 'lg_taxNone', { n: pname(p) });
         }
         return finishTurn(state);
       }
       case 'crash': {
         const candidates = p.inv.filter(i => i.kind === 'P' && sq.colors.includes(i.color));
         if (!candidates.length) {
-          log(state, '💥 Crash (' + sq.colors.map(c => COLORNAME[c]).join('/') + '): ο ' + pname(p) + ' δεν έχει Project σε αυτά τα χρώματα — τη γλίτωσε!');
+          log(state, 'lg_crashMiss', { n: pname(p), colors: sq.colors.join(',') });
           return finishTurn(state);
         }
         const victim = pickVictim(candidates);
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
-        log(state, '💥 Crash! Ο ' + pname(p) + ' χάνει: ' + victim.title + ' (' + fmt(victim.cost) + ', −' + fmt(victim.income) + '/κύκλο)');
+        log(state, 'lg_crashHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost), inc: fmt(victim.income) });
         return finishTurn(state);
       }
       case 'fundingfails': {
         const funds = p.inv.filter(i => i.kind === 'funding');
         if (!funds.length) {
-          log(state, '💥 Funding Fails: ο ' + pname(p) + ' δεν έχει Χρηματοδοτήσεις — τη γλίτωσε!');
+          log(state, 'lg_ffMiss', { n: pname(p) });
           return finishTurn(state);
         }
         const victim = pickVictim(funds);
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
-        log(state, '💥 Funding Fails! Ο ' + pname(p) + ' χάνει: ' + victim.title + ' (' + fmt(victim.cost) + ')');
+        log(state, 'lg_ffHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost) });
         return finishTurn(state);
       }
     }
@@ -360,7 +359,7 @@
       return;
     }
     const applied = applyLifestyleTo(state, p, c);
-    log(state, '🏠 Lifestyle: ' + pname(p) + ' — «' + c.title + '» → ' + c.cat + ' ' + (applied > 0 ? '+' : '') + applied + '€' + (applied !== c.delta ? ' (με πληθωρισμό)' : ''));
+    log(state, applied !== c.delta ? 'lg_lifestyleInfl' : 'lg_lifestyle', { n: pname(p), cid: c.id, catKey: c.cat, d: (applied > 0 ? '+' : '') + applied });
     // v0.2: για ανθρώπους η κάρτα εμφανίζεται σε ΟΛΟΥΣ και κλείνει με κλικ του παίκτη
     if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, cardId: c.id, deck: 'lifestyle' }; return; }
     return finishTurn(state);
@@ -386,11 +385,11 @@
           undone.push(lc.title);
         }
       });
-      log(state, '🌱 Moment: ' + pname(p) + ' — «' + c.title + '»' + (undone.length ? ' → αναιρέθηκε: ' + undone.join(' & ') : ' (δεν είχε τις αντίστοιχες κάρτες — καμία επίδραση)'));
+      log(state, undone.length ? 'lg_momentCancel' : 'lg_momentCancelNone', { n: pname(p), cid: c.id, cids: undone.join(',') });
     } else {
       const amt = momentAmount(state, c);
       p.cash += amt;
-      log(state, (amt >= 0 ? '🟢' : '🔻') + ' Moment: ' + pname(p) + ' — «' + c.title + '» → ' + (amt > 0 ? '+' : '') + fmt(amt) + (amt !== c.amount ? ' (με πληθωρισμό)' : ''));
+      log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
     }
     discard(state, 'moments', cid);
     // v0.2: reveal για ανθρώπους — το forced sale (αν χρειάζεται) ακολουθεί μετά το κλείσιμο της κάρτας
@@ -411,11 +410,15 @@
     const c = card(pend.cardId);
     let price = Math.round(priceOf(state, c) * (1 - (pend.discount || 0)));
     if (withLoan) {
-      const shortfall = price - p.cash;
-      if (shortfall <= 0) return err('Δεν χρειάζεσαι δάνειο για αυτή την αγορά.');
-      const amount = Math.min(Math.ceil(shortfall / 100) * 100, maxLoan(p));
-      if (maxLoan(p) <= 0) return err('Δεν υπάρχει περιθώριο δανείου (αξία επενδύσεων − χρέος).');
-      if (amount < shortfall) return err('Το μέγιστο δάνειο (' + fmt(maxLoan(p)) + ') δεν καλύπτει τη διαφορά.');
+      // v1.0 (#8): ο παίκτης επιλέγει ΠΟΣΟ δάνειο θα πάρει (και μεγαλύτερο από τη διαφορά,
+      // για μαξιλάρι ρευστότητας) — ακόμα κι αν του φτάνουν τα μετρητά. Πάντα εντός ορίου.
+      const shortfall = Math.max(0, price - p.cash);
+      let amount = Math.floor(withLoan.loanAmount || 0);
+      if (!amount) amount = Math.max(100, Math.ceil(shortfall / 100) * 100);
+      if (amount % 100 !== 0) return err('Το δάνειο δίνεται σε πολλαπλάσια του 100€.');
+      if (maxLoan(p) < 100) return err('Δεν υπάρχει περιθώριο δανείου (αξία επενδύσεων − χρέος).');
+      if (amount > maxLoan(p)) return err('Μέγιστο δάνειο: ' + fmt(maxLoan(p)) + '.');
+      if (p.cash + amount < price) return err('Το δάνειο (' + fmt(amount) + ') δεν καλύπτει την αγορά.');
       takeLoanInternalV2(state, p, amount);
     }
     if (p.cash < price) return err('Δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ' / ' + fmt(price) + ').');
@@ -429,30 +432,30 @@
     const isBB = c.id.startsWith('BB');
     if (isBB) {
       p.inv.push({ uid: uid(state), cardId: c.id, kind: 'bb', title: c.title, cost: value, income: c.income });
-      log(state, '🏆 ' + pname(p) + ' αγόρασε Big Business: «' + c.title + '» ' + fmt(pricePaid) + (discount ? ' (έκπτωση -10%)' : '') + ' → +' + fmt(c.income) + '/κύκλο');
+      log(state, discount ? 'lg_buyBBDisc' : 'lg_buyBB', { n: pname(p), cid: c.id, v: fmt(pricePaid), inc: fmt(c.income) });
       return;
     }
     switch (c.kind) {
       case 'P':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'P', color: c.color, title: c.title, cost: value, income: c.income });
-        log(state, '📊 ' + pname(p) + ' αγόρασε Project ' + COLORNAME[c.color] + ': «' + c.title + '» ' + fmt(value) + ' → +' + fmt(c.income) + '/κύκλο');
+        log(state, 'lg_buyP', { n: pname(p), colors: c.color, cid: c.id, v: fmt(value), inc: fmt(c.income) });
         break;
       case 'funding':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'funding', title: c.title, cost: value, income: c.income });
-        log(state, '🤝 ' + pname(p) + ' αγόρασε Χρηματοδότηση: «' + c.title + '» ' + fmt(value) + ' → +' + fmt(c.income) + '/κύκλο');
+        log(state, 'lg_buyF', { n: pname(p), cid: c.id, v: fmt(value), inc: fmt(c.income) });
         break;
       case 'bond':
         p.inv.push({ uid: uid(state), cardId: c.id, kind: 'bond', title: c.title, cost: c.cost, income: 0, tokens: 0 });
-        log(state, '🏛️ ' + pname(p) + ' αγόρασε Κρατικό Ομόλογο ' + fmt(c.cost) + ' (4%/είσπραξη, λήξη στα 10 tokens)');
+        log(state, 'lg_buyBond', { n: pname(p), v: fmt(c.cost) });
         break;
       case 'masters':
         p.salary += c.salaryUp;
-        log(state, '🎓 ' + pname(p) + ' έκανε Μεταπτυχιακό (' + fmt(c.cost) + ') → μισθός +' + fmt(c.salaryUp) + ' (νέος: ' + fmt(p.salary) + ')');
+        log(state, 'lg_masters', { n: pname(p), v: fmt(c.cost), up: fmt(c.salaryUp), s: fmt(p.salary) });
         discard(state, 'project', c.id);
         break;
       case 'taxprepay':
         p.expenses['Φόροι'] = Math.max(0, p.expenses['Φόροι'] - c.taxDown);
-        log(state, '🧾 ' + pname(p) + ' πλήρωσε Προκαταβολή Φόρου (' + fmt(c.cost) + ') → Φόροι −' + fmt(c.taxDown) + '/κύκλο');
+        log(state, 'lg_taxprepay', { n: pname(p), v: fmt(c.cost), d: fmt(c.taxDown) });
         discard(state, 'project', c.id);
         break;
       case 'betterloan': {
@@ -460,14 +463,14 @@
         const active = p.loans.slice().sort((a, b) => b.remaining - a.remaining)[0];
         if (active) {
           active.remaining = Math.max(0, active.remaining - c.fewerPayments);
-          log(state, '🏦 ' + pname(p) + ' — Ευνοϊκότερο Δάνειο: −' + c.fewerPayments + ' δόσεις στο δάνειο των ' + fmt(active.amount) + ' (μένουν ' + active.remaining + ')');
+          log(state, 'lg_blActive', { n: pname(p), f: c.fewerPayments, a: fmt(active.amount), r: active.remaining });
           if (active.remaining <= 0) {
             p.loans = p.loans.filter(x => x.uid !== active.uid);
-            log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(active.amount) + ' ✓');
+            log(state, 'lg_loanDone', { n: pname(p), a: fmt(active.amount) });
           }
         } else {
           p.loanBonusFewer += c.fewerPayments;
-          log(state, '🏦 ' + pname(p) + ' — Ευνοϊκότερο Δάνειο: −' + c.fewerPayments + ' δόσεις στο μελλοντικό δάνειο');
+          log(state, 'lg_blFuture', { n: pname(p), f: c.fewerPayments });
         }
         discard(state, 'project', c.id);
         break;
@@ -480,9 +483,30 @@
 
   function err(message) { return { error: message }; }
 
+  // v1.0 (#4β): ΑΜΕΣΟ I QUIT — τη στιγμή που το παθητικό καλύπτει τα έξοδα ΚΑΙ δεν υπάρχουν
+  // χρέη, ο παίκτης παραιτείται αυτόματα, χωρίς να περιμένει το επόμενο πέρασμα από Salary.
+  function sweepInstantQuit(state) {
+    if (state.phase !== 'playing') return;
+    state.players.forEach(p => {
+      if (!isActive(p)) return;
+      if (state.pending && state.pending.playerId === p.id) return; // όχι στη μέση δικής του απόφασης
+      if (p.loans.length === 0 && passive(p) >= totalExp(p)) {
+        p.retiredAge = p.age;
+        log(state, 'lg_iquitInstant', { n: pname(p), age: p.age, pas: fmt(passive(p)), exp: fmt(totalExp(p)) });
+      }
+    });
+    // Αν αυτός που έχει σειρά μόλις παραιτήθηκε (και δεν εκκρεμεί τίποτα), προχώρα τη σειρά
+    if (state.phase === 'playing' && !state.pending && !isActive(currentPlayer(state))) advanceTurn(state);
+  }
+
   // ---------- Actions ----------
   // applyAction(state, playerId, action) → null (ok) ή {error}
   function applyAction(state, playerId, action) {
+    const r = applyActionInner(state, playerId, action);
+    if (!r || !r.error) sweepInstantQuit(state);
+    return r;
+  }
+  function applyActionInner(state, playerId, action) {
     if (state.phase !== 'playing') return err('Το παιχνίδι δεν είναι σε εξέλιξη.');
     const p = state.players.find(x => x.id === playerId);
     if (!p) return err('Άγνωστος παίκτης.');
@@ -495,7 +519,7 @@
         const d1 = rollDie(state), d2 = rollDie(state);
         const from = p.pos, steps = d1 + d2;
         state.lastRoll = { playerId, d1, d2, from, to: (from + steps) % 28, seq: state.logSeq };
-        log(state, '🎲 ' + pname(p) + ' έριξε ' + d1 + '+' + d2 + ' = ' + steps);
+        log(state, 'lg_roll', { n: pname(p), d1: d1, d2: d2, s: steps });
         for (let s = 1; s <= steps; s++) {
           const pos = (from + s) % 28;
           if (pos === 0 || pos === 14) {
@@ -540,9 +564,9 @@
         l.remaining -= count;
         if (l.remaining <= 0) {
           p.loans = p.loans.filter(x => x.uid !== l.uid);
-          log(state, '🏦 ' + pname(p) + ' εξόφλησε πλήρως το δάνειο των ' + fmt(l.amount) + ' (−' + fmt(pay) + ') ✓');
+          log(state, 'lg_repayFull', { n: pname(p), a: fmt(l.amount), v: fmt(pay) });
         } else {
-          log(state, '🏦 ' + pname(p) + ' πλήρωσε ' + count + ' δόσεις (−' + fmt(pay) + ') · μένουν ' + l.remaining);
+          log(state, 'lg_repayPart', { n: pname(p), c: count, v: fmt(pay), r: l.remaining });
         }
         return null;
       }
@@ -559,7 +583,7 @@
         p.cash += b.cost;
         p.inv = p.inv.filter(i => i.uid !== b.uid);
         discard(state, 'project', b.cardId);
-        log(state, '🏛️ ' + pname(p) + ' πούλησε ομόλογο (' + b.tokens + '/10 tokens) → επιστροφή κεφαλαίου +' + fmt(b.cost));
+        log(state, 'lg_bondSold', { n: pname(p), t: b.tokens, v: fmt(b.cost) });
         return null;
       }
 
@@ -572,7 +596,7 @@
         const price = Math.floor(action.price);
         if (!price || price < inv.cost) return err('Η τιμή πρέπει να είναι ≥ ' + fmt(inv.cost) + '.');
         state.pending = { type: 'funding-offer', playerId: target.id, fromId: p.id, uid: inv.uid, price, title: inv.title, income: inv.income, cost: inv.cost };
-        log(state, '🤝 ' + pname(p) + ' προσφέρει τη Χρηματοδότηση «' + inv.title + '» στον ' + pname(target) + ' για ' + fmt(price));
+        log(state, 'lg_offer', { n: pname(p), cid: inv.cardId, n2: pname(target), v: fmt(price) });
         return null;
       }
 
@@ -593,12 +617,12 @@
           if (!ncid) return err('Η άλλη στοίβα είναι άδεια.');
           p.wilds--;
           discard(state, pend.deck, pend.cardId); // η αρχική στον πάτο/discard
-          log(state, '🃏 ' + pname(p) + ' έπαιξε Wild Card: ' + (pend.deck === 'project' ? 'Project → Big Business' : 'Big Business → Project') + ' (' + p.wilds + ' απομένουν)');
+          log(state, pend.deck === 'project' ? 'lg_wildToBB' : 'lg_wildToP', { n: pname(p), w: p.wilds });
           state.pending = { type: 'card', playerId: p.id, deck: otherDeck, cardId: ncid, discount: 0, canWild: false, viaWild: true };
           return null;
         }
         if (ch === 'buy' || ch === 'buy-loan') {
-          const e = buyCard(state, p, pend, ch === 'buy-loan');
+          const e = buyCard(state, p, pend, ch === 'buy-loan' ? { loanAmount: action.loanAmount } : null);
           if (e) return e;
           return finishTurn(state), null;
         }
@@ -609,14 +633,14 @@
             const np = ni >= 0 ? state.players[ni] : null;
             if (np && np.id !== p.id) {
               state.pending = { type: 'card', playerId: np.id, deck: 'bb', cardId: pend.cardId, discount: 0.10, canWild: false, viaWild: false, isDiscountOffer: true, declinedBy: p.id };
-              log(state, '➡️ Ο ' + pname(p) + ' δεν αγόρασε «' + c.title + '» — ο ' + pname(np) + ' μπορεί να την πάρει με -10% (' + fmt(c.cost * 0.9) + ')');
+              log(state, 'lg_passDisc', { n: pname(p), cid: c.id, n2: pname(np), v: fmt(c.cost * 0.9) });
               return null;
             }
             discard(state, 'bb', pend.cardId);
           } else {
             discard(state, pend.deck === 'bb' ? 'bb' : 'project', pend.cardId);
           }
-          log(state, '✋ ' + pname(p) + ' δεν αγόρασε: «' + c.title + '»');
+          log(state, 'lg_declined', { n: pname(p), cid: c.id });
           return finishTurn(state), null;
         }
         return err('Μη έγκυρη επιλογή.');
@@ -628,7 +652,7 @@
         if (!partner || partner.id === p.id || !isActive(partner)) return err('Διάλεξε έναν άλλον ενεργό παίκτη.');
         const applied = applyLifestyleTo(state, p, c);
         partner.expenses[c.cat] = Math.max(0, (partner.expenses[c.cat] || 0) + applied);
-        log(state, '🏠 Lifestyle (Έκαστος): «' + c.title + '» → ' + pname(p) + ' & ' + pname(partner) + ': ' + c.cat + ' ' + applied + '€ ο καθένας');
+        log(state, 'lg_lifestyleEach', { cid: c.id, n: pname(p), n2: pname(partner), catKey: c.cat, d: applied });
         return finishTurn(state), null;
       }
 
@@ -640,7 +664,7 @@
         p.inv = p.inv.filter(i => i.uid !== inv.uid);
         if (inv.kind === 'bb') { /* BB αφαιρούνται οριστικά */ }
         else discard(state, 'project', inv.cardId);
-        log(state, '🔻 Αναγκαστική πώληση: ' + pname(p) + ' — «' + inv.title + '» → +' + fmt(val));
+        log(state, 'lg_forcedSold', { n: pname(p), cid: inv.cardId, v: fmt(val) });
         if (needForcedSale(p)) {
           state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash, then: pend.then };
           return null;
@@ -666,9 +690,9 @@
           from.cash += pend.price;
           from.inv = from.inv.filter(i => i.uid !== inv.uid);
           p.inv.push(Object.assign({}, inv, { uid: uid(state) }));
-          log(state, '🤝 Ο ' + pname(p) + ' αγόρασε τη «' + inv.title + '» από τον ' + pname(from) + ' για ' + fmt(pend.price));
+          log(state, 'lg_offerAccepted', { n: pname(p), cid: inv.cardId, n2: pname(from), v: fmt(pend.price) });
         } else {
-          log(state, '✋ Ο ' + pname(p) + ' αρνήθηκε την προσφορά Χρηματοδότησης.');
+          log(state, 'lg_offerDeclined', { n: pname(p) });
         }
         state.pending = null;
         return null;
@@ -685,6 +709,6 @@
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE,
-    _internals: { pickVictim, doInflation, collect },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
   };
 });

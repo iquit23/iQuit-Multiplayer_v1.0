@@ -108,13 +108,19 @@
     const prof = profileOf(p);
     const price = Math.round(E.priceOf(state, c) * (1 - (pend.discount || 0)));
     const affordable = p.cash - price >= prof.cushion;
-    const canLoanCover = E.maxLoan(p) >= price - p.cash && price > p.cash;
+    const shortfall = Math.max(0, price - p.cash);
+    const loanAmount = Math.ceil(shortfall / 100) * 100;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0;
     const isBB = pend.deck === 'bb';
+
+    // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι
+    // η εξόφληση των δανείων — καμία νέα αγορά, κανένα νέο δάνειο!
+    if (E.passive(p) >= E.totalExp(p)) return { a: 'resolve', choice: 'decline' };
 
     if (isBB) {
       if (p.age >= prof.bbAge) {
         if (p.cash >= price) return { a: 'resolve', choice: 'buy' };
-        if (canLoanCover && p.cash > 0) return { a: 'resolve', choice: 'buy-loan' };
+        if (canLoanCover && p.cash > 0) return { a: 'resolve', choice: 'buy-loan', loanAmount: loanAmount };
         return { a: 'resolve', choice: 'decline' };
       }
       if (p.cash >= prof.bbEarlyMult * price) return { a: 'resolve', choice: 'buy' };
