@@ -654,9 +654,9 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       perCollect: '/εισπρ.', sellBond: 'Πώληση +{v}', sellToPlayer: 'Πώληση σε παίκτη',
       loans: '🏦 Δάνεια', debt: '(χρέος {v})', loanRow: 'Δάνειο {v}', installments: '{n} δόσεις × {p}',
       pay1: '1 δόση', payoff: 'Εξόφληση {v}', newLoanPh: 'Νέο δάνειο έως {v}', loanBtn: '+ Δάνειο',
-      loanHint: 'Έως όσο η αξία των επενδύσεών σου ({v}) − υπάρχον χρέος κεφαλαίου · πολλαπλάσια του 100€ · 20 δόσεις × 10% · εξόφληση υποχρεωτική πριν το I QUIT',
+      loanHint: 'Έως όσο η αξία των επενδύσεών σου ({v}) − υπάρχον χρέος κεφαλαίου · πολλαπλάσια του 100€ · 20 δόσεις × 10% · έως 3 δάνεια σε όλο το παιχνίδι · εξόφληση υποχρεωτική πριν το I QUIT',
       quitBlocked: '💡 Το παθητικό σου καλύπτει τα έξοδα — εξόφλησε τα δάνεια για να πατήσεις I QUIT!',
-      loanCap: '🔒 Έφτασες το όριο των {n} ενεργών δανείων — εξόφλησε κάποιο για να δανειστείς ξανά.',
+      loanCap: '🔒 Χρησιμοποίησες και τα {n} δάνεια που επιτρέπονται σε όλο το παιχνίδι.',
       yearsOld: '{n} ετών', passiveShort: 'Παθητικό {v}', iquitAt: 'I QUIT στα {age}!', at65: 'στα 65',
       // Cards & modals
       cost: 'Κόστος:', perCycle: '/ κύκλο', permanent: '/ κύκλο (μόνιμα)', each: ' — έκαστος',
@@ -792,9 +792,9 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       perCollect: '/payday', sellBond: 'Sell +{v}', sellToPlayer: 'Sell to player',
       loans: '🏦 Loans', debt: '(debt {v})', loanRow: 'Loan {v}', installments: '{n} payments × {p}',
       pay1: '1 payment', payoff: 'Pay off {v}', newLoanPh: 'New loan up to {v}', loanBtn: '+ Loan',
-      loanHint: 'Up to the value of your investments ({v}) − existing principal debt · multiples of €100 · 20 payments × 10% · must be fully repaid before I QUIT',
+      loanHint: 'Up to the value of your investments ({v}) − existing principal debt · multiples of €100 · 20 payments × 10% · max 3 loans per game · must be fully repaid before I QUIT',
       quitBlocked: '💡 Your passive income covers your expenses — pay off your loans to hit I QUIT!',
-      loanCap: '🔒 You reached the limit of {n} active loans — repay one to borrow again.',
+      loanCap: '🔒 You have used all {n} loans allowed for the whole game.',
       yearsOld: 'age {n}', passiveShort: 'Passive {v}', iquitAt: 'I QUIT at {age}!', at65: 'at 65',
       cost: 'Cost:', perCycle: '/ cycle', permanent: '/ cycle (permanent)', each: ' — each',
       baseInfl: '(base {v} + inflation)', cancelsLS: 'Cancels your matching Lifestyle cards ✨',
@@ -1036,9 +1036,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
   const START_EXPENSES = { 'Φόροι': 200, 'Ενοίκιο': 500, 'Μεταφορικά': 200, 'Διατροφή': 300, 'Ένδυση': 100, 'Ψυχαγωγία': 100, 'Ασφάλεια': 100 };
   const START_CASH = 2000, START_SALARY = 2000, START_AGE = 25, END_AGE = 65;
-  // v1.1 (προσωρινό, απόφαση Γιώργου): μέγιστο 3 ενεργά δάνεια ανά παίκτη —
-  // κόβει τον μηχανισμό συνεχούς μόχλευσης μέχρι τον επανασχεδιασμό του Loan System.
-  const MAX_ACTIVE_LOANS = 3;
+  // v1.2 (προσωρινό, απόφαση Γιώργου): μέγιστο 3 δάνεια ΣΥΝΟΛΙΚΑ σε όλο το παιχνίδι
+  // (όχι απλώς ταυτόχρονα) — κόβει τη συνεχή μόχλευση μέχρι τον επανασχεδιασμό του Loan System.
+  const MAX_LOANS_TOTAL = 3;
   const WILDS_PER_PLAYER = 5;
   const COLORNAME = { G: 'Πράσινο', Y: 'Κίτρινο', R: 'Κόκκινο' };
   const PLAYER_COLORS = ['#3b82f6', '#e25b54', '#3ec46d', '#e8c43d', '#a98cf0', '#f08c4b'];
@@ -1089,6 +1089,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     p.loanBonusFewer = 0; // το μπόνους «−2 δόσεις» καταναλώνεται στο επόμενο δάνειο
     state.invSeq = (state.invSeq || 0) + 1;
     p.loans.push({ uid: 'ln' + state.invSeq, amount, payment: amount * 0.1, remaining });
+    p.loansTaken = (p.loansTaken || 0) + 1; // v1.2: μετρητής ΣΥΝΟΛΙΚΩΝ δανείων στο παιχνίδι
     p.cash += amount;
     log(state, 'lg_loanTaken', { n: pname(p), a: fmt(amount), r: remaining, pay: fmt(amount * 0.1) });
   }
@@ -1121,6 +1122,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         lifestyle: [],
         inv: [],
         loans: [], // v0.5: πολλαπλά δάνεια — {uid, amount, payment, remaining}
+        loansTaken: 0, // v1.2: πόσα δάνεια έχει πάρει ΣΥΝΟΛΙΚΑ (όριο MAX_LOANS_TOTAL)
         loanBonusFewer: 0,
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
@@ -1282,13 +1284,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   // Πληθωρίζονται τα ΜΗΝΙΑΙΑ ΕΞΟΔΑ όλων των παικτών, και οι κάρτες Lifestyle/Moments
   // εφαρμόζονται πληθωρισμένες με τον τρέχοντα συντελεστή.
   //
-  // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών (βαθμονόμηση με Monte Carlo, ~9.000 παρτίδες):
-  // το κουτί Inflation ενεργοποιείται σε ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με
-  // περισσότερους παίκτες «χτυπά» αναλογικά συχνότερα. Τα ποσοστά επιλέχθηκαν ώστε η
-  // πιθανότητα I QUIT και η ηλικία επίτευξης να μένουν κοντά στο επίπεδο αναφοράς
-  // (3 παίκτες @ 5%), με στόχο τις περισσότερες νίκες στο εύρος 55–60.
-  const INFLATION_BY_PLAYERS = { 1: 0.18, 2: 0.085, 3: 0.05, 4: 0.0375, 5: 0.0275, 6: 0.0175 };
-  function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.05; }
+  // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
+  // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
+  // v1.2 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.12, 2: 0.07, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
     state.inflMult = (state.inflMult || 1) * (1 + r);
@@ -1448,7 +1448,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (withLoan) {
       // v1.0 (#8): ο παίκτης επιλέγει ΠΟΣΟ δάνειο θα πάρει (και μεγαλύτερο από τη διαφορά,
       // για μαξιλάρι ρευστότητας) — ακόμα κι αν του φτάνουν τα μετρητά. Πάντα εντός ορίου.
-      if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
+      if ((p.loansTaken || 0) >= MAX_LOANS_TOTAL) return err('Έχεις χρησιμοποιήσει και τα ' + MAX_LOANS_TOTAL + ' δάνεια του παιχνιδιού.');
       const shortfall = Math.max(0, price - p.cash);
       let amount = Math.floor(withLoan.loanAmount || 0);
       if (!amount) amount = Math.max(100, Math.ceil(shortfall / 100) * 100);
@@ -1574,13 +1574,16 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       case 'resolve': {
         const pend = state.pending;
         if (!pend) return err('Δεν υπάρχει εκκρεμής απόφαση.');
-        if (pend.playerId !== playerId) return err('Η απόφαση δεν είναι δική σου.');
+        // v1.2: την κάρτα «Πληθωρισμός» μπορεί να την κλείσει ΚΑΘΕ άνθρωπος
+        // (όταν προσγειώνεται bot, η κάρτα μένει μέχρι να την πατήσει κάποιος)
+        const anyHumanOk = pend.type === 'reveal' && pend.special === 'inflation' && !p.isBot;
+        if (pend.playerId !== playerId && !anyHumanOk) return err('Η απόφαση δεν είναι δική σου.');
         return resolvePendingAction(state, p, pend, action);
       }
 
       case 'loan': {
         if (currentPlayer(state).id !== playerId || state.pending) return err('Δάνειο μόνο στη σειρά σου, χωρίς εκκρεμότητες.');
-        if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
+        if ((p.loansTaken || 0) >= MAX_LOANS_TOTAL) return err('Έχεις χρησιμοποιήσει και τα ' + MAX_LOANS_TOTAL + ' δάνεια του παιχνιδιού.');
         const amount = Math.floor(action.amount);
         if (!amount || amount < 100) return err('Ελάχιστο δάνειο 100€.');
         if (amount % 100 !== 0) return err('Το δάνειο δίνεται σε πολλαπλάσια του 100€ (π.χ. ' + fmt(Math.ceil(amount / 100) * 100) + ').');
@@ -1713,8 +1716,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       }
 
       case 'reveal': {
+        // v1.2: ο έλεγχος forced sale αφορά τον παίκτη ΤΗΣ κάρτας (μπορεί να την
+        // έκλεισε άλλος άνθρωπος, στην περίπτωση Inflation από bot)
+        const owner = state.players.find(x => x.id === pend.playerId) || p;
         state.pending = null;
-        if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return null; }
+        if (queueForcedSaleIfNeeded(state, owner)) { state.pending.then = 'advance'; return null; }
         return finishTurn(state), null;
       }
 
@@ -1746,7 +1752,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     totalExp, passive, bbPassive, invTotalCost, bondValue, bondInterestOf, capital, quitPct,
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
-    BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_ACTIVE_LOANS,
+    BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
     _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
   };
 });
@@ -1836,7 +1842,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function decidePending(state, p, pend) {
     switch (pend.type) {
       case 'card': return decideCard(state, p, pend);
-      case 'reveal': return { a: 'resolve', choice: 'ok' };
+      case 'reveal': {
+        // v1.2: την κάρτα «Πληθωρισμός» ΔΕΝ την κλείνει το bot — μένει μέχρι να την
+        // πατήσει κάποιος άνθρωπος (μόνο σε παρτίδες χωρίς ανθρώπους την κλείνει μόνο του)
+        if (pend.special === 'inflation' && state.players.some(x => !x.isBot)) return null;
+        return { a: 'resolve', choice: 'ok' };
+      }
       case 'lifestyle-partner': {
         const others = state.players.filter(x => x.id !== p.id && E.isActive(x));
         const partner = others[(state.round + p.pos) % others.length];
@@ -1865,7 +1876,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const affordable = p.cash - price >= prof.cushion;
     const shortfall = Math.max(0, price - p.cash);
     const loanAmount = Math.ceil(shortfall / 100) * 100;
-    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && p.loans.length < E.MAX_ACTIVE_LOANS;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && (p.loansTaken || 0) < E.MAX_LOANS_TOTAL;
     const isBB = pend.deck === 'bb';
 
     // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι
@@ -2377,7 +2388,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
   function hostStart() {
     const spec = App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, pawn: p.pawn, strategy: p.strategy }));
-    if (spec.length < 2) { toast('⚠️ Χρειάζονται τουλάχιστον 2 παίκτες — πρόσθεσε ένα bot!'); return; }
+    if (spec.length < 1) return; // v1.2: επιτρέπεται SOLO παιχνίδι (1 άνθρωπος, χωρίς bot)
     App.game = E.newGame(spec, Date.now() & 0x7fffffff);
     App.game.players.forEach(gp => {
       const lp = App.lobby.players.find(x => x.id === gp.id);
@@ -2569,16 +2580,26 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     overlay(html, true);
     $('fbCancel').onclick = () => { closeOverlay(); if (App.game) render(); };
     $('fbSend').onclick = () => {
+      // v1.2 (αίτημα Γιώργου): στο email μπαίνει ΟΛΟΚΛΗΡΗ η ερώτηση δίπλα σε κάθε
+      // απάντηση + μία γραμμή Excel (τιμές χωρισμένες με ;) για copy-paste συλλογή.
       const data = { _subject: 'I QUIT! — Feedback παίκτη', _template: 'table', _captcha: 'false', lang: I.lang, date: new Date().toISOString() };
-      I.QUEST.forEach(q => {
-        if (q.text) { const el = document.querySelector('.fbtext[data-q="' + q.id + '"]'); if (el && el.value.trim()) data[q.id] = el.value.trim(); }
+      const xlHdr = ['date', 'lang'], xlVal = [new Date().toISOString().slice(0, 16).replace('T', ' '), I.lang];
+      I.QUEST.forEach((q, qi) => {
+        const label = (qi + 1) + '. ' + q.q[I.lang];
+        let val = '';
+        if (q.text) { const el = document.querySelector('.fbtext[data-q="' + q.id + '"]'); if (el && el.value.trim()) val = el.value.trim(); }
         else {
           const sel = document.querySelector('input[name="fb_' + q.id + '"]:checked');
-          if (sel) data[q.id] = sel.value;
+          if (sel) val = sel.value;
           const oth = document.querySelector('.fbother[data-q="' + q.id + '_other"]');
-          if (oth && oth.value.trim()) data[q.id + '_other'] = oth.value.trim();
+          if (oth && oth.value.trim()) val += (val ? ' — ' : '') + oth.value.trim();
         }
+        if (val) data[label] = val;
+        xlHdr.push('Q' + (qi + 1) + ' (' + q.id + ')');
+        xlVal.push(val.replace(/[;\n]/g, ','));
       });
+      data['📋 Excel ΓΡΑΜΜΗ ΤΙΤΛΩΝ (επικόλληση → Δεδομένα → Κείμενο σε στήλες, διαχωριστικό ";")'] = xlHdr.join(';');
+      data['📋 Excel ΓΡΑΜΜΗ ΑΠΑΝΤΗΣΕΩΝ'] = xlVal.join(';');
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
       // v1.0 (#1): ελέγχουμε το ΠΕΡΙΕΧΟΜΕΝΟ της απάντησης — το FormSubmit επιστρέφει 200
       // ακόμα κι όταν απλώς ζητά ενεργοποίηση, οπότε το 200 ΔΕΝ σημαίνει «στάλθηκε email».
@@ -2634,7 +2655,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
       saveHostSession(); renderLobby();
     });
-    $('btnStart').disabled = App.lobby.players.length < 2;
+    $('btnStart').disabled = App.lobby.players.length < 1; // v1.2: επιτρέπεται και SOLO (χωρίς bot)
     renderPawnPick(App.lobby.players);
     broadcastLobby();
   }
@@ -2802,9 +2823,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       if (pct >= 100 && p.loans.length) {
         loanHtml += '<div class="notice" style="margin-top:6px;">' + t('quitBlocked') + '</div>';
       }
-      // v1.1: με 3 ενεργά δάνεια δεν δίνεται νέο (προσωρινό όριο)
-      if (p.loans.length >= E.MAX_ACTIVE_LOANS) {
-        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_ACTIVE_LOANS }) + '</div>';
+      // v1.2: όριο 3 δανείων ΣΥΝΟΛΙΚΑ στο παιχνίδι (προσωρινό)
+      if ((p.loansTaken || 0) >= E.MAX_LOANS_TOTAL) {
+        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_LOANS_TOTAL }) + '</div>';
       } else {
         loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
           '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
@@ -3015,8 +3036,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (pend.playerId !== App.myId) {
       const actorP = g.players.find(x => x.id === pend.playerId);
       if (pend.special === 'inflation') {
-        overlay(inflationCardHtml(g) +
+        // v1.2: η κάρτα μένει μέχρι να την πατήσει κάποιος — κάθε άνθρωπος μπορεί να την κλείσει
+        overlay('<div data-ch="ok" style="cursor:pointer">' + inflationCardHtml(g) + '</div>' +
+          '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
+        $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
@@ -3065,7 +3089,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       // v1.0.1 (#3): η επιλογή δανείου εμφανίζεται ΜΟΝΟ αν το μέγιστο δάνειο
       // πράγματι αρκεί για να ολοκληρωθεί η αγορά (μετρητά + δάνειο ≥ τιμή)
       const maxLn = E.maxLoan(p);
-      if (maxLn >= 100 && p.cash + maxLn >= price && p.loans.length < E.MAX_ACTIVE_LOANS) {
+      if (maxLn >= 100 && p.cash + maxLn >= price && (p.loansTaken || 0) < E.MAX_LOANS_TOTAL) {
         const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
         html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +

@@ -12,9 +12,9 @@
 
   const START_EXPENSES = { 'Φόροι': 200, 'Ενοίκιο': 500, 'Μεταφορικά': 200, 'Διατροφή': 300, 'Ένδυση': 100, 'Ψυχαγωγία': 100, 'Ασφάλεια': 100 };
   const START_CASH = 2000, START_SALARY = 2000, START_AGE = 25, END_AGE = 65;
-  // v1.1 (προσωρινό, απόφαση Γιώργου): μέγιστο 3 ενεργά δάνεια ανά παίκτη —
-  // κόβει τον μηχανισμό συνεχούς μόχλευσης μέχρι τον επανασχεδιασμό του Loan System.
-  const MAX_ACTIVE_LOANS = 3;
+  // v1.2 (προσωρινό, απόφαση Γιώργου): μέγιστο 3 δάνεια ΣΥΝΟΛΙΚΑ σε όλο το παιχνίδι
+  // (όχι απλώς ταυτόχρονα) — κόβει τη συνεχή μόχλευση μέχρι τον επανασχεδιασμό του Loan System.
+  const MAX_LOANS_TOTAL = 3;
   const WILDS_PER_PLAYER = 5;
   const COLORNAME = { G: 'Πράσινο', Y: 'Κίτρινο', R: 'Κόκκινο' };
   const PLAYER_COLORS = ['#3b82f6', '#e25b54', '#3ec46d', '#e8c43d', '#a98cf0', '#f08c4b'];
@@ -65,6 +65,7 @@
     p.loanBonusFewer = 0; // το μπόνους «−2 δόσεις» καταναλώνεται στο επόμενο δάνειο
     state.invSeq = (state.invSeq || 0) + 1;
     p.loans.push({ uid: 'ln' + state.invSeq, amount, payment: amount * 0.1, remaining });
+    p.loansTaken = (p.loansTaken || 0) + 1; // v1.2: μετρητής ΣΥΝΟΛΙΚΩΝ δανείων στο παιχνίδι
     p.cash += amount;
     log(state, 'lg_loanTaken', { n: pname(p), a: fmt(amount), r: remaining, pay: fmt(amount * 0.1) });
   }
@@ -97,6 +98,7 @@
         lifestyle: [],
         inv: [],
         loans: [], // v0.5: πολλαπλά δάνεια — {uid, amount, payment, remaining}
+        loansTaken: 0, // v1.2: πόσα δάνεια έχει πάρει ΣΥΝΟΛΙΚΑ (όριο MAX_LOANS_TOTAL)
         loanBonusFewer: 0,
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
@@ -258,13 +260,11 @@
   // Πληθωρίζονται τα ΜΗΝΙΑΙΑ ΕΞΟΔΑ όλων των παικτών, και οι κάρτες Lifestyle/Moments
   // εφαρμόζονται πληθωρισμένες με τον τρέχοντα συντελεστή.
   //
-  // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών (βαθμονόμηση με Monte Carlo, ~9.000 παρτίδες):
-  // το κουτί Inflation ενεργοποιείται σε ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με
-  // περισσότερους παίκτες «χτυπά» αναλογικά συχνότερα. Τα ποσοστά επιλέχθηκαν ώστε η
-  // πιθανότητα I QUIT και η ηλικία επίτευξης να μένουν κοντά στο επίπεδο αναφοράς
-  // (3 παίκτες @ 5%), με στόχο τις περισσότερες νίκες στο εύρος 55–60.
-  const INFLATION_BY_PLAYERS = { 1: 0.18, 2: 0.085, 3: 0.05, 4: 0.0375, 5: 0.0275, 6: 0.0175 };
-  function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.05; }
+  // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
+  // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
+  // v1.2 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.12, 2: 0.07, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
     state.inflMult = (state.inflMult || 1) * (1 + r);
@@ -424,7 +424,7 @@
     if (withLoan) {
       // v1.0 (#8): ο παίκτης επιλέγει ΠΟΣΟ δάνειο θα πάρει (και μεγαλύτερο από τη διαφορά,
       // για μαξιλάρι ρευστότητας) — ακόμα κι αν του φτάνουν τα μετρητά. Πάντα εντός ορίου.
-      if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
+      if ((p.loansTaken || 0) >= MAX_LOANS_TOTAL) return err('Έχεις χρησιμοποιήσει και τα ' + MAX_LOANS_TOTAL + ' δάνεια του παιχνιδιού.');
       const shortfall = Math.max(0, price - p.cash);
       let amount = Math.floor(withLoan.loanAmount || 0);
       if (!amount) amount = Math.max(100, Math.ceil(shortfall / 100) * 100);
@@ -550,13 +550,16 @@
       case 'resolve': {
         const pend = state.pending;
         if (!pend) return err('Δεν υπάρχει εκκρεμής απόφαση.');
-        if (pend.playerId !== playerId) return err('Η απόφαση δεν είναι δική σου.');
+        // v1.2: την κάρτα «Πληθωρισμός» μπορεί να την κλείσει ΚΑΘΕ άνθρωπος
+        // (όταν προσγειώνεται bot, η κάρτα μένει μέχρι να την πατήσει κάποιος)
+        const anyHumanOk = pend.type === 'reveal' && pend.special === 'inflation' && !p.isBot;
+        if (pend.playerId !== playerId && !anyHumanOk) return err('Η απόφαση δεν είναι δική σου.');
         return resolvePendingAction(state, p, pend, action);
       }
 
       case 'loan': {
         if (currentPlayer(state).id !== playerId || state.pending) return err('Δάνειο μόνο στη σειρά σου, χωρίς εκκρεμότητες.');
-        if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
+        if ((p.loansTaken || 0) >= MAX_LOANS_TOTAL) return err('Έχεις χρησιμοποιήσει και τα ' + MAX_LOANS_TOTAL + ' δάνεια του παιχνιδιού.');
         const amount = Math.floor(action.amount);
         if (!amount || amount < 100) return err('Ελάχιστο δάνειο 100€.');
         if (amount % 100 !== 0) return err('Το δάνειο δίνεται σε πολλαπλάσια του 100€ (π.χ. ' + fmt(Math.ceil(amount / 100) * 100) + ').');
@@ -689,8 +692,11 @@
       }
 
       case 'reveal': {
+        // v1.2: ο έλεγχος forced sale αφορά τον παίκτη ΤΗΣ κάρτας (μπορεί να την
+        // έκλεισε άλλος άνθρωπος, στην περίπτωση Inflation από bot)
+        const owner = state.players.find(x => x.id === pend.playerId) || p;
         state.pending = null;
-        if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return null; }
+        if (queueForcedSaleIfNeeded(state, owner)) { state.pending.then = 'advance'; return null; }
         return finishTurn(state), null;
       }
 
@@ -722,7 +728,7 @@
     totalExp, passive, bbPassive, invTotalCost, bondValue, bondInterestOf, capital, quitPct,
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
-    BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_ACTIVE_LOANS,
+    BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
     _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
   };
 });

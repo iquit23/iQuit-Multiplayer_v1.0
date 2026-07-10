@@ -81,7 +81,12 @@
   function decidePending(state, p, pend) {
     switch (pend.type) {
       case 'card': return decideCard(state, p, pend);
-      case 'reveal': return { a: 'resolve', choice: 'ok' };
+      case 'reveal': {
+        // v1.2: την κάρτα «Πληθωρισμός» ΔΕΝ την κλείνει το bot — μένει μέχρι να την
+        // πατήσει κάποιος άνθρωπος (μόνο σε παρτίδες χωρίς ανθρώπους την κλείνει μόνο του)
+        if (pend.special === 'inflation' && state.players.some(x => !x.isBot)) return null;
+        return { a: 'resolve', choice: 'ok' };
+      }
       case 'lifestyle-partner': {
         const others = state.players.filter(x => x.id !== p.id && E.isActive(x));
         const partner = others[(state.round + p.pos) % others.length];
@@ -110,7 +115,7 @@
     const affordable = p.cash - price >= prof.cushion;
     const shortfall = Math.max(0, price - p.cash);
     const loanAmount = Math.ceil(shortfall / 100) * 100;
-    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && p.loans.length < E.MAX_ACTIVE_LOANS;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && (p.loansTaken || 0) < E.MAX_LOANS_TOTAL;
     const isBB = pend.deck === 'bb';
 
     // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι

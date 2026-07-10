@@ -124,7 +124,7 @@ section('v0.2 Crash tie-break (#3)');
 }
 
 // ---------- 3ε. v0.5: Πληθωρισμός — στα ΕΞΟΔΑ & στις Lifestyle, ΟΧΙ στις επενδύσεις
-// (3 παίκτες = ποσοστό αναφοράς 5%, ώστε οι αριθμοί του test να μένουν ως έχουν)
+// (3 παίκτες → 4% με τον πίνακα v1.2)
 section('v0.5 Πληθωρισμός εξόδων');
 {
   let s2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], 31);
@@ -136,20 +136,20 @@ section('v0.5 Πληθωρισμός εξόδων');
   assert(P.cash === 1000, 'μετρητά ΑΝΕΠΑΦΑ');
   assert(P.inv[0].cost === 1000 && P.inv[1].cost === 1000, 'οι επενδύσεις ΔΕΝ πληθωρίζονται πια');
   assert(E.priceOf(s2, E.card('PG2')) === 800 && E.priceOf(s2, E.card('BB10')) === 4000, 'ούτε οι τιμές στις στοίβες');
-  assert(P.expenses['Ενοίκιο'] === 525 && P.expenses['Φόροι'] === 210, 'έξοδα +5%: Ενοίκιο 500→525, Φόροι 200→210');
-  assert(E.totalExp(P) === 1575, 'σύνολο εξόδων 1500→1575');
-  assert(E.totalExp(Q2) === 1575, 'πληθωρίζονται τα έξοδα ΟΛΩΝ');
+  assert(P.expenses['Ενοίκιο'] === 520 && P.expenses['Φόροι'] === 208, 'έξοδα +4% (3p): Ενοίκιο 500→520, Φόροι 200→208');
+  assert(E.totalExp(P) === 1560, 'σύνολο εξόδων 1500→1560');
+  assert(E.totalExp(Q2) === 1560, 'πληθωρίζονται τα έξοδα ΟΛΩΝ');
   E._internals.doInflation(s2);
-  assert(P.expenses['Ενοίκιο'] === 551, 'δεύτερος πληθωρισμός: 525→551 (στρογγυλοποίηση)');
+  assert(P.expenses['Ενοίκιο'] === 541, 'δεύτερος πληθωρισμός: 520→541 (στρογγυλοποίηση)');
   // v0.6: πληθωρίζονται ΚΑΙ τα Moments
-  assert(E.momentAmount(s2, E.card('M17')) === Math.round(-500 * 1.1025), 'Moment −500 → −551 με ×1.1025');
-  assert(E.momentAmount(s2, E.card('M04')) === Math.round(250 * 1.1025), 'Moment +250 → +276 (και τα θετικά)');
+  assert(E.momentAmount(s2, E.card('M17')) === Math.round(-500 * 1.04 * 1.04), 'Moment −500 → −541 με ×1.0816');
+  assert(E.momentAmount(s2, E.card('M04')) === Math.round(250 * 1.04 * 1.04), 'Moment +250 → +270 (και τα θετικά)');
   assert(E.momentAmount(s2, E.card('M01')) === 0, 'κάρτες-αναίρεσης: χωρίς ποσό');
   // Lifestyle: εφαρμόζεται πληθωρισμένη και αναιρείται με το ίδιο ποσό
   const smoke = E.card('L14'); // Κάπνισμα: Ασφάλεια +100, tag smoking
   const before = P.expenses['Ασφάλεια'];
   const applied = E.lifestyleDelta(s2, smoke);
-  assert(applied === Math.round(100 * 1.05 * 1.05), 'lifestyle +100 → +' + applied + ' με ×1.1025');
+  assert(applied === Math.round(100 * 1.04 * 1.04), 'lifestyle +100 → +' + applied + ' με ×1.0816');
   // Το applyLifestyleTo δεν είναι exported — προσομοιώνουμε χειροκίνητα ένα entry όπως το αποθηκεύει το engine:
   P.expenses['Ασφάλεια'] = before + applied;
   P.lifestyle.push({ id: 'L14', applied });
@@ -163,25 +163,39 @@ section('v0.5 Πληθωρισμός εξόδων');
   s2.pending = null;
 }
 
-// ---------- 3ε4. v1.1: Dynamic Inflation ανά αριθμό παικτών
-section('v1.1 Dynamic Inflation');
+// ---------- 3ε4. v1.1/v1.2: Dynamic Inflation ανά αριθμό παικτών
+section('v1.2 Dynamic Inflation');
 {
-  assert(E.INFLATION_BY_PLAYERS[3] === 0.05, 'σημείο αναφοράς: 3 παίκτες = 5%');
+  assert(E.INFLATION_BY_PLAYERS[1] === 0.12 && E.INFLATION_BY_PLAYERS[3] === 0.04 && E.INFLATION_BY_PLAYERS[6] === 0.01,
+    'πίνακας v1.2 (απόφαση Γιώργου): 1p=12%, 3p=4%, 6p=1%');
   assert(E.INFLATION_BY_PLAYERS[1] > E.INFLATION_BY_PLAYERS[2] && E.INFLATION_BY_PLAYERS[2] > E.INFLATION_BY_PLAYERS[3] &&
     E.INFLATION_BY_PLAYERS[3] > E.INFLATION_BY_PLAYERS[4] && E.INFLATION_BY_PLAYERS[4] > E.INFLATION_BY_PLAYERS[5] &&
     E.INFLATION_BY_PLAYERS[5] > E.INFLATION_BY_PLAYERS[6], 'μονότονα φθίνον ποσοστό όσο αυξάνονται οι παίκτες');
-  // 2 παίκτες → 8,5%
+  // 2 παίκτες → 7%
   let g2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 71);
-  assert(E.inflRate(g2) === 0.085, '2 παίκτες → 8,5%');
+  assert(E.inflRate(g2) === 0.07, '2 παίκτες → 7%');
   E._internals.doInflation(g2);
-  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.085), '2p: Ενοίκιο 500 → 543');
-  // 6 παίκτες → 1,75%
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.07), '2p: Ενοίκιο 500 → 535');
+  // 6 παίκτες → 1%
   const spec6 = 'abcdef'.split('').map(x => ({ id: x, name: x.toUpperCase() }));
   let g6 = E.newGame(spec6, 72);
-  assert(E.inflRate(g6) === 0.0175, '6 παίκτες → 1,75%');
+  assert(E.inflRate(g6) === 0.01, '6 παίκτες → 1%');
   E._internals.doInflation(g6);
-  assert(g6.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.0175), '6p: Ενοίκιο 500 → 509');
-  assert(g6.players[5].expenses['Ενοίκιο'] === Math.round(500 * 1.0175), 'επηρεάζονται όλοι οι παίκτες');
+  assert(g6.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.01), '6p: Ενοίκιο 500 → 505');
+  assert(g6.players[5].expenses['Ενοίκιο'] === Math.round(500 * 1.01), 'επηρεάζονται όλοι οι παίκτες');
+  // v1.2: η κάρτα Inflation μένει ΑΝΟΙΧΤΗ μέχρι να την κλείσει άνθρωπος — και όταν προσγειωθεί bot
+  let gI = E.newGame([{ id: 'h', name: 'H' }, { id: 'bot', name: 'B', isBot: true }], 73);
+  gI.pending = { type: 'reveal', playerId: 'bot', special: 'inflation' };
+  gI.turn = 1;
+  const BOTS_T = require('../js/bots.js');
+  assert(BOTS_T.decide(gI, 'bot') === null, 'το bot ΔΕΝ κλείνει μόνο του την κάρτα Inflation όταν υπάρχει άνθρωπος');
+  let rI = E.applyAction(gI, 'h', { a: 'resolve', choice: 'ok' });
+  assert((!rI || !rI.error) && gI.pending === null, 'ο άνθρωπος κλείνει την κάρτα Inflation του bot ✓');
+  // χωρίς ανθρώπους (sims) το bot την κλείνει μόνο του
+  let gB = E.newGame([{ id: 'b1', name: 'B1', isBot: true }, { id: 'b2', name: 'B2', isBot: true }], 74);
+  gB.pending = { type: 'reveal', playerId: 'b1', special: 'inflation' };
+  const dB = BOTS_T.decide(gB, 'b1');
+  assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
 }
 
 // ---------- 3ε3. v0.5: Δάνεια v2
@@ -209,15 +223,21 @@ section('v0.5 Δάνεια v2');
   r2 = E.applyAction(s2, 'a', { a: 'repay', uid: l1.uid, count: 5 });
   assert((!r2 || !r2.error) && l1.remaining === 15, 'πλήρωσε 5 δόσεις × 200 → μένουν 15');
   assert(E.loanDebt(P) === Math.round(2000 * 15 / 20) + 1300, 'το χρέος κεφαλαίου μειώθηκε αναλογικά');
-  // v1.1: ΟΡΙΟ 3 ενεργών δανείων
+  // v1.2: ΟΡΙΟ 3 δανείων ΣΥΝΟΛΙΚΑ σε όλο το παιχνίδι
   r2 = E.applyAction(s2, 'a', { a: 'loan', amount: 100 });
-  assert((!r2 || !r2.error) && P.loans.length === 3, '3ο δάνειο ΟΚ (εντός ορίου)');
+  assert((!r2 || !r2.error) && P.loans.length === 3 && P.loansTaken === 3, '3ο δάνειο ΟΚ (εντός ορίου)');
   r2 = E.applyAction(s2, 'a', { a: 'loan', amount: 100 });
-  assert(r2 && r2.error && P.loans.length === 3, '4ο δάνειο ΑΠΟΡΡΙΠΤΕΤΑΙ (μέγιστο 3 ενεργά)');
+  assert(r2 && r2.error && P.loans.length === 3, '4ο δάνειο ΑΠΟΡΡΙΠΤΕΤΑΙ (μέγιστο 3 συνολικά)');
   s2.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PG3', discount: 0, canWild: false, viaWild: false };
   r2 = E.applyAction(s2, 'a', { a: 'resolve', choice: 'buy-loan', loanAmount: 100 });
   assert(r2 && r2.error, 'και η «αγορά με δάνειο» μπλοκάρεται στο όριο των 3');
   s2.pending = null;
+  // v1.2: το όριο είναι ΣΥΝΟΛΙΚΟ — η εξόφληση ΔΕΝ ελευθερώνει νέο δάνειο
+  const l3 = P.loans[2];
+  r2 = E.applyAction(s2, 'a', { a: 'repay', uid: l3.uid, count: l3.remaining });
+  assert((!r2 || !r2.error) && P.loans.length === 2, 'εξόφλησε πλήρως το 3ο δάνειο');
+  r2 = E.applyAction(s2, 'a', { a: 'loan', amount: 100 });
+  assert(r2 && r2.error && P.loansTaken === 3, 'v1.2: ΚΑΝΕΝΑ νέο δάνειο μετά από 3 συνολικά — ούτε μετά από εξόφληση');
   // Παραίτηση ΜΠΛΟΚΑΡΕΤΑΙ με ενεργό δάνειο
   P.inv.push({ uid: 'x3', cardId: 'BB13', kind: 'bb', title: 'Διαμέρισμα Χανιά', cost: 10000, income: 600 });
   P.inv.push({ uid: 'x4', cardId: 'BB19', kind: 'bb', title: 'Διαμέρισμα Ηράκλειο', cost: 10000, income: 600 });

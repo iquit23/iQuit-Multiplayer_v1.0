@@ -328,7 +328,7 @@
 
   function hostStart() {
     const spec = App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, pawn: p.pawn, strategy: p.strategy }));
-    if (spec.length < 2) { toast('⚠️ Χρειάζονται τουλάχιστον 2 παίκτες — πρόσθεσε ένα bot!'); return; }
+    if (spec.length < 1) return; // v1.2: επιτρέπεται SOLO παιχνίδι (1 άνθρωπος, χωρίς bot)
     App.game = E.newGame(spec, Date.now() & 0x7fffffff);
     App.game.players.forEach(gp => {
       const lp = App.lobby.players.find(x => x.id === gp.id);
@@ -520,16 +520,26 @@
     overlay(html, true);
     $('fbCancel').onclick = () => { closeOverlay(); if (App.game) render(); };
     $('fbSend').onclick = () => {
+      // v1.2 (αίτημα Γιώργου): στο email μπαίνει ΟΛΟΚΛΗΡΗ η ερώτηση δίπλα σε κάθε
+      // απάντηση + μία γραμμή Excel (τιμές χωρισμένες με ;) για copy-paste συλλογή.
       const data = { _subject: 'I QUIT! — Feedback παίκτη', _template: 'table', _captcha: 'false', lang: I.lang, date: new Date().toISOString() };
-      I.QUEST.forEach(q => {
-        if (q.text) { const el = document.querySelector('.fbtext[data-q="' + q.id + '"]'); if (el && el.value.trim()) data[q.id] = el.value.trim(); }
+      const xlHdr = ['date', 'lang'], xlVal = [new Date().toISOString().slice(0, 16).replace('T', ' '), I.lang];
+      I.QUEST.forEach((q, qi) => {
+        const label = (qi + 1) + '. ' + q.q[I.lang];
+        let val = '';
+        if (q.text) { const el = document.querySelector('.fbtext[data-q="' + q.id + '"]'); if (el && el.value.trim()) val = el.value.trim(); }
         else {
           const sel = document.querySelector('input[name="fb_' + q.id + '"]:checked');
-          if (sel) data[q.id] = sel.value;
+          if (sel) val = sel.value;
           const oth = document.querySelector('.fbother[data-q="' + q.id + '_other"]');
-          if (oth && oth.value.trim()) data[q.id + '_other'] = oth.value.trim();
+          if (oth && oth.value.trim()) val += (val ? ' — ' : '') + oth.value.trim();
         }
+        if (val) data[label] = val;
+        xlHdr.push('Q' + (qi + 1) + ' (' + q.id + ')');
+        xlVal.push(val.replace(/[;\n]/g, ','));
       });
+      data['📋 Excel ΓΡΑΜΜΗ ΤΙΤΛΩΝ (επικόλληση → Δεδομένα → Κείμενο σε στήλες, διαχωριστικό ";")'] = xlHdr.join(';');
+      data['📋 Excel ΓΡΑΜΜΗ ΑΠΑΝΤΗΣΕΩΝ'] = xlVal.join(';');
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
       // v1.0 (#1): ελέγχουμε το ΠΕΡΙΕΧΟΜΕΝΟ της απάντησης — το FormSubmit επιστρέφει 200
       // ακόμα κι όταν απλώς ζητά ενεργοποίηση, οπότε το 200 ΔΕΝ σημαίνει «στάλθηκε email».
@@ -585,7 +595,7 @@
       App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
       saveHostSession(); renderLobby();
     });
-    $('btnStart').disabled = App.lobby.players.length < 2;
+    $('btnStart').disabled = App.lobby.players.length < 1; // v1.2: επιτρέπεται και SOLO (χωρίς bot)
     renderPawnPick(App.lobby.players);
     broadcastLobby();
   }
@@ -753,9 +763,9 @@
       if (pct >= 100 && p.loans.length) {
         loanHtml += '<div class="notice" style="margin-top:6px;">' + t('quitBlocked') + '</div>';
       }
-      // v1.1: με 3 ενεργά δάνεια δεν δίνεται νέο (προσωρινό όριο)
-      if (p.loans.length >= E.MAX_ACTIVE_LOANS) {
-        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_ACTIVE_LOANS }) + '</div>';
+      // v1.2: όριο 3 δανείων ΣΥΝΟΛΙΚΑ στο παιχνίδι (προσωρινό)
+      if ((p.loansTaken || 0) >= E.MAX_LOANS_TOTAL) {
+        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_LOANS_TOTAL }) + '</div>';
       } else {
         loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
           '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
@@ -966,8 +976,11 @@
     if (pend.playerId !== App.myId) {
       const actorP = g.players.find(x => x.id === pend.playerId);
       if (pend.special === 'inflation') {
-        overlay(inflationCardHtml(g) +
+        // v1.2: η κάρτα μένει μέχρι να την πατήσει κάποιος — κάθε άνθρωπος μπορεί να την κλείσει
+        overlay('<div data-ch="ok" style="cursor:pointer">' + inflationCardHtml(g) + '</div>' +
+          '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
+        $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
@@ -1016,7 +1029,7 @@
       // v1.0.1 (#3): η επιλογή δανείου εμφανίζεται ΜΟΝΟ αν το μέγιστο δάνειο
       // πράγματι αρκεί για να ολοκληρωθεί η αγορά (μετρητά + δάνειο ≥ τιμή)
       const maxLn = E.maxLoan(p);
-      if (maxLn >= 100 && p.cash + maxLn >= price && p.loans.length < E.MAX_ACTIVE_LOANS) {
+      if (maxLn >= 100 && p.cash + maxLn >= price && (p.loansTaken || 0) < E.MAX_LOANS_TOTAL) {
         const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
         html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +
