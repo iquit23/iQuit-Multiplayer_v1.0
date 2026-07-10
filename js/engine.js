@@ -262,13 +262,16 @@
   //
   // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
   // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
-  // v1.2 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
-  const INFLATION_BY_PLAYERS = { 1: 0.12, 2: 0.07, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  // v1.3 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.10, 2: 0.06, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
   function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
     state.inflMult = (state.inflMult || 1) * (1 + r);
     state.players.forEach(pl => {
+      // v1.3 (απόφαση Γιώργου): όποιος έχει κάνει I QUIT ΔΕΝ επηρεάζεται πλέον —
+      // το meter του μένει παγωμένο όπως τη στιγμή της νίκης του.
+      if (pl.retiredAge !== null) return;
       Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * (1 + r)); });
     });
     log(state, 'lg_inflation', { r: parseFloat((r * 100).toFixed(2)) });
@@ -277,8 +280,9 @@
   function priceOf(state, c) { return c.cost; }
   // Πληθωρισμένη επίδραση κάρτας Lifestyle
   function lifestyleDelta(state, c) { return Math.round(c.delta * (state.inflMult || 1)); }
-  // v0.6: πληθωρίζονται ΚΑΙ οι κάρτες Moments (εφάπαξ ποσά, θετικά & αρνητικά)
-  function momentAmount(state, c) { return Math.round((c.amount || 0) * (state.inflMult || 1)); }
+  // v1.3 (απόφαση Γιώργου): οι κάρτες Moments ΔΕΝ πληθωρίζονται πλέον — εφαρμόζονται
+  // πάντα στην ονομαστική τους αξία. (Οι Lifestyle συνεχίζουν να πληθωρίζονται.)
+  function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
   // ---------- Forced sale ----------
   function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }

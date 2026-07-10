@@ -59,7 +59,7 @@
       discountOffer: 'Ο προηγούμενος παίκτης δεν την αγόρασε — τη θέλεις με έκπτωση 10%;',
       cardOf: 'Κάρτα του παίκτη <b>{name}</b>', decidesNow: 'Ο <b>{name}</b> αποφασίζει…',
       okRead: 'ΟΚ, το διάβασα ✔', everyoneSees: 'Όλοι οι παίκτες βλέπουν αυτή την κάρτα',
-      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle. (Όποιος έχει κάνει I QUIT δεν επηρεάζεται.)',
       landedBy: 'Την πάτησε ο <b>{name}</b>',
       bondEffect: '+{v} στο ταμείο σε κάθε είσπραξη',
       bondNote: 'Λήξη στα 10 tokens → επιστροφή κεφαλαίου {v} · πωλείται όποτε θες · ανεπηρέαστο από πληθωρισμό · δεν μετράει στο I QUIT meter ούτε στο όριο δανείου',
@@ -108,7 +108,7 @@
       lg_iquitInstant: '🎉 I QUIT! Ο {n} πέτυχε την οικονομική ελευθερία στα {age} — παθητικό {pas} ≥ έξοδα {exp} και μηδέν χρέη!',
       lg_forcedLoanSettle: '🏦 {n}: υποχρεωτική εξόφληση δανείων −{v}',
       lg_reached65: '⏳ Ο {n} έφτασε τα 65 χωρίς παραίτηση.',
-      lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle.',
       lg_forcedNeeded: '⚠️ {n}: δεν επαρκούν τα μετρητά ({v}) — αναγκαστική πώληση στο 80%.',
       lg_negNoAssets: '🔴 {n}: αρνητικά μετρητά χωρίς περιουσιακά στοιχεία ({v}).',
       lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
@@ -196,7 +196,7 @@
       discountOffer: 'The previous player passed — want it at a 10% discount?',
       cardOf: '<b>{name}</b>’s card', decidesNow: '<b>{name}</b> is deciding…',
       okRead: 'OK, got it ✔', everyoneSees: 'All players can see this card',
-      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by {r}%, and so did all Lifestyle & Moments cards.',
+      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by {r}%, and so did all Lifestyle cards. (Players who already hit I QUIT are not affected.)',
       landedBy: 'Landed on by <b>{name}</b>',
       bondEffect: '+{v} to your cash every payday',
       bondNote: 'Matures at 10 tokens → principal {v} returned · sell any time · unaffected by inflation · does not count toward the I QUIT meter or the loan limit',
@@ -242,7 +242,7 @@
       lg_iquitInstant: '🎉 I QUIT! {n} reached financial freedom at {age} — passive {pas} ≥ expenses {exp} and zero debt!',
       lg_forcedLoanSettle: '🏦 {n}: mandatory loan settlement −{v}',
       lg_reached65: '⏳ {n} reached 65 without retiring.',
-      lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle & Moments cards.',
+      lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle cards.',
       lg_forcedNeeded: '⚠️ {n}: not enough cash ({v}) — forced sale at 80%.',
       lg_negNoAssets: '🔴 {n}: negative cash with no assets left ({v}).',
       lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
@@ -329,7 +329,7 @@
 <p><b>💥 Crash</b> — Χάνεις ολόκληρη την Project επένδυσή σου στο αντίστοιχο χρώμα με τη μεγαλύτερη απόδοση. Αν υπάρχει ισοπαλία, χάνεται εκείνη με τη μεγαλύτερη αξία. Υπενθύμιση: οι υψηλές αποδόσεις συνοδεύονται από υψηλότερο ρίσκο.</p>
 <p><b>⚓ Funding Fails</b> — Χάνεις τη Χρηματοδότηση με τη μεγαλύτερη απόδοση.</p>
 <p><b>🧾 Tax</b> — Πληρώνεις φόρο ίσο με το 50% του εισοδήματος που λαμβάνεις από τις Big Business επενδύσεις.</p>
-<p><b>📈 Inflation</b> — Όλοι οι παίκτες αυξάνουν τα μηνιαία έξοδά τους κατά 5%. Οι μελλοντικές κάρτες Lifestyle και Moments προσαρμόζονται επίσης στον πληθωρισμό. Οι επενδύσεις και τα μετρητά σου δεν επηρεάζονται.</p>
+<p><b>📈 Inflation</b> — Όλοι οι παίκτες αυξάνουν τα μηνιαία έξοδά τους κατά 5%. Οι μελλοντικές κάρτες Lifestyle προσαρμόζονται επίσης στον πληθωρισμό. Οι επενδύσεις και τα μετρητά σου δεν επηρεάζονται.</p>
 <h3>🏛️ Ομόλογα</h3>
 <p>Αγοράζεις ένα ομόλογο (π.χ. 1.000€). Σε κάθε είσπραξη: λαμβάνεις τόκο 4% και κερδίζεις ένα Bond Token. Μετά από 10 Tokens το ομόλογο λήγει και επιστρέφεται το αρχικό κεφάλαιο. Μπορείς να το πουλήσεις οποιαδήποτε στιγμή και να πάρεις πίσω το κεφάλαιό σου. Τα ομόλογα δεν μετρούν στο I QUIT Meter και δεν αυξάνουν το όριο δανεισμού. Είναι εργαλείο ασφάλειας και ρευστότητας.</p>
 <h3>🏦 Δάνεια</h3>
@@ -371,7 +371,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 <p><b>💥 Crash</b> — You lose your entire Project investment of the matching colour with the highest return. On a tie, the one with the greater value is lost. Reminder: high returns come with high risk.</p>
 <p><b>⚓ Funding Fails</b> — You lose the Funding card with the highest return.</p>
 <p><b>🧾 Tax</b> — You pay 50% of the income you receive from Big Business investments.</p>
-<p><b>📈 Inflation</b> — All players’ monthly expenses rise by 5%. Future Lifestyle and Moments cards also adjust for inflation. Your investments and cash are not affected.</p>
+<p><b>📈 Inflation</b> — All players’ monthly expenses rise by 5%. Future Lifestyle cards also adjust for inflation. Your investments and cash are not affected.</p>
 <h3>🏛️ Bonds</h3>
 <p>You buy a bond (e.g. €1,000). Every payday you receive 4% interest and one Bond Token. After 10 tokens the bond matures and the principal is returned. You can sell it any time and get your principal back. Bonds do not count toward the I QUIT Meter and do not raise your loan limit. They are a tool for safety and liquidity.</p>
 <h3>🏦 Loans</h3>

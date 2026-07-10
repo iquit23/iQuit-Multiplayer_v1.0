@@ -141,9 +141,9 @@ section('v0.5 Πληθωρισμός εξόδων');
   assert(E.totalExp(Q2) === 1560, 'πληθωρίζονται τα έξοδα ΟΛΩΝ');
   E._internals.doInflation(s2);
   assert(P.expenses['Ενοίκιο'] === 541, 'δεύτερος πληθωρισμός: 520→541 (στρογγυλοποίηση)');
-  // v0.6: πληθωρίζονται ΚΑΙ τα Moments
-  assert(E.momentAmount(s2, E.card('M17')) === Math.round(-500 * 1.04 * 1.04), 'Moment −500 → −541 με ×1.0816');
-  assert(E.momentAmount(s2, E.card('M04')) === Math.round(250 * 1.04 * 1.04), 'Moment +250 → +270 (και τα θετικά)');
+  // v1.3 (απόφαση Γιώργου): τα Moments ΔΕΝ πληθωρίζονται πλέον — ονομαστικές αξίες πάντα
+  assert(E.momentAmount(s2, E.card('M17')) === -500, 'v1.3: Moment −500 μένει −500 (χωρίς πληθωρισμό)');
+  assert(E.momentAmount(s2, E.card('M04')) === 250, 'v1.3: Moment +250 μένει +250');
   assert(E.momentAmount(s2, E.card('M01')) === 0, 'κάρτες-αναίρεσης: χωρίς ποσό');
   // Lifestyle: εφαρμόζεται πληθωρισμένη και αναιρείται με το ίδιο ποσό
   const smoke = E.card('L14'); // Κάπνισμα: Ασφάλεια +100, tag smoking
@@ -166,16 +166,22 @@ section('v0.5 Πληθωρισμός εξόδων');
 // ---------- 3ε4. v1.1/v1.2: Dynamic Inflation ανά αριθμό παικτών
 section('v1.2 Dynamic Inflation');
 {
-  assert(E.INFLATION_BY_PLAYERS[1] === 0.12 && E.INFLATION_BY_PLAYERS[3] === 0.04 && E.INFLATION_BY_PLAYERS[6] === 0.01,
-    'πίνακας v1.2 (απόφαση Γιώργου): 1p=12%, 3p=4%, 6p=1%');
+  assert(E.INFLATION_BY_PLAYERS[1] === 0.10 && E.INFLATION_BY_PLAYERS[3] === 0.04 && E.INFLATION_BY_PLAYERS[6] === 0.01,
+    'πίνακας v1.3 (απόφαση Γιώργου): 1p=10%, 3p=4%, 6p=1%');
   assert(E.INFLATION_BY_PLAYERS[1] > E.INFLATION_BY_PLAYERS[2] && E.INFLATION_BY_PLAYERS[2] > E.INFLATION_BY_PLAYERS[3] &&
     E.INFLATION_BY_PLAYERS[3] > E.INFLATION_BY_PLAYERS[4] && E.INFLATION_BY_PLAYERS[4] > E.INFLATION_BY_PLAYERS[5] &&
     E.INFLATION_BY_PLAYERS[5] > E.INFLATION_BY_PLAYERS[6], 'μονότονα φθίνον ποσοστό όσο αυξάνονται οι παίκτες');
-  // 2 παίκτες → 7%
+  // 2 παίκτες → 6%
   let g2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 71);
-  assert(E.inflRate(g2) === 0.07, '2 παίκτες → 7%');
+  assert(E.inflRate(g2) === 0.06, '2 παίκτες → 6%');
   E._internals.doInflation(g2);
-  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.07), '2p: Ενοίκιο 500 → 535');
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.06), '2p: Ενοίκιο 500 → 530');
+  // v1.3: όποιος έχει κάνει I QUIT ΔΕΝ επηρεάζεται από επόμενους πληθωρισμούς
+  g2.players[1].retiredAge = 47;
+  const frozenRent = g2.players[1].expenses['Ενοίκιο'];
+  E._internals.doInflation(g2);
+  assert(g2.players[1].expenses['Ενοίκιο'] === frozenRent, 'v1.3: τα έξοδα του νικητή I QUIT μένουν παγωμένα');
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(Math.round(500 * 1.06) * 1.06), 'οι ενεργοί συνεχίζουν να πληθωρίζονται');
   // 6 παίκτες → 1%
   const spec6 = 'abcdef'.split('').map(x => ({ id: x, name: x.toUpperCase() }));
   let g6 = E.newGame(spec6, 72);

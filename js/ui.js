@@ -93,6 +93,12 @@
         beep(App._stepAlt ? 900 : 700, .045, 'square', .045); App._stepAlt = !App._stepAlt;
     }
   }
+  // v1.3: «νότα εκκλησιαστικού οργάνου» — θεμελίωση + υποοκτάβα + αρμονική, για δραματικό χαρακτήρα
+  function organNote(f, dur, when, g) {
+    beep(f, dur, 'sawtooth', (g || .05) * .45, when);   // σώμα
+    beep(f / 2, dur, 'sine', (g || .05), when);          // υποοκτάβα (βάθος)
+    beep(f * 2.004, dur, 'sine', (g || .05) * .22, when); // αρμονική, ελαφρά detuned (organ feel)
+  }
   function sound(kind, pawn) {
     if (App.muted) return;
     try {
@@ -101,6 +107,19 @@
       else if (kind === 'land') { beep(500, .1, 'triangle', .07); beep(750, .12, 'triangle', .06, .08); }
       else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => beep(f, .18, 'triangle', .08, i * .13)); }
       else if (kind === 'chat') { beep(1200, .05, 'sine', .04); }
+      else if (kind === 'inflation') {
+        // v1.3: δραματικό ΚΑΤΗΦΟΡΙΚΟ μοτίβο οργάνου σε ρε ελάσσονα (~3.5s, πρωτότυπο,
+        // στο πνεύμα «Phantom of the Opera»): Λα–Σολ–Φα–Μι ↓ και σκοτεινή συγχορδία ρε ελάσσονα
+        organNote(440.00, .38, 0.00, .055); // Λα4
+        organNote(392.00, .38, 0.40, .055); // Σολ4
+        organNote(349.23, .38, 0.80, .055); // Φα4
+        organNote(329.63, .55, 1.20, .055); // Μι4
+        // τελική συγχορδία: Ρε ελάσσων, χαμηλά και βαριά
+        organNote(146.83, 1.7, 1.85, .07);  // Ρε3
+        organNote(220.00, 1.7, 1.85, .05);  // Λα3
+        organNote(349.23, 1.7, 1.85, .035); // Φα4
+        noiseBurst(.5, 90, .04, 1.85);      // υπόκωφο «μπουμ»
+      }
     } catch (e) {}
   }
 
@@ -964,6 +983,12 @@
         (pend.type === 'reveal' || pend.type === 'lifestyle-partner') ? (pend.deck || 'lifestyle') : null);
     const willShow = mine0 || (actorP0 && !actorP0.isBot && ['card', 'reveal', 'lifestyle-partner'].includes(pend.type));
     const pendKey = pend.type + ':' + (pend.cardId || pend.special || '') + ':' + pend.playerId;
+    // v1.3: δραματικός ήχος όταν εμφανίζεται η κάρτα ΠΛΗΘΩΡΙΣΜΟΣ (μία φορά ανά χτύπημα —
+    // το inflMult αλλάζει σε κάθε πληθωρισμό, οπότε ξεχωρίζει διαδοχικά χτυπήματα)
+    if (pend.special === 'inflation') {
+      const ik = pendKey + ':' + g.inflMult;
+      if (App.lastInflSnd !== ik) { App.lastInflSnd = ik; sound('inflation'); }
+    }
     if (deckFor && willShow && App.lastDrawKey !== pendKey) {
       App.lastDrawKey = pendKey;
       closeOverlay();

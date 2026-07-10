@@ -671,7 +671,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       discountOffer: 'Ο προηγούμενος παίκτης δεν την αγόρασε — τη θέλεις με έκπτωση 10%;',
       cardOf: 'Κάρτα του παίκτη <b>{name}</b>', decidesNow: 'Ο <b>{name}</b> αποφασίζει…',
       okRead: 'ΟΚ, το διάβασα ✔', everyoneSees: 'Όλοι οι παίκτες βλέπουν αυτή την κάρτα',
-      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle. (Όποιος έχει κάνει I QUIT δεν επηρεάζεται.)',
       landedBy: 'Την πάτησε ο <b>{name}</b>',
       bondEffect: '+{v} στο ταμείο σε κάθε είσπραξη',
       bondNote: 'Λήξη στα 10 tokens → επιστροφή κεφαλαίου {v} · πωλείται όποτε θες · ανεπηρέαστο από πληθωρισμό · δεν μετράει στο I QUIT meter ούτε στο όριο δανείου',
@@ -720,7 +720,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_iquitInstant: '🎉 I QUIT! Ο {n} πέτυχε την οικονομική ελευθερία στα {age} — παθητικό {pas} ≥ έξοδα {exp} και μηδέν χρέη!',
       lg_forcedLoanSettle: '🏦 {n}: υποχρεωτική εξόφληση δανείων −{v}',
       lg_reached65: '⏳ Ο {n} έφτασε τα 65 χωρίς παραίτηση.',
-      lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle.',
       lg_forcedNeeded: '⚠️ {n}: δεν επαρκούν τα μετρητά ({v}) — αναγκαστική πώληση στο 80%.',
       lg_negNoAssets: '🔴 {n}: αρνητικά μετρητά χωρίς περιουσιακά στοιχεία ({v}).',
       lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
@@ -808,7 +808,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       discountOffer: 'The previous player passed — want it at a 10% discount?',
       cardOf: '<b>{name}</b>’s card', decidesNow: '<b>{name}</b> is deciding…',
       okRead: 'OK, got it ✔', everyoneSees: 'All players can see this card',
-      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by {r}%, and so did all Lifestyle & Moments cards.',
+      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by {r}%, and so did all Lifestyle cards. (Players who already hit I QUIT are not affected.)',
       landedBy: 'Landed on by <b>{name}</b>',
       bondEffect: '+{v} to your cash every payday',
       bondNote: 'Matures at 10 tokens → principal {v} returned · sell any time · unaffected by inflation · does not count toward the I QUIT meter or the loan limit',
@@ -854,7 +854,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_iquitInstant: '🎉 I QUIT! {n} reached financial freedom at {age} — passive {pas} ≥ expenses {exp} and zero debt!',
       lg_forcedLoanSettle: '🏦 {n}: mandatory loan settlement −{v}',
       lg_reached65: '⏳ {n} reached 65 without retiring.',
-      lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle & Moments cards.',
+      lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle cards.',
       lg_forcedNeeded: '⚠️ {n}: not enough cash ({v}) — forced sale at 80%.',
       lg_negNoAssets: '🔴 {n}: negative cash with no assets left ({v}).',
       lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
@@ -941,7 +941,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 <p><b>💥 Crash</b> — Χάνεις ολόκληρη την Project επένδυσή σου στο αντίστοιχο χρώμα με τη μεγαλύτερη απόδοση. Αν υπάρχει ισοπαλία, χάνεται εκείνη με τη μεγαλύτερη αξία. Υπενθύμιση: οι υψηλές αποδόσεις συνοδεύονται από υψηλότερο ρίσκο.</p>
 <p><b>⚓ Funding Fails</b> — Χάνεις τη Χρηματοδότηση με τη μεγαλύτερη απόδοση.</p>
 <p><b>🧾 Tax</b> — Πληρώνεις φόρο ίσο με το 50% του εισοδήματος που λαμβάνεις από τις Big Business επενδύσεις.</p>
-<p><b>📈 Inflation</b> — Όλοι οι παίκτες αυξάνουν τα μηνιαία έξοδά τους κατά 5%. Οι μελλοντικές κάρτες Lifestyle και Moments προσαρμόζονται επίσης στον πληθωρισμό. Οι επενδύσεις και τα μετρητά σου δεν επηρεάζονται.</p>
+<p><b>📈 Inflation</b> — Όλοι οι παίκτες αυξάνουν τα μηνιαία έξοδά τους κατά 5%. Οι μελλοντικές κάρτες Lifestyle προσαρμόζονται επίσης στον πληθωρισμό. Οι επενδύσεις και τα μετρητά σου δεν επηρεάζονται.</p>
 <h3>🏛️ Ομόλογα</h3>
 <p>Αγοράζεις ένα ομόλογο (π.χ. 1.000€). Σε κάθε είσπραξη: λαμβάνεις τόκο 4% και κερδίζεις ένα Bond Token. Μετά από 10 Tokens το ομόλογο λήγει και επιστρέφεται το αρχικό κεφάλαιο. Μπορείς να το πουλήσεις οποιαδήποτε στιγμή και να πάρεις πίσω το κεφάλαιό σου. Τα ομόλογα δεν μετρούν στο I QUIT Meter και δεν αυξάνουν το όριο δανεισμού. Είναι εργαλείο ασφάλειας και ρευστότητας.</p>
 <h3>🏦 Δάνεια</h3>
@@ -983,7 +983,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 <p><b>💥 Crash</b> — You lose your entire Project investment of the matching colour with the highest return. On a tie, the one with the greater value is lost. Reminder: high returns come with high risk.</p>
 <p><b>⚓ Funding Fails</b> — You lose the Funding card with the highest return.</p>
 <p><b>🧾 Tax</b> — You pay 50% of the income you receive from Big Business investments.</p>
-<p><b>📈 Inflation</b> — All players’ monthly expenses rise by 5%. Future Lifestyle and Moments cards also adjust for inflation. Your investments and cash are not affected.</p>
+<p><b>📈 Inflation</b> — All players’ monthly expenses rise by 5%. Future Lifestyle cards also adjust for inflation. Your investments and cash are not affected.</p>
 <h3>🏛️ Bonds</h3>
 <p>You buy a bond (e.g. €1,000). Every payday you receive 4% interest and one Bond Token. After 10 tokens the bond matures and the principal is returned. You can sell it any time and get your principal back. Bonds do not count toward the I QUIT Meter and do not raise your loan limit. They are a tool for safety and liquidity.</p>
 <h3>🏦 Loans</h3>
@@ -1286,13 +1286,16 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   //
   // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
   // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
-  // v1.2 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
-  const INFLATION_BY_PLAYERS = { 1: 0.12, 2: 0.07, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  // v1.3 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.10, 2: 0.06, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
   function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
     state.inflMult = (state.inflMult || 1) * (1 + r);
     state.players.forEach(pl => {
+      // v1.3 (απόφαση Γιώργου): όποιος έχει κάνει I QUIT ΔΕΝ επηρεάζεται πλέον —
+      // το meter του μένει παγωμένο όπως τη στιγμή της νίκης του.
+      if (pl.retiredAge !== null) return;
       Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * (1 + r)); });
     });
     log(state, 'lg_inflation', { r: parseFloat((r * 100).toFixed(2)) });
@@ -1301,8 +1304,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function priceOf(state, c) { return c.cost; }
   // Πληθωρισμένη επίδραση κάρτας Lifestyle
   function lifestyleDelta(state, c) { return Math.round(c.delta * (state.inflMult || 1)); }
-  // v0.6: πληθωρίζονται ΚΑΙ οι κάρτες Moments (εφάπαξ ποσά, θετικά & αρνητικά)
-  function momentAmount(state, c) { return Math.round((c.amount || 0) * (state.inflMult || 1)); }
+  // v1.3 (απόφαση Γιώργου): οι κάρτες Moments ΔΕΝ πληθωρίζονται πλέον — εφαρμόζονται
+  // πάντα στην ονομαστική τους αξία. (Οι Lifestyle συνεχίζουν να πληθωρίζονται.)
+  function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
   // ---------- Forced sale ----------
   function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }
@@ -2153,6 +2157,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         beep(App._stepAlt ? 900 : 700, .045, 'square', .045); App._stepAlt = !App._stepAlt;
     }
   }
+  // v1.3: «νότα εκκλησιαστικού οργάνου» — θεμελίωση + υποοκτάβα + αρμονική, για δραματικό χαρακτήρα
+  function organNote(f, dur, when, g) {
+    beep(f, dur, 'sawtooth', (g || .05) * .45, when);   // σώμα
+    beep(f / 2, dur, 'sine', (g || .05), when);          // υποοκτάβα (βάθος)
+    beep(f * 2.004, dur, 'sine', (g || .05) * .22, when); // αρμονική, ελαφρά detuned (organ feel)
+  }
   function sound(kind, pawn) {
     if (App.muted) return;
     try {
@@ -2161,6 +2171,19 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       else if (kind === 'land') { beep(500, .1, 'triangle', .07); beep(750, .12, 'triangle', .06, .08); }
       else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => beep(f, .18, 'triangle', .08, i * .13)); }
       else if (kind === 'chat') { beep(1200, .05, 'sine', .04); }
+      else if (kind === 'inflation') {
+        // v1.3: δραματικό ΚΑΤΗΦΟΡΙΚΟ μοτίβο οργάνου σε ρε ελάσσονα (~3.5s, πρωτότυπο,
+        // στο πνεύμα «Phantom of the Opera»): Λα–Σολ–Φα–Μι ↓ και σκοτεινή συγχορδία ρε ελάσσονα
+        organNote(440.00, .38, 0.00, .055); // Λα4
+        organNote(392.00, .38, 0.40, .055); // Σολ4
+        organNote(349.23, .38, 0.80, .055); // Φα4
+        organNote(329.63, .55, 1.20, .055); // Μι4
+        // τελική συγχορδία: Ρε ελάσσων, χαμηλά και βαριά
+        organNote(146.83, 1.7, 1.85, .07);  // Ρε3
+        organNote(220.00, 1.7, 1.85, .05);  // Λα3
+        organNote(349.23, 1.7, 1.85, .035); // Φα4
+        noiseBurst(.5, 90, .04, 1.85);      // υπόκωφο «μπουμ»
+      }
     } catch (e) {}
   }
 
@@ -3024,6 +3047,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         (pend.type === 'reveal' || pend.type === 'lifestyle-partner') ? (pend.deck || 'lifestyle') : null);
     const willShow = mine0 || (actorP0 && !actorP0.isBot && ['card', 'reveal', 'lifestyle-partner'].includes(pend.type));
     const pendKey = pend.type + ':' + (pend.cardId || pend.special || '') + ':' + pend.playerId;
+    // v1.3: δραματικός ήχος όταν εμφανίζεται η κάρτα ΠΛΗΘΩΡΙΣΜΟΣ (μία φορά ανά χτύπημα —
+    // το inflMult αλλάζει σε κάθε πληθωρισμό, οπότε ξεχωρίζει διαδοχικά χτυπήματα)
+    if (pend.special === 'inflation') {
+      const ik = pendKey + ':' + g.inflMult;
+      if (App.lastInflSnd !== ik) { App.lastInflSnd = ik; sound('inflation'); }
+    }
     if (deckFor && willShow && App.lastDrawKey !== pendKey) {
       App.lastDrawKey = pendKey;
       closeOverlay();
