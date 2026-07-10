@@ -124,9 +124,10 @@ section('v0.2 Crash tie-break (#3)');
 }
 
 // ---------- 3ε. v0.5: Πληθωρισμός — στα ΕΞΟΔΑ & στις Lifestyle, ΟΧΙ στις επενδύσεις
+// (3 παίκτες = ποσοστό αναφοράς 5%, ώστε οι αριθμοί του test να μένουν ως έχουν)
 section('v0.5 Πληθωρισμός εξόδων');
 {
-  let s2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 31);
+  let s2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], 31);
   const P = s2.players[0], Q2 = s2.players[1];
   P.cash = 1000;
   P.inv.push({ uid: 'f1', cardId: 'PF1', kind: 'funding', title: 'Καφετέρια', cost: 1000, income: 80 });
@@ -162,6 +163,27 @@ section('v0.5 Πληθωρισμός εξόδων');
   s2.pending = null;
 }
 
+// ---------- 3ε4. v1.1: Dynamic Inflation ανά αριθμό παικτών
+section('v1.1 Dynamic Inflation');
+{
+  assert(E.INFLATION_BY_PLAYERS[3] === 0.05, 'σημείο αναφοράς: 3 παίκτες = 5%');
+  assert(E.INFLATION_BY_PLAYERS[1] > E.INFLATION_BY_PLAYERS[2] && E.INFLATION_BY_PLAYERS[2] > E.INFLATION_BY_PLAYERS[3] &&
+    E.INFLATION_BY_PLAYERS[3] > E.INFLATION_BY_PLAYERS[4] && E.INFLATION_BY_PLAYERS[4] > E.INFLATION_BY_PLAYERS[5] &&
+    E.INFLATION_BY_PLAYERS[5] > E.INFLATION_BY_PLAYERS[6], 'μονότονα φθίνον ποσοστό όσο αυξάνονται οι παίκτες');
+  // 2 παίκτες → 8,5%
+  let g2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 71);
+  assert(E.inflRate(g2) === 0.085, '2 παίκτες → 8,5%');
+  E._internals.doInflation(g2);
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.085), '2p: Ενοίκιο 500 → 543');
+  // 6 παίκτες → 1,75%
+  const spec6 = 'abcdef'.split('').map(x => ({ id: x, name: x.toUpperCase() }));
+  let g6 = E.newGame(spec6, 72);
+  assert(E.inflRate(g6) === 0.0175, '6 παίκτες → 1,75%');
+  E._internals.doInflation(g6);
+  assert(g6.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.0175), '6p: Ενοίκιο 500 → 509');
+  assert(g6.players[5].expenses['Ενοίκιο'] === Math.round(500 * 1.0175), 'επηρεάζονται όλοι οι παίκτες');
+}
+
 // ---------- 3ε3. v0.5: Δάνεια v2
 section('v0.5 Δάνεια v2');
 {
@@ -187,6 +209,15 @@ section('v0.5 Δάνεια v2');
   r2 = E.applyAction(s2, 'a', { a: 'repay', uid: l1.uid, count: 5 });
   assert((!r2 || !r2.error) && l1.remaining === 15, 'πλήρωσε 5 δόσεις × 200 → μένουν 15');
   assert(E.loanDebt(P) === Math.round(2000 * 15 / 20) + 1300, 'το χρέος κεφαλαίου μειώθηκε αναλογικά');
+  // v1.1: ΟΡΙΟ 3 ενεργών δανείων
+  r2 = E.applyAction(s2, 'a', { a: 'loan', amount: 100 });
+  assert((!r2 || !r2.error) && P.loans.length === 3, '3ο δάνειο ΟΚ (εντός ορίου)');
+  r2 = E.applyAction(s2, 'a', { a: 'loan', amount: 100 });
+  assert(r2 && r2.error && P.loans.length === 3, '4ο δάνειο ΑΠΟΡΡΙΠΤΕΤΑΙ (μέγιστο 3 ενεργά)');
+  s2.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PG3', discount: 0, canWild: false, viaWild: false };
+  r2 = E.applyAction(s2, 'a', { a: 'resolve', choice: 'buy-loan', loanAmount: 100 });
+  assert(r2 && r2.error, 'και η «αγορά με δάνειο» μπλοκάρεται στο όριο των 3');
+  s2.pending = null;
   // Παραίτηση ΜΠΛΟΚΑΡΕΤΑΙ με ενεργό δάνειο
   P.inv.push({ uid: 'x3', cardId: 'BB13', kind: 'bb', title: 'Διαμέρισμα Χανιά', cost: 10000, income: 600 });
   P.inv.push({ uid: 'x4', cardId: 'BB19', kind: 'bb', title: 'Διαμέρισμα Ηράκλειο', cost: 10000, income: 600 });

@@ -753,9 +753,14 @@
       if (pct >= 100 && p.loans.length) {
         loanHtml += '<div class="notice" style="margin-top:6px;">' + t('quitBlocked') + '</div>';
       }
-      loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
-        '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
-        '<div class="muted" style="margin-top:4px;">' + t('loanHint', { v: fmt(E.loanBase(p)) }) + '</div>';
+      // v1.1: με 3 ενεργά δάνεια δεν δίνεται νέο (προσωρινό όριο)
+      if (p.loans.length >= E.MAX_ACTIVE_LOANS) {
+        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_ACTIVE_LOANS }) + '</div>';
+      } else {
+        loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
+          '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
+          '<div class="muted" style="margin-top:4px;">' + t('loanHint', { v: fmt(E.loanBase(p)) }) + '</div>';
+      }
     }
 
     box.innerHTML = status +
@@ -868,10 +873,11 @@
   }
   function closeOverlay() { $('overlay').classList.add('hidden'); App.localModal = null; }
 
-  function inflationCardHtml() {
+  function inflationCardHtml(g) {
+    const r = g ? parseFloat((E.inflRate(g) * 100).toFixed(2)) : 5;
     return '<div class="gamecard gc-inflation">' +
       '<div class="ttl" style="font-size:24px; letter-spacing:2px; font-weight:900;">' + t('inflTitle') + '</div>' +
-      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody') + '</div></div>';
+      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody', { r: r }) + '</div></div>';
   }
 
   function cardHtml(c, deck, discount, curPrice) {
@@ -960,7 +966,7 @@
     if (pend.playerId !== App.myId) {
       const actorP = g.players.find(x => x.id === pend.playerId);
       if (pend.special === 'inflation') {
-        overlay(inflationCardHtml() +
+        overlay(inflationCardHtml(g) +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
@@ -978,7 +984,7 @@
     if (pend.type === 'reveal') {
       const rc = pend.special ? null : E.card(pend.cardId);
       const body = pend.special === 'inflation'
-        ? inflationCardHtml()
+        ? inflationCardHtml(g)
         : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
         '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
@@ -1010,7 +1016,7 @@
       // v1.0.1 (#3): η επιλογή δανείου εμφανίζεται ΜΟΝΟ αν το μέγιστο δάνειο
       // πράγματι αρκεί για να ολοκληρωθεί η αγορά (μετρητά + δάνειο ≥ τιμή)
       const maxLn = E.maxLoan(p);
-      if (maxLn >= 100 && p.cash + maxLn >= price) {
+      if (maxLn >= 100 && p.cash + maxLn >= price && p.loans.length < E.MAX_ACTIVE_LOANS) {
         const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
         html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +

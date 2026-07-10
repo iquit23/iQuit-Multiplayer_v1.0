@@ -110,7 +110,7 @@
     const affordable = p.cash - price >= prof.cushion;
     const shortfall = Math.max(0, price - p.cash);
     const loanAmount = Math.ceil(shortfall / 100) * 100;
-    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && p.loans.length < E.MAX_ACTIVE_LOANS;
     const isBB = pend.deck === 'bb';
 
     // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι

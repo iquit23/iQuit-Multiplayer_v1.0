@@ -656,6 +656,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       pay1: '1 δόση', payoff: 'Εξόφληση {v}', newLoanPh: 'Νέο δάνειο έως {v}', loanBtn: '+ Δάνειο',
       loanHint: 'Έως όσο η αξία των επενδύσεών σου ({v}) − υπάρχον χρέος κεφαλαίου · πολλαπλάσια του 100€ · 20 δόσεις × 10% · εξόφληση υποχρεωτική πριν το I QUIT',
       quitBlocked: '💡 Το παθητικό σου καλύπτει τα έξοδα — εξόφλησε τα δάνεια για να πατήσεις I QUIT!',
+      loanCap: '🔒 Έφτασες το όριο των {n} ενεργών δανείων — εξόφλησε κάποιο για να δανειστείς ξανά.',
       yearsOld: '{n} ετών', passiveShort: 'Παθητικό {v}', iquitAt: 'I QUIT στα {age}!', at65: 'στα 65',
       // Cards & modals
       cost: 'Κόστος:', perCycle: '/ κύκλο', permanent: '/ κύκλο (μόνιμα)', each: ' — έκαστος',
@@ -670,7 +671,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       discountOffer: 'Ο προηγούμενος παίκτης δεν την αγόρασε — τη θέλεις με έκπτωση 10%;',
       cardOf: 'Κάρτα του παίκτη <b>{name}</b>', decidesNow: 'Ο <b>{name}</b> αποφασίζει…',
       okRead: 'ΟΚ, το διάβασα ✔', everyoneSees: 'Όλοι οι παίκτες βλέπουν αυτή την κάρτα',
-      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      inflTitle: 'ΠΛΗΘΩΡΙΣΜΟΣ', inflBody: 'Τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
       landedBy: 'Την πάτησε ο <b>{name}</b>',
       bondEffect: '+{v} στο ταμείο σε κάθε είσπραξη',
       bondNote: 'Λήξη στα 10 tokens → επιστροφή κεφαλαίου {v} · πωλείται όποτε θες · ανεπηρέαστο από πληθωρισμό · δεν μετράει στο I QUIT meter ούτε στο όριο δανείου',
@@ -719,7 +720,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_iquitInstant: '🎉 I QUIT! Ο {n} πέτυχε την οικονομική ελευθερία στα {age} — παθητικό {pas} ≥ έξοδα {exp} και μηδέν χρέη!',
       lg_forcedLoanSettle: '🏦 {n}: υποχρεωτική εξόφληση δανείων −{v}',
       lg_reached65: '⏳ Ο {n} έφτασε τα 65 χωρίς παραίτηση.',
-      lg_inflation: '📈 Πληθωρισμός 5%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle & Moments.',
+      lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle & Moments.',
       lg_forcedNeeded: '⚠️ {n}: δεν επαρκούν τα μετρητά ({v}) — αναγκαστική πώληση στο 80%.',
       lg_negNoAssets: '🔴 {n}: αρνητικά μετρητά χωρίς περιουσιακά στοιχεία ({v}).',
       lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
@@ -793,6 +794,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       pay1: '1 payment', payoff: 'Pay off {v}', newLoanPh: 'New loan up to {v}', loanBtn: '+ Loan',
       loanHint: 'Up to the value of your investments ({v}) − existing principal debt · multiples of €100 · 20 payments × 10% · must be fully repaid before I QUIT',
       quitBlocked: '💡 Your passive income covers your expenses — pay off your loans to hit I QUIT!',
+      loanCap: '🔒 You reached the limit of {n} active loans — repay one to borrow again.',
       yearsOld: 'age {n}', passiveShort: 'Passive {v}', iquitAt: 'I QUIT at {age}!', at65: 'at 65',
       cost: 'Cost:', perCycle: '/ cycle', permanent: '/ cycle (permanent)', each: ' — each',
       baseInfl: '(base {v} + inflation)', cancelsLS: 'Cancels your matching Lifestyle cards ✨',
@@ -806,7 +808,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       discountOffer: 'The previous player passed — want it at a 10% discount?',
       cardOf: '<b>{name}</b>’s card', decidesNow: '<b>{name}</b> is deciding…',
       okRead: 'OK, got it ✔', everyoneSees: 'All players can see this card',
-      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by 5%, and so did all Lifestyle & Moments cards.',
+      inflTitle: 'INFLATION', inflBody: 'Everyone’s monthly expenses increased by {r}%, and so did all Lifestyle & Moments cards.',
       landedBy: 'Landed on by <b>{name}</b>',
       bondEffect: '+{v} to your cash every payday',
       bondNote: 'Matures at 10 tokens → principal {v} returned · sell any time · unaffected by inflation · does not count toward the I QUIT meter or the loan limit',
@@ -852,7 +854,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_iquitInstant: '🎉 I QUIT! {n} reached financial freedom at {age} — passive {pas} ≥ expenses {exp} and zero debt!',
       lg_forcedLoanSettle: '🏦 {n}: mandatory loan settlement −{v}',
       lg_reached65: '⏳ {n} reached 65 without retiring.',
-      lg_inflation: '📈 Inflation 5%: everyone’s monthly expenses rose by 5%, and so did all Lifestyle & Moments cards.',
+      lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle & Moments cards.',
       lg_forcedNeeded: '⚠️ {n}: not enough cash ({v}) — forced sale at 80%.',
       lg_negNoAssets: '🔴 {n}: negative cash with no assets left ({v}).',
       lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
@@ -1034,6 +1036,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
   const START_EXPENSES = { 'Φόροι': 200, 'Ενοίκιο': 500, 'Μεταφορικά': 200, 'Διατροφή': 300, 'Ένδυση': 100, 'Ψυχαγωγία': 100, 'Ασφάλεια': 100 };
   const START_CASH = 2000, START_SALARY = 2000, START_AGE = 25, END_AGE = 65;
+  // v1.1 (προσωρινό, απόφαση Γιώργου): μέγιστο 3 ενεργά δάνεια ανά παίκτη —
+  // κόβει τον μηχανισμό συνεχούς μόχλευσης μέχρι τον επανασχεδιασμό του Loan System.
+  const MAX_ACTIVE_LOANS = 3;
   const WILDS_PER_PLAYER = 5;
   const COLORNAME = { G: 'Πράσινο', Y: 'Κίτρινο', R: 'Κόκκινο' };
   const PLAYER_COLORS = ['#3b82f6', '#e25b54', '#3ec46d', '#e8c43d', '#a98cf0', '#f08c4b'];
@@ -1274,14 +1279,23 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
 
   // Πληθωρισμός (v0.5, κανόνας Γιώργου): οι επενδύσεις ΔΕΝ επηρεάζονται πλέον.
-  // Πληθωρίζονται +5% τα ΜΗΝΙΑΙΑ ΕΞΟΔΑ όλων των παικτών, και οι κάρτες Lifestyle
-  // (τα ±50/±100 τους) εφαρμόζονται πληθωρισμένα με τον τρέχοντα συντελεστή.
+  // Πληθωρίζονται τα ΜΗΝΙΑΙΑ ΕΞΟΔΑ όλων των παικτών, και οι κάρτες Lifestyle/Moments
+  // εφαρμόζονται πληθωρισμένες με τον τρέχοντα συντελεστή.
+  //
+  // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών (βαθμονόμηση με Monte Carlo, ~9.000 παρτίδες):
+  // το κουτί Inflation ενεργοποιείται σε ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με
+  // περισσότερους παίκτες «χτυπά» αναλογικά συχνότερα. Τα ποσοστά επιλέχθηκαν ώστε η
+  // πιθανότητα I QUIT και η ηλικία επίτευξης να μένουν κοντά στο επίπεδο αναφοράς
+  // (3 παίκτες @ 5%), με στόχο τις περισσότερες νίκες στο εύρος 55–60.
+  const INFLATION_BY_PLAYERS = { 1: 0.18, 2: 0.085, 3: 0.05, 4: 0.0375, 5: 0.0275, 6: 0.0175 };
+  function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.05; }
   function doInflation(state) {
-    state.inflMult = (state.inflMult || 1) * 1.05;
+    const r = inflRate(state);
+    state.inflMult = (state.inflMult || 1) * (1 + r);
     state.players.forEach(pl => {
-      Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * 1.05); });
+      Object.keys(pl.expenses).forEach(k => { pl.expenses[k] = Math.round(pl.expenses[k] * (1 + r)); });
     });
-    log(state, 'lg_inflation');
+    log(state, 'lg_inflation', { r: parseFloat((r * 100).toFixed(2)) });
   }
   // v0.5: οι τιμές των καρτών στις στοίβες ΔΕΝ πληθωρίζονται πια
   function priceOf(state, c) { return c.cost; }
@@ -1434,6 +1448,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (withLoan) {
       // v1.0 (#8): ο παίκτης επιλέγει ΠΟΣΟ δάνειο θα πάρει (και μεγαλύτερο από τη διαφορά,
       // για μαξιλάρι ρευστότητας) — ακόμα κι αν του φτάνουν τα μετρητά. Πάντα εντός ορίου.
+      if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
       const shortfall = Math.max(0, price - p.cash);
       let amount = Math.floor(withLoan.loanAmount || 0);
       if (!amount) amount = Math.max(100, Math.ceil(shortfall / 100) * 100);
@@ -1565,6 +1580,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
       case 'loan': {
         if (currentPlayer(state).id !== playerId || state.pending) return err('Δάνειο μόνο στη σειρά σου, χωρίς εκκρεμότητες.');
+        if (p.loans.length >= MAX_ACTIVE_LOANS) return err('Μέγιστο ' + MAX_ACTIVE_LOANS + ' ενεργά δάνεια ταυτόχρονα — εξόφλησε κάποιο πρώτα.');
         const amount = Math.floor(action.amount);
         if (!amount || amount < 100) return err('Ελάχιστο δάνειο 100€.');
         if (amount % 100 !== 0) return err('Το δάνειο δίνεται σε πολλαπλάσια του 100€ (π.χ. ' + fmt(Math.ceil(amount / 100) * 100) + ').');
@@ -1728,9 +1744,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   return {
     newGame, applyAction, computeRankings,
     totalExp, passive, bbPassive, invTotalCost, bondValue, bondInterestOf, capital, quitPct,
-    maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount,
+    maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
-    BOARD: CARDS.BOARD, COLORNAME, END_AGE,
+    BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_ACTIVE_LOANS,
     _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
   };
 });
@@ -1849,7 +1865,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     const affordable = p.cash - price >= prof.cushion;
     const shortfall = Math.max(0, price - p.cash);
     const loanAmount = Math.ceil(shortfall / 100) * 100;
-    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0;
+    const canLoanCover = E.maxLoan(p) >= loanAmount && shortfall > 0 && p.loans.length < E.MAX_ACTIVE_LOANS;
     const isBB = pend.deck === 'bb';
 
     // v1.0 (#5): αν το παθητικό ήδη καλύπτει τα έξοδα, ο ΜΟΝΟΣ δρόμος για I QUIT είναι
@@ -2786,9 +2802,14 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       if (pct >= 100 && p.loans.length) {
         loanHtml += '<div class="notice" style="margin-top:6px;">' + t('quitBlocked') + '</div>';
       }
-      loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
-        '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
-        '<div class="muted" style="margin-top:4px;">' + t('loanHint', { v: fmt(E.loanBase(p)) }) + '</div>';
+      // v1.1: με 3 ενεργά δάνεια δεν δίνεται νέο (προσωρινό όριο)
+      if (p.loans.length >= E.MAX_ACTIVE_LOANS) {
+        loanHtml += '<div class="muted" style="margin-top:6px;">' + t('loanCap', { n: E.MAX_ACTIVE_LOANS }) + '</div>';
+      } else {
+        loanHtml += '<div class="row" style="margin-top:8px;"><input id="loanAmt" type="number" inputmode="numeric" step="100" min="100" placeholder="' + t('newLoanPh', { v: fmt(max) }) + '" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' +
+          '<button class="mini" id="btnLoan" style="flex:0 0 auto; padding:12px;" ' + (myTurn && max > 0 ? '' : 'disabled') + '>' + t('loanBtn') + '</button></div>' +
+          '<div class="muted" style="margin-top:4px;">' + t('loanHint', { v: fmt(E.loanBase(p)) }) + '</div>';
+      }
     }
 
     box.innerHTML = status +
@@ -2901,10 +2922,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
   function closeOverlay() { $('overlay').classList.add('hidden'); App.localModal = null; }
 
-  function inflationCardHtml() {
+  function inflationCardHtml(g) {
+    const r = g ? parseFloat((E.inflRate(g) * 100).toFixed(2)) : 5;
     return '<div class="gamecard gc-inflation">' +
       '<div class="ttl" style="font-size:24px; letter-spacing:2px; font-weight:900;">' + t('inflTitle') + '</div>' +
-      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody') + '</div></div>';
+      '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody', { r: r }) + '</div></div>';
   }
 
   function cardHtml(c, deck, discount, curPrice) {
@@ -2993,7 +3015,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (pend.playerId !== App.myId) {
       const actorP = g.players.find(x => x.id === pend.playerId);
       if (pend.special === 'inflation') {
-        overlay(inflationCardHtml() +
+        overlay(inflationCardHtml(g) +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
@@ -3011,7 +3033,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     if (pend.type === 'reveal') {
       const rc = pend.special ? null : E.card(pend.cardId);
       const body = pend.special === 'inflation'
-        ? inflationCardHtml()
+        ? inflationCardHtml(g)
         : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
         '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
@@ -3043,7 +3065,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       // v1.0.1 (#3): η επιλογή δανείου εμφανίζεται ΜΟΝΟ αν το μέγιστο δάνειο
       // πράγματι αρκεί για να ολοκληρωθεί η αγορά (μετρητά + δάνειο ≥ τιμή)
       const maxLn = E.maxLoan(p);
-      if (maxLn >= 100 && p.cash + maxLn >= price) {
+      if (maxLn >= 100 && p.cash + maxLn >= price && p.loans.length < E.MAX_ACTIVE_LOANS) {
         const defLn = Math.min(maxLn, Math.max(100, Math.ceil(Math.max(short, 0) / 100) * 100));
         const lnN = Math.max(1, 20 - (p.loanBonusFewer || 0));
         html += '<div class="row" style="margin:2px 0;"><input id="blAmt" type="number" step="100" min="100" max="' + maxLn + '" value="' + defLn + '" inputmode="numeric" style="flex:1;">' +
