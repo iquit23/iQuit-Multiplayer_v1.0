@@ -17,7 +17,14 @@ section('Δεδομένα καρτών');
 assert(CARDS.LIFESTYLE.length === 24, 'Lifestyle = 24 (' + CARDS.LIFESTYLE.length + ')');
 assert(CARDS.MOMENTS.length === 26, 'Moments = 26 (' + CARDS.MOMENTS.length + ')');
 assert(CARDS.BIG_BUSINESS.length === 20, 'Big Business = 20 (' + CARDS.BIG_BUSINESS.length + ')');
-assert(CARDS.PROJECTS.length === 37, 'Project μοναδικές = 37 (' + CARDS.PROJECTS.length + ')');
+assert(CARDS.PROJECTS.length === 44, 'v1.11: Project = 44 με τα αντίτυπα (' + CARDS.PROJECTS.length + ')');
+// v1.11: νέες κάρτες από IQuit_Cards_v3.key
+assert(CARDS.PROJECTS.filter(c => c.kind === 'bond').length === 5, 'Ομόλογα = 5 (2×1.000, 2×2.000, 1×1.500)');
+assert(CARDS.PROJECTS.filter(c => c.kind === 'P' && c.color === 'G').length === 10, 'Πράσινα = 10');
+assert(CARDS.PROJECTS.every(c => c.kind !== 'betterloan' || c.fewerPayments === 3), 'Ευνοϊκότερο Δάνειο: −3 δόσεις πλέον');
+assert(CARDS.MOMENTS.find(c => c.id === 'M02').cancels.join() === 'hobby,theater', 'M02 αναιρεί χόμπι + θεατρικές');
+assert(CARDS.LIFESTYLE.find(c => c.id === 'L15').tag === 'hobby' && CARDS.LIFESTYLE.find(c => c.id === 'L18').tag === 'theater', 'tags L15/L18');
+assert(CARDS.MOMENTS.find(c => c.id === 'M09').amount === -450 && CARDS.MOMENTS.find(c => c.id === 'M21').amount === -100, 'νέα ποσά M09/M21');
 assert(CARDS.BOARD.length === 28, 'Ταμπλό = 28 κουτάκια');
 assert(CARDS.BOARD[0].t === 'start' && CARDS.BOARD[14].t === 'salary', 'Γωνίες 0/14 σωστές');
 assert(CARDS.BOARD[7].t === 'inflation' && CARDS.BOARD[21].t === 'inflation', 'Inflation στα 7/21');
