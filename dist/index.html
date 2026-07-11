@@ -658,6 +658,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       quitBlocked: '💡 Το παθητικό σου καλύπτει τα έξοδα — εξόφλησε τα δάνεια για να πατήσεις I QUIT!',
       loanCap: '🔒 Χρησιμοποίησες και τα {n} δάνεια που επιτρέπονται σε όλο το παιχνίδι.',
       yearsOld: '{n} ετών', passiveShort: 'Παθητικό {v}', iquitAt: 'I QUIT στα {age}!', at65: 'στα 65',
+      bankruptTag: 'Χρεοκοπία', bankruptNote: '💥 Χρεοκόπησες — αρνητικά μετρητά χωρίς περιουσία για πώληση. Εκτός παιχνιδιού.',
       // Cards & modals
       cost: 'Κόστος:', perCycle: '/ κύκλο', permanent: '/ κύκλο (μόνιμα)', each: ' — έκαστος',
       baseInfl: '(βασικό {v} + πληθωρισμός)', cancelsLS: 'Αναιρεί τις αντίστοιχες Lifestyle κάρτες σου ✨',
@@ -723,6 +724,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_inflation: '📈 Πληθωρισμός {r}%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά {r}%, όπως και όλες οι κάρτες Lifestyle.',
       lg_forcedNeeded: '⚠️ {n}: δεν επαρκούν τα μετρητά ({v}) — αναγκαστική πώληση στο 80%.',
       lg_negNoAssets: '🔴 {n}: αρνητικά μετρητά χωρίς περιουσιακά στοιχεία ({v}).',
+      lg_bankrupt: '💥 ΧΡΕΟΚΟΠΙΑ! Ο {n} έμεινε με {v} και τίποτα να πουλήσει — εκτός παιχνιδιού.',
       lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
       lg_emptyLifestyle: 'ℹ️ Η στοίβα Lifestyle είναι άδεια.', lg_emptyMoments: 'ℹ️ Η στοίβα Moments είναι άδεια.',
       lg_tax: '🧾 Tax: {n} πληρώνει 50% του εισοδήματος BB = −{v}',
@@ -796,6 +798,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       quitBlocked: '💡 Your passive income covers your expenses — pay off your loans to hit I QUIT!',
       loanCap: '🔒 You have used all {n} loans allowed for the whole game.',
       yearsOld: 'age {n}', passiveShort: 'Passive {v}', iquitAt: 'I QUIT at {age}!', at65: 'at 65',
+      bankruptTag: 'Bankrupt', bankruptNote: '💥 You went bankrupt — negative cash with nothing to sell. Out of the game.',
       cost: 'Cost:', perCycle: '/ cycle', permanent: '/ cycle (permanent)', each: ' — each',
       baseInfl: '(base {v} + inflation)', cancelsLS: 'Cancels your matching Lifestyle cards ✨',
       yourCash: 'Your cash: {v}', buy: '✔ Buy {v}', decline: '✋ No, thanks',
@@ -857,6 +860,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_inflation: '📈 Inflation {r}%: everyone’s monthly expenses rose by {r}%, and so did all Lifestyle cards.',
       lg_forcedNeeded: '⚠️ {n}: not enough cash ({v}) — forced sale at 80%.',
       lg_negNoAssets: '🔴 {n}: negative cash with no assets left ({v}).',
+      lg_bankrupt: '💥 BANKRUPT! {n} ended up at {v} with nothing left to sell — out of the game.',
       lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
       lg_emptyLifestyle: 'ℹ️ The Lifestyle deck is empty.', lg_emptyMoments: 'ℹ️ The Moments deck is empty.',
       lg_tax: '🧾 Tax: {n} pays 50% of BB income = −{v}',
@@ -1126,7 +1130,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         loanBonusFewer: 0,
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
-        retiredAge: null, finished: false,
+        retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
       })),
       decks: null,
       pending: null,
@@ -1166,7 +1170,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
 
   // ---------- Player status ----------
-  function isActive(p) { return p.retiredAge === null && !p.finished; }
+  function isActive(p) { return p.retiredAge === null && !p.finished && !p.bankrupt; }
   function activePlayers(state) { return state.players.filter(isActive); }
   function currentPlayer(state) { return state.players[state.turn]; }
 
@@ -1196,16 +1200,19 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function computeRankings(state) {
     const retired = state.players.filter(p => p.retiredAge !== null)
       .sort((a, b) => a.retiredAge - b.retiredAge);
-    const rest = state.players.filter(p => p.retiredAge === null)
+    const rest = state.players.filter(p => p.retiredAge === null && !p.bankrupt)
       .map(p => {
         const gap = totalExp(p) - passive(p);
         const months = gap > 0 ? capital(p) / gap : Infinity;
         return { p, months };
       })
       .sort((a, b) => b.months - a.months);
+    // v1.4: οι χρεοκοπημένοι κατατάσσονται πάντα τελευταίοι
+    const broke = state.players.filter(p => p.bankrupt);
     const out = [];
     retired.forEach(p => out.push({ id: p.id, name: pname(p), retiredAge: p.retiredAge, months: null }));
     rest.forEach(({ p, months }) => out.push({ id: p.id, name: pname(p), retiredAge: null, months: months === Infinity ? null : Math.round(months) }));
+    broke.forEach(p => out.push({ id: p.id, name: pname(p), retiredAge: null, months: null, bankrupt: true }));
     return out;
   }
 
@@ -1286,8 +1293,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   //
   // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
   // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
-  // v1.3 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
-  const INFLATION_BY_PLAYERS = { 1: 0.10, 2: 0.06, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  // v1.4 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.08, 2: 0.05, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
   function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
@@ -1308,15 +1315,26 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   // πάντα στην ονομαστική τους αξία. (Οι Lifestyle συνεχίζουν να πληθωρίζονται.)
   function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
-  // ---------- Forced sale ----------
+  // ---------- Forced sale & bankruptcy ----------
   function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }
+  // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
+  // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
+  function bankruptIfBroke(state, p) {
+    if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
+      p.bankrupt = true;
+      log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
+      if (!activePlayers(state).length) endGame(state);
+      return true;
+    }
+    return false;
+  }
   function queueForcedSaleIfNeeded(state, p) {
     if (needForcedSale(p)) {
       state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash };
       log(state, 'lg_forcedNeeded', { n: pname(p), v: fmt(p.cash) });
       return true;
     }
-    if (p.cash < 0) log(state, 'lg_negNoAssets', { n: pname(p), v: fmt(p.cash) });
+    bankruptIfBroke(state, p);
     return false;
   }
 
@@ -1571,6 +1589,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.pos = (from + steps) % 28;
         if (!isActive(p)) return finishTurn(state), null;
         if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'square'; return null; }
+        if (!isActive(p)) return finishTurn(state), null; // v1.4: χρεοκόπησε στο πέρασμα από Salary
         resolveSquare(state, p);
         return null;
       }
@@ -1715,6 +1734,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           return null;
         }
         state.pending = null;
+        // v1.4: πούλησε τα πάντα και παραμένει αρνητικός → χρεοκοπία
+        if (bankruptIfBroke(state, p)) return finishTurn(state), null;
         if (pend.then === 'square') { resolveSquare(state, p); return null; }
         return finishTurn(state), null;
       }
@@ -2809,6 +2830,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
     let status = '';
     if (p.retiredAge !== null) status = '<div class="notice" style="margin-bottom:10px;">' + t('retired', { age: p.retiredAge }) + '</div>';
+    else if (p.bankrupt) status = '<div class="notice" style="margin-bottom:10px; border-color:var(--red); color:var(--red);">' + t('bankruptNote') + '</div>';
     else if (p.finished) status = '<div class="muted" style="margin-bottom:10px;">' + t('finished65') + '</div>';
 
     // v0.6: ταξινόμηση κατά απόδοση, από τη μικρότερη στη μεγαλύτερη
@@ -2912,8 +2934,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     $('others').innerHTML = g.players.filter(p => p.id !== App.myId).map(p => {
       const pct = E.quitPct(p);
       const flags = (p.retiredAge !== null ? '<span class="ret">' + t('iquitAt', { age: p.retiredAge }) + '</span>' :
-        (p.finished ? '<span class="muted" style="font-size:10px;">' + t('at65') + '</span>' :
-          (!p.isBot && !p.connected ? '<span class="off">⚡ ' + t('offline') + '</span>' : '')));
+        (p.bankrupt ? '<span class="off" style="color:var(--red)">💥 ' + t('bankruptTag') + '</span>' :
+          (p.finished ? '<span class="muted" style="font-size:10px;">' + t('at65') + '</span>' :
+            (!p.isBot && !p.connected ? '<span class="off">⚡ ' + t('offline') + '</span>' : ''))));
       return '<div class="op' + (p.id === actorId && g.phase === 'playing' ? ' turn' : '') + '">' +
         '<div class="top"><span class="opdot" style="background:' + p.color + '">' + (p.pawn || esc((p.name[0] || '?').toUpperCase())) + '</span>' +
         '<span class="nm">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</span>' + flags + '</div>' +
@@ -3194,7 +3217,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     let html = '<div class="confetti">🎉🏆🎉</div><h2 style="text-align:center; margin-bottom:12px;">' + t('finalRank') + '</h2>' +
       g.rankings.map((r, i) => '<div class="rank"><span class="pos">' + medals[i] + '</span><div class="det"><b>' + esc(r.name) + '</b>' +
         '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
-          (r.months !== null ? t('survive', { n: r.months }) : t('reached65'))) + '</div></div></div>').join('');
+          (r.bankrupt ? '💥 ' + t('bankruptTag') :
+            (r.months !== null ? t('survive', { n: r.months }) : t('reached65')))) + '</div></div></div>').join('');
     html += '<div class="acts" style="margin-top:14px;">' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
       (App.role === 'host' ? '<button class="buy" id="btnAgain">' + t('playAgain') + '</button>' : '') +

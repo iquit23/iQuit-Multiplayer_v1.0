@@ -166,22 +166,22 @@ section('v0.5 Πληθωρισμός εξόδων');
 // ---------- 3ε4. v1.1/v1.2: Dynamic Inflation ανά αριθμό παικτών
 section('v1.2 Dynamic Inflation');
 {
-  assert(E.INFLATION_BY_PLAYERS[1] === 0.10 && E.INFLATION_BY_PLAYERS[3] === 0.04 && E.INFLATION_BY_PLAYERS[6] === 0.01,
-    'πίνακας v1.3 (απόφαση Γιώργου): 1p=10%, 3p=4%, 6p=1%');
+  assert(E.INFLATION_BY_PLAYERS[1] === 0.08 && E.INFLATION_BY_PLAYERS[3] === 0.04 && E.INFLATION_BY_PLAYERS[6] === 0.01,
+    'πίνακας v1.4 (απόφαση Γιώργου): 1p=8%, 3p=4%, 6p=1%');
   assert(E.INFLATION_BY_PLAYERS[1] > E.INFLATION_BY_PLAYERS[2] && E.INFLATION_BY_PLAYERS[2] > E.INFLATION_BY_PLAYERS[3] &&
     E.INFLATION_BY_PLAYERS[3] > E.INFLATION_BY_PLAYERS[4] && E.INFLATION_BY_PLAYERS[4] > E.INFLATION_BY_PLAYERS[5] &&
     E.INFLATION_BY_PLAYERS[5] > E.INFLATION_BY_PLAYERS[6], 'μονότονα φθίνον ποσοστό όσο αυξάνονται οι παίκτες');
-  // 2 παίκτες → 6%
+  // 2 παίκτες → 5%
   let g2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 71);
-  assert(E.inflRate(g2) === 0.06, '2 παίκτες → 6%');
+  assert(E.inflRate(g2) === 0.05, '2 παίκτες → 5%');
   E._internals.doInflation(g2);
-  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.06), '2p: Ενοίκιο 500 → 530');
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(500 * 1.05), '2p: Ενοίκιο 500 → 525');
   // v1.3: όποιος έχει κάνει I QUIT ΔΕΝ επηρεάζεται από επόμενους πληθωρισμούς
   g2.players[1].retiredAge = 47;
   const frozenRent = g2.players[1].expenses['Ενοίκιο'];
   E._internals.doInflation(g2);
   assert(g2.players[1].expenses['Ενοίκιο'] === frozenRent, 'v1.3: τα έξοδα του νικητή I QUIT μένουν παγωμένα');
-  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(Math.round(500 * 1.06) * 1.06), 'οι ενεργοί συνεχίζουν να πληθωρίζονται');
+  assert(g2.players[0].expenses['Ενοίκιο'] === Math.round(Math.round(500 * 1.05) * 1.05), 'οι ενεργοί συνεχίζουν να πληθωρίζονται');
   // 6 παίκτες → 1%
   const spec6 = 'abcdef'.split('').map(x => ({ id: x, name: x.toUpperCase() }));
   let g6 = E.newGame(spec6, 72);
@@ -202,6 +202,40 @@ section('v1.2 Dynamic Inflation');
   gB.pending = { type: 'reveal', playerId: 'b1', special: 'inflation' };
   const dB = BOTS_T.decide(gB, 'b1');
   assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
+}
+
+// ---------- 3ε5. v1.4: Χρεοκοπία
+section('v1.4 Χρεοκοπία');
+{
+  let sB = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }], 91);
+  const P = sB.players[0];
+  // Αρνητικά μετρητά ΧΩΡΙΣ επενδύσεις → χρεοκοπία μέσω του forced-sale ελέγχου
+  P.cash = -300;
+  assert(P.inv.length === 0, 'χωρίς επενδύσεις');
+  E._internals.doInflation(sB); // άσχετη ενέργεια — η χρεοκοπία ελέγχεται στα σημεία ελέγχου ρευστότητας
+  sB.pending = { type: 'reveal', playerId: 'a', cardId: 'M17', deck: 'moments' };
+  let rB = E.applyAction(sB, 'a', { a: 'resolve', choice: 'ok' });
+  assert((!rB || !rB.error) && P.bankrupt === true, 'v1.4: αρνητικά μετρητά χωρίς περιουσία → ΧΡΕΟΚΟΠΙΑ');
+  assert(!E.isActive(P), 'ο χρεοκοπημένος είναι εκτός παιχνιδιού');
+  assert(sB.phase === 'playing', 'το παιχνίδι συνεχίζεται για τους υπόλοιπους');
+  const rk = E.computeRankings(sB);
+  assert(rk[rk.length - 1].id === 'a' && rk[rk.length - 1].bankrupt === true, 'ο χρεοκοπημένος κατατάσσεται ΤΕΛΕΥΤΑΙΟΣ');
+  // Solo χρεοκοπία → το παιχνίδι τελειώνει
+  let sS = E.newGame([{ id: 'x', name: 'X' }], 92);
+  const PX = sS.players[0];
+  PX.cash = -100;
+  sS.pending = { type: 'reveal', playerId: 'x', cardId: 'M17', deck: 'moments' };
+  E.applyAction(sS, 'x', { a: 'resolve', choice: 'ok' });
+  assert(PX.bankrupt === true && sS.phase === 'ended', 'solo: η χρεοκοπία τερματίζει το παιχνίδι');
+  // Με επενδύσεις: πρώτα forced sale· αν και μετά την πώληση ΟΛΩΝ μένει αρνητικός → χρεοκοπία
+  let sF = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 93);
+  const PF = sF.players[0];
+  PF.cash = -2000;
+  PF.inv.push({ uid: 'z1', cardId: 'PG2', kind: 'P', color: 'G', title: 'Μετοχή', cost: 800, income: 48 });
+  sF.pending = { type: 'forced-sale', playerId: 'a', deficit: 2000 };
+  E.applyAction(sF, 'a', { a: 'resolve', uid: 'z1' });
+  assert(PF.inv.length === 0 && PF.cash === -2000 + 640, 'πούλησε το μοναδικό asset στο 80% (+640)');
+  assert(PF.bankrupt === true, 'παρέμεινε αρνητικός χωρίς τίποτα να πουλήσει → ΧΡΕΟΚΟΠΙΑ');
 }
 
 // ---------- 3ε3. v0.5: Δάνεια v2
@@ -339,6 +373,8 @@ for (let seed = 1; seed <= GAMES; seed++) {
     const st = runFullGame(seed, np);
     assert(st.phase === 'ended' && st.rankings && st.rankings.length === np, 'παιχνίδι #' + seed + ' ολοκληρώθηκε με κατάταξη');
     st.players.forEach(p => {
+      // v1.4: ο χρεοκοπημένος βγαίνει νωρίς — εξαιρείται από τα τελικά invariants
+      if (p.bankrupt) { assert(p.cash < 0 && p.inv.length === 0, 'χρεοκοπία μόνο με αρνητικά μετρητά χωρίς περιουσία'); return; }
       assert(p.retiredAge !== null || p.age >= 65, 'παίκτης τερμάτισε (παραίτηση ή 65)');
       assert(p.loans.length === 0, 'όλα τα δάνεια εξοφλημένα στο τέλος (65 ή I QUIT)');
     });

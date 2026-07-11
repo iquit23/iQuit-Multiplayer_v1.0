@@ -745,6 +745,7 @@
 
     let status = '';
     if (p.retiredAge !== null) status = '<div class="notice" style="margin-bottom:10px;">' + t('retired', { age: p.retiredAge }) + '</div>';
+    else if (p.bankrupt) status = '<div class="notice" style="margin-bottom:10px; border-color:var(--red); color:var(--red);">' + t('bankruptNote') + '</div>';
     else if (p.finished) status = '<div class="muted" style="margin-bottom:10px;">' + t('finished65') + '</div>';
 
     // v0.6: ταξινόμηση κατά απόδοση, από τη μικρότερη στη μεγαλύτερη
@@ -848,8 +849,9 @@
     $('others').innerHTML = g.players.filter(p => p.id !== App.myId).map(p => {
       const pct = E.quitPct(p);
       const flags = (p.retiredAge !== null ? '<span class="ret">' + t('iquitAt', { age: p.retiredAge }) + '</span>' :
-        (p.finished ? '<span class="muted" style="font-size:10px;">' + t('at65') + '</span>' :
-          (!p.isBot && !p.connected ? '<span class="off">⚡ ' + t('offline') + '</span>' : '')));
+        (p.bankrupt ? '<span class="off" style="color:var(--red)">💥 ' + t('bankruptTag') + '</span>' :
+          (p.finished ? '<span class="muted" style="font-size:10px;">' + t('at65') + '</span>' :
+            (!p.isBot && !p.connected ? '<span class="off">⚡ ' + t('offline') + '</span>' : ''))));
       return '<div class="op' + (p.id === actorId && g.phase === 'playing' ? ' turn' : '') + '">' +
         '<div class="top"><span class="opdot" style="background:' + p.color + '">' + (p.pawn || esc((p.name[0] || '?').toUpperCase())) + '</span>' +
         '<span class="nm">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</span>' + flags + '</div>' +
@@ -1130,7 +1132,8 @@
     let html = '<div class="confetti">🎉🏆🎉</div><h2 style="text-align:center; margin-bottom:12px;">' + t('finalRank') + '</h2>' +
       g.rankings.map((r, i) => '<div class="rank"><span class="pos">' + medals[i] + '</span><div class="det"><b>' + esc(r.name) + '</b>' +
         '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
-          (r.months !== null ? t('survive', { n: r.months }) : t('reached65'))) + '</div></div></div>').join('');
+          (r.bankrupt ? '💥 ' + t('bankruptTag') :
+            (r.months !== null ? t('survive', { n: r.months }) : t('reached65')))) + '</div></div></div>').join('');
     html += '<div class="acts" style="margin-top:14px;">' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
       (App.role === 'host' ? '<button class="buy" id="btnAgain">' + t('playAgain') + '</button>' : '') +

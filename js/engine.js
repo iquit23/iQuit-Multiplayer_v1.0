@@ -102,7 +102,7 @@
         loanBonusFewer: 0,
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
-        retiredAge: null, finished: false,
+        retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
       })),
       decks: null,
       pending: null,
@@ -142,7 +142,7 @@
   }
 
   // ---------- Player status ----------
-  function isActive(p) { return p.retiredAge === null && !p.finished; }
+  function isActive(p) { return p.retiredAge === null && !p.finished && !p.bankrupt; }
   function activePlayers(state) { return state.players.filter(isActive); }
   function currentPlayer(state) { return state.players[state.turn]; }
 
@@ -172,16 +172,19 @@
   function computeRankings(state) {
     const retired = state.players.filter(p => p.retiredAge !== null)
       .sort((a, b) => a.retiredAge - b.retiredAge);
-    const rest = state.players.filter(p => p.retiredAge === null)
+    const rest = state.players.filter(p => p.retiredAge === null && !p.bankrupt)
       .map(p => {
         const gap = totalExp(p) - passive(p);
         const months = gap > 0 ? capital(p) / gap : Infinity;
         return { p, months };
       })
       .sort((a, b) => b.months - a.months);
+    // v1.4: οι χρεοκοπημένοι κατατάσσονται πάντα τελευταίοι
+    const broke = state.players.filter(p => p.bankrupt);
     const out = [];
     retired.forEach(p => out.push({ id: p.id, name: pname(p), retiredAge: p.retiredAge, months: null }));
     rest.forEach(({ p, months }) => out.push({ id: p.id, name: pname(p), retiredAge: null, months: months === Infinity ? null : Math.round(months) }));
+    broke.forEach(p => out.push({ id: p.id, name: pname(p), retiredAge: null, months: null, bankrupt: true }));
     return out;
   }
 
@@ -262,8 +265,8 @@
   //
   // v1.1 — DYNAMIC INFLATION ανά αριθμό παικτών: το κουτί Inflation ενεργοποιείται σε
   // ΚΑΘΕ προσγείωση οποιουδήποτε παίκτη, άρα με περισσότερους παίκτες «χτυπά» συχνότερα.
-  // v1.3 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
-  const INFLATION_BY_PLAYERS = { 1: 0.10, 2: 0.06, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
+  // v1.4 — δοκιμαστικά ποσοστά που όρισε ο Γιώργος (2026-07-10) προς playtesting.
+  const INFLATION_BY_PLAYERS = { 1: 0.08, 2: 0.05, 3: 0.04, 4: 0.03, 5: 0.02, 6: 0.01 };
   function inflRate(state) { return INFLATION_BY_PLAYERS[state.players.length] || 0.04; }
   function doInflation(state) {
     const r = inflRate(state);
@@ -284,15 +287,26 @@
   // πάντα στην ονομαστική τους αξία. (Οι Lifestyle συνεχίζουν να πληθωρίζονται.)
   function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
-  // ---------- Forced sale ----------
+  // ---------- Forced sale & bankruptcy ----------
   function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }
+  // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
+  // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
+  function bankruptIfBroke(state, p) {
+    if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
+      p.bankrupt = true;
+      log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
+      if (!activePlayers(state).length) endGame(state);
+      return true;
+    }
+    return false;
+  }
   function queueForcedSaleIfNeeded(state, p) {
     if (needForcedSale(p)) {
       state.pending = { type: 'forced-sale', playerId: p.id, deficit: -p.cash };
       log(state, 'lg_forcedNeeded', { n: pname(p), v: fmt(p.cash) });
       return true;
     }
-    if (p.cash < 0) log(state, 'lg_negNoAssets', { n: pname(p), v: fmt(p.cash) });
+    bankruptIfBroke(state, p);
     return false;
   }
 
@@ -547,6 +561,7 @@
         p.pos = (from + steps) % 28;
         if (!isActive(p)) return finishTurn(state), null;
         if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'square'; return null; }
+        if (!isActive(p)) return finishTurn(state), null; // v1.4: χρεοκόπησε στο πέρασμα από Salary
         resolveSquare(state, p);
         return null;
       }
@@ -691,6 +706,8 @@
           return null;
         }
         state.pending = null;
+        // v1.4: πούλησε τα πάντα και παραμένει αρνητικός → χρεοκοπία
+        if (bankruptIfBroke(state, p)) return finishTurn(state), null;
         if (pend.then === 'square') { resolveSquare(state, p); return null; }
         return finishTurn(state), null;
       }
