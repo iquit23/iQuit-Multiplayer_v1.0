@@ -211,7 +211,7 @@ h1,h2,h3{margin:0;}
 .meter-pct{font-size:26px; font-weight:800; color:var(--gold);}
 .bar{height:14px; background:#0a1320; border-radius:10px; overflow:hidden; border:1px solid var(--line);}
 .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .35s ease;}
-.statgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+.statgrid{display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-top:10px;} /* v1.6: +ΑΠΟΤΑΜΙΕΥΣΗ */
 .stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0;}
 .stat .k{color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
 .stat .v{font-size:14px; font-weight:700; margin-top:1px; white-space:nowrap;}

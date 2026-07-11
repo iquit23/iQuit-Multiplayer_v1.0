@@ -811,6 +811,8 @@
       '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
       '<div class="statgrid">' +
       '<div class="stat"><div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
+      // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
+      '<div class="stat"><div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
@@ -866,7 +868,8 @@
       return '<div class="op' + (p.id === actorId && g.phase === 'playing' ? ' turn' : '') + '">' +
         '<div class="top"><span class="opdot" style="background:' + p.color + '">' + (p.pawn || esc((p.name[0] || '?').toUpperCase())) + '</span>' +
         '<span class="nm">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</span>' + flags + '</div>' +
-        '<div class="st"><span>' + t('yearsOld', { n: p.age }) + '</span><span>' + fmt(p.cash) + '</span></div>' +
+        '<div class="st"><span>' + t('yearsOld', { n: p.age }) + '</span><span>' + fmt(p.cash) +
+        ((p.savings || 0) > 0 ? ' <span style="color:var(--yellow)" title="' + t('savings') + '">🐖' + fmt(p.savings) + '</span>' : '') + '</span></div>' +
         '<div class="st"><span>' + t('passiveShort', { v: fmt(E.passive(p)) }) + '</span><span>' + pct + '%</span></div>' +
         '<div class="st" style="margin-top:2px;"><span>📍 ' + esc(CARDS.BOARD[p.pos].label) + '</span></div>' +
         '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div></div>';
@@ -1102,6 +1105,29 @@
         }).join('') + '</div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-fs]').forEach(b => b.onclick = () => act({ a: 'resolve', uid: b.dataset.fs }));
+      return;
+    } else if (pend.type === 'savings') {
+      // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — προσφορά κατάθεσης ανά 5ετία (και ανάληψη στα 60)
+      const maxDep = Math.floor(p.cash / 50) * 50;
+      const defDep = Math.min(maxDep, Math.max(50, Math.floor(p.cash * 0.1 / 50) * 50));
+      let html = '<div class="gamecard gc-inflation" style="border-color:var(--yellow); background:#211d0d;">' +
+        '<div class="cat">' + t('savTitle') + '</div>' +
+        '<div class="ttl" style="font-size:20px;">🐖 ' + t('savAsk', { age: p.age }) + '</div>' +
+        '<div style="margin-top:10px; font-size:13px; line-height:1.6; text-align:left;">' + t('savExplain') + '</div>' +
+        '<div class="muted" style="margin-top:8px;">' + t('savBalance', { v: fmt(p.savings || 0), c: fmt(p.cash) }) + '</div></div>' +
+        '<div class="acts">';
+      if (maxDep >= 50) {
+        html += '<div class="row" style="margin:2px 0;"><input id="savAmt" type="number" step="50" min="50" max="' + maxDep + '" value="' + defDep + '" inputmode="numeric" style="flex:1;">' +
+          '<button class="buy" id="savGo" style="flex:0 0 auto; padding:12px;">' + t('savDeposit') + '</button></div>';
+      }
+      if (pend.canWithdraw && (p.savings || 0) > 0) {
+        html += '<button class="wildbtn" data-sv="withdraw">' + t('savWithdraw', { v: fmt(p.savings || 0) }) + '</button>';
+      }
+      html += '<button class="ghost" data-sv="skip">' + t('savSkip') + '</button></div>';
+      overlay(html);
+      const sg = $('savGo');
+      if (sg) sg.onclick = () => { const v = Math.floor(parseFloat($('savAmt').value)); if (v >= 50) act({ a: 'resolve', choice: 'deposit', amount: v }); };
+      $('modalBody').querySelectorAll('[data-sv]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: b.dataset.sv }));
       return;
     } else if (pend.type === 'funding-offer') {
       const from = g.players.find(x => x.id === pend.fromId);

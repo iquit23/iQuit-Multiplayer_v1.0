@@ -49,7 +49,7 @@
   // v0.2: ο τόκος ομολόγου (4%) πληρώνεται σε μετρητά σε κάθε είσπραξη· η πώληση/λήξη επιστρέφει το κεφάλαιο
   function bondValue(i) { return i.cost; }
   function bondInterestOf(i) { return i.cost * 0.04; }
-  function capital(p) { return p.cash + p.inv.reduce((s, i) => s + i.cost, 0); }
+  function capital(p) { return p.cash + (p.savings || 0) + p.inv.reduce((s, i) => s + i.cost, 0); }
   function quitPct(p) { const e = totalExp(p); return e > 0 ? Math.round(passive(p) / e * 100) : 0; }
   // v0.2: τα ομόλογα ΔΕΝ μετράνε ως επενδύσεις για το όριο δανείου
   function loanBase(p) { return p.inv.filter(i => i.kind !== 'bond').reduce((s, i) => s + i.cost, 0); }
@@ -105,6 +105,9 @@
         retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
         // v1.5: analytics — buy: αγορές ανά κατηγορία, skip: απορρίψεις ΕΝΩ επαρκούσαν τα μετρητά
         stats: { buy: {}, skip: {} },
+        // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης) — κλειδωμένα χρήματα, μόνο για
+        // αρνητικά Moments (με −30% όταν καλύπτονται πλήρως)· προσφορά κατάθεσης ανά 5ετία.
+        savings: 0, savingsOffer: true, // αρχική προσφορά στα 25 (πρώτη ζαριά)
       })),
       decks: null,
       pending: null,
@@ -208,6 +211,8 @@
     p.loans = p.loans.filter(l => l.remaining > 0);
     doneLoans.forEach(l => log(state, 'lg_loanDone', { n: pname(p), a: fmt(l.amount) }));
     p.age++;
+    // v1.6: κάθε 5 χρόνια (30,35,…,60) προσφέρεται κατάθεση στην ΑΠΟΤΑΜΙΕΥΣΗ
+    if (p.age % 5 === 0 && p.age <= 60 && p.retiredAge === null) p.savingsOffer = true;
     // 4 παραλλαγές μηνύματος ανάλογα με τόκους ομολόγων/δόσεις (για σωστή μετάφραση)
     const ck = bondInterest > 0 ? (loanPay > 0 ? 'lg_collectBL' : 'lg_collectB') : (loanPay > 0 ? 'lg_collectL' : 'lg_collect');
     log(state, ck, { n: pname(p), net: fmt(net), age: p.age, bi: fmt(bondInterest), lp: fmt(loanPay) });
@@ -294,6 +299,13 @@
   // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
   // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
   function bankruptIfBroke(state, p) {
+    // v1.6: έσχατη διάσωση — πριν τη χρεοκοπία, η ΑΠΟΤΑΜΙΕΥΣΗ ρευστοποιείται 1:1
+    // (αυτός είναι άλλωστε ο ρόλος ενός ταμείου έκτακτης ανάγκης)
+    if (p.cash < 0 && p.inv.length === 0 && (p.savings || 0) > 0 && isActive(p)) {
+      p.cash += p.savings;
+      log(state, 'lg_savRescue', { n: pname(p), a: fmt(p.savings) });
+      p.savings = 0;
+    }
     if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
       p.bankrupt = true;
       log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
@@ -420,8 +432,17 @@
       log(state, undone.length ? 'lg_momentCancel' : 'lg_momentCancelNone', { n: pname(p), cid: c.id, cids: undone.join(',') });
     } else {
       const amt = momentAmount(state, c);
-      p.cash += amt;
-      log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
+      // v1.6: αρνητικό Moment που ΚΑΛΥΠΤΕΤΑΙ ΠΛΗΡΩΣ από την ΑΠΟΤΑΜΙΕΥΣΗ πληρώνεται
+      // από εκεί με έκπτωση 30% (επιβράβευση πρόνοιας) — τα μετρητά μένουν ανέπαφα.
+      // Αν δεν καλύπτεται ολόκληρο, πληρώνεται κανονικά από τα μετρητά, χωρίς έκπτωση.
+      if (amt < 0 && (p.savings || 0) >= -amt) {
+        const pay = Math.round(-amt * 0.7);
+        p.savings -= pay;
+        log(state, 'lg_savPaid', { n: pname(p), cid: c.id, v: fmt(-amt), d: fmt(pay), s: fmt(p.savings) });
+      } else {
+        p.cash += amt;
+        log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
+      }
     }
     discard(state, 'moments', cid);
     // v0.2: reveal για ανθρώπους — το forced sale (αν χρειάζεται) ακολουθεί μετά το κλείσιμο της κάρτας
@@ -578,6 +599,12 @@
         if (!isActive(p)) return finishTurn(state), null;
         if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'square'; return null; }
         if (!isActive(p)) return finishTurn(state), null; // v1.4: χρεοκόπησε στο πέρασμα από Salary
+        // v1.6: εκκρεμεί προσφορά ΑΠΟΤΑΜΙΕΥΣΗΣ (25 ή κάθε 5ετία) — πριν το κουτί προορισμού
+        if (p.savingsOffer) {
+          p.savingsOffer = false;
+          state.pending = { type: 'savings', playerId: p.id, canWithdraw: p.age >= 60, then: 'square' };
+          return null;
+        }
         resolveSquare(state, p);
         return null;
       }
@@ -741,6 +768,28 @@
         return finishTurn(state), null;
       }
 
+      case 'savings': {
+        // v1.6: κατάθεση σε πολλαπλάσια του 50€ / παράλειψη / (στα 60) ανάληψη όλων
+        const ch2 = action.choice;
+        if (ch2 === 'deposit') {
+          const amt = Math.floor(action.amount || 0);
+          if (amt < 50) return err('Ελάχιστη κατάθεση 50€.');
+          if (amt % 50 !== 0) return err('Η αποταμίευση γίνεται σε πολλαπλάσια του 50€.');
+          if (amt > p.cash) return err('Δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ').');
+          p.cash -= amt;
+          p.savings = (p.savings || 0) + amt;
+          log(state, 'lg_savDeposit', { n: pname(p), a: fmt(amt), s: fmt(p.savings) });
+        } else if (ch2 === 'withdraw') {
+          if (!pend.canWithdraw) return err('Ανάληψη μόνο στα 60.');
+          p.cash += p.savings || 0;
+          log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings || 0) });
+          p.savings = 0;
+        } else if (ch2 !== 'skip') return err('Μη έγκυρη επιλογή.');
+        state.pending = null;
+        if (pend.then === 'square') { resolveSquare(state, p); return null; }
+        return finishTurn(state), null;
+      }
+
       case 'funding-offer': {
         const from = state.players.find(x => x.id === pend.fromId);
         if (action.choice === 'accept') {
@@ -770,6 +819,6 @@
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
-    _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment },
   };
 });

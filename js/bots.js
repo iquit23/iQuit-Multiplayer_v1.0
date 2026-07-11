@@ -101,6 +101,16 @@
         const ok = pend.income / pend.price >= 0.08 && p.cash - pend.price >= prof.cushion * 2;
         return { a: 'resolve', choice: ok ? 'accept' : 'decline' };
       }
+      case 'savings': {
+        // v1.6: ο αμυντικός αποταμιεύει γενναία, ο ισορροπημένος λίγο, ο επιθετικός καθόλου·
+        // στα 60 όλοι ρευστοποιούν (τα κλειδωμένα χρήματα δεν βοηθούν πια στην κατάταξη κίνησης)
+        const prof = profileOf(p);
+        if (pend.canWithdraw && (p.savings || 0) > 0) return { a: 'resolve', choice: 'withdraw' };
+        const pct = { aggressive: 0, balanced: 0.06, defensive: 0.15 }[p.strategy] || 0.06;
+        const amt = Math.floor((p.cash * pct) / 50) * 50;
+        if (amt >= 50 && p.cash - amt >= prof.cushion * 2) return { a: 'resolve', choice: 'deposit', amount: amt };
+        return { a: 'resolve', choice: 'skip' };
+      }
       default:
         return { a: 'resolve', choice: 'decline' };
     }

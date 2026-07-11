@@ -204,6 +204,58 @@ section('v1.2 Dynamic Inflation');
   assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
 }
 
+// ---------- 3ε7. v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης)
+section('v1.6 Αποταμίευση');
+{
+  let sS = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 97);
+  const P = sS.players[0];
+  assert(P.savings === 0 && P.savingsOffer === true, 'ξεκινά με μηδέν αποταμίευση και αρχική προσφορά (25)');
+  // Κατάθεση: validations + επιτυχία
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: false, then: null };
+  let r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'deposit', amount: 30 });
+  assert(r && r.error, 'κατάθεση 30 απορρίπτεται (< 50)');
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: false, then: null };
+  r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'deposit', amount: 120 });
+  assert(r && r.error, 'κατάθεση 120 απορρίπτεται (όχι πολλαπλάσιο του 50)');
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: false, then: null };
+  r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'deposit', amount: 400 });
+  assert((!r || !r.error) && P.savings === 400 && P.cash === 1600, 'κατάθεση 400: μετρητά 2000→1600, ταμείο 400');
+  assert(E.capital(P) === 1600 + 400, 'το κεφάλαιο κατάταξης περιλαμβάνει την αποταμίευση');
+  // Ανάληψη ΜΟΝΟ στα 60
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: false, then: null };
+  r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'withdraw' });
+  assert(r && r.error && P.savings === 400, 'ανάληψη πριν τα 60 απορρίπτεται');
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: true, then: null };
+  r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'withdraw' });
+  assert((!r || !r.error) && P.savings === 0 && P.cash === 2000, 'στα 60: ανάληψη όλων πίσω στα μετρητά');
+  // Αρνητικό Moment ΚΑΛΥΠΤΟΜΕΝΟ πλήρως → −30% από το ταμείο, μετρητά ανέπαφα
+  let sM = E.newGame([{ id: 'a', name: 'A', isBot: true }, { id: 'b', name: 'B', isBot: true }], 98);
+  const PM = sM.players[0];
+  PM.savings = 600; PM.cash = 5000;
+  const negMoment = CARDS.MOMENTS.find(c => !c.cancels && c.amount === -500);
+  assert(negMoment, 'υπάρχει Moment −500 στην τράπουλα');
+  E._internals.applyMoment(sM, PM, negMoment.id);
+  assert(PM.savings === 600 - 350 && PM.cash === 5000, 'Moment −500 με ταμείο 600: πληρώνει 350 (−30%), μετρητά ανέπαφα');
+  // ΜΗ καλυπτόμενο (ταμείο 250 < 500) → πλήρης χρέωση μετρητών, ταμείο ανέπαφο
+  const PM2 = sM.players[1];
+  PM2.savings = 250; PM2.cash = 5000;
+  sM.turn = 1;
+  E._internals.applyMoment(sM, PM2, negMoment.id);
+  assert(PM2.savings === 250 && PM2.cash === 4500, 'ταμείο 250 < 500: πλήρη 500 από μετρητά, ταμείο ανέπαφο');
+  // Προσφορά κάθε 5ετία: 29→30 ενεργοποιεί savingsOffer
+  const P29 = sM.players[0];
+  P29.age = 29; P29.savingsOffer = false;
+  E._internals.collect(sM, P29);
+  assert(P29.savingsOffer === true, 'στα 30 (κάθε 5ετία) ενεργοποιείται νέα προσφορά αποταμίευσης');
+  // Διάσωση από χρεοκοπία: η αποταμίευση ρευστοποιείται 1:1 πριν κηρυχθεί
+  let sR = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 99);
+  const PR = sR.players[0];
+  PR.cash = -150; PR.savings = 400;
+  sR.pending = { type: 'reveal', playerId: 'a', cardId: 'M17', deck: 'moments' };
+  E.applyAction(sR, 'a', { a: 'resolve', choice: 'ok' });
+  assert(PR.bankrupt === false && PR.cash === 250 && PR.savings === 0, 'η αποταμίευση σώζει από χρεοκοπία (−150+400=250)');
+}
+
 // ---------- 3ε6. v1.5: Player analytics
 section('v1.5 Player analytics');
 {

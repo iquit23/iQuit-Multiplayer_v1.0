@@ -220,7 +220,7 @@ h1,h2,h3{margin:0;}
 .meter-pct{font-size:26px; font-weight:800; color:var(--gold);}
 .bar{height:14px; background:#0a1320; border-radius:10px; overflow:hidden; border:1px solid var(--line);}
 .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .35s ease;}
-.statgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+.statgrid{display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-top:10px;} /* v1.6: +ΑΠΟΤΑΜΙΕΥΣΗ */
 .stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0;}
 .stat .k{color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
 .stat .v{font-size:14px; font-weight:700; margin-top:1px; white-space:nowrap;}
@@ -340,7 +340,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.1</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.2</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -666,6 +666,16 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       analyticsBtn: '📊 Αναλυτικά', analyticsTitle: '📊 Αναλυτικά παρτίδας',
       analyticsLegend: '✔ = αγόρασε · ✋ = απέρριψε ενώ τα μετρητά επαρκούσαν. Οι κάρτες μέσω Wild μετρούν στη δεύτερη κάρτα.',
       statBought: 'αγόρασε', statSkipped: 'απέρριψε ενώ μπορούσε',
+      // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης)
+      savings: 'Αποταμίευση', savTitle: 'ΤΑΜΕΙΟ ΕΚΤΑΚΤΗΣ ΑΝΑΓΚΗΣ',
+      savAsk: 'Έκλεισες τα {age} — θα αποταμιεύσεις;',
+      savExplain: 'Βάλε χρήματα στην άκρη (πολλαπλάσια του 50€). Είναι <b>κλειδωμένα</b>: χρησιμοποιούνται ΜΟΝΟ όταν σε χτυπήσει αρνητική κάρτα Moment — και τότε, αν η αποταμίευση καλύπτει ΟΛΟ το ποσό, πληρώνεις μόνο το 70% (<b>−30% επιβράβευση πρόνοιας</b>) χωρίς να αγγίξεις τα μετρητά σου. Αν δεν φτάνει, πληρώνεις κανονικά από τα μετρητά. Νέα κατάθεση κάθε 5 χρόνια · ανάληψη ΜΟΝΟ στα 60.',
+      savBalance: 'Αποταμίευση: {v} · Μετρητά: {c}',
+      savDeposit: '🐖 Κατάθεση', savSkip: '✋ Όχι τώρα', savWithdraw: '💶 Ανάληψη όλων ({v})',
+      lg_savDeposit: '🐖 {n}: αποταμίευσε {a} (σύνολο ταμείου {s})',
+      lg_savWithdraw: '💶 {n}: ανάληψη όλης της αποταμίευσης στα 60 (+{a})',
+      lg_savPaid: '🐖 {n}: το «{title}» ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}). Η πρόνοια επιβραβεύεται!',
+      lg_savRescue: '🆘 {n}: η αποταμίευση ({a}) ρευστοποιήθηκε in extremis για να αποφευχθεί η χρεοκοπία.',
       stat_G: '🟢 Πράσινα Projects', stat_Y: '🟡 Κίτρινα Projects', stat_R: '🔴 Κόκκινα Projects',
       stat_funding: '💼 Χρηματοδοτήσεις', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Ομόλογα',
       stat_masters: '🎓 Μεταπτυχιακό', stat_taxprepay: '🧾 Προκαταβολή Φόρου', stat_betterloan: '🏦 Καλύτεροι Όροι Δανείου',
@@ -813,6 +823,15 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       analyticsBtn: '📊 Details', analyticsTitle: '📊 Game analytics',
       analyticsLegend: '✔ = bought · ✋ = declined while having enough cash. Cards drawn via Wild count on the second card.',
       statBought: 'bought', statSkipped: 'declined while affordable',
+      savings: 'Savings', savTitle: 'EMERGENCY FUND',
+      savAsk: 'You just turned {age} — save some money?',
+      savExplain: 'Put money aside (multiples of €50). It is <b>locked</b>: it is used ONLY when a negative Moment card hits you — and if your savings cover the FULL amount, you pay just 70% (<b>−30% foresight reward</b>) without touching your cash. If it does not cover it, you pay normally from cash. New deposit every 5 years · withdrawal ONLY at 60.',
+      savBalance: 'Savings: {v} · Cash: {c}',
+      savDeposit: '🐖 Deposit', savSkip: '✋ Not now', savWithdraw: '💶 Withdraw all ({v})',
+      lg_savDeposit: '🐖 {n}: saved {a} (fund total {s})',
+      lg_savWithdraw: '💶 {n}: withdrew all savings at 60 (+{a})',
+      lg_savPaid: '🐖 {n}: “{title}” ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}). Foresight pays off!',
+      lg_savRescue: '🆘 {n}: savings ({a}) were liquidated in extremis to avoid bankruptcy.',
       stat_G: '🟢 Green Projects', stat_Y: '🟡 Yellow Projects', stat_R: '🔴 Red Projects',
       stat_funding: '💼 Funding', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Bonds',
       stat_masters: '🎓 Master’s Degree', stat_taxprepay: '🧾 Tax Prepayment', stat_betterloan: '🏦 Better Loan Terms',
@@ -1094,7 +1113,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   // v0.2: ο τόκος ομολόγου (4%) πληρώνεται σε μετρητά σε κάθε είσπραξη· η πώληση/λήξη επιστρέφει το κεφάλαιο
   function bondValue(i) { return i.cost; }
   function bondInterestOf(i) { return i.cost * 0.04; }
-  function capital(p) { return p.cash + p.inv.reduce((s, i) => s + i.cost, 0); }
+  function capital(p) { return p.cash + (p.savings || 0) + p.inv.reduce((s, i) => s + i.cost, 0); }
   function quitPct(p) { const e = totalExp(p); return e > 0 ? Math.round(passive(p) / e * 100) : 0; }
   // v0.2: τα ομόλογα ΔΕΝ μετράνε ως επενδύσεις για το όριο δανείου
   function loanBase(p) { return p.inv.filter(i => i.kind !== 'bond').reduce((s, i) => s + i.cost, 0); }
@@ -1150,6 +1169,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
         // v1.5: analytics — buy: αγορές ανά κατηγορία, skip: απορρίψεις ΕΝΩ επαρκούσαν τα μετρητά
         stats: { buy: {}, skip: {} },
+        // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης) — κλειδωμένα χρήματα, μόνο για
+        // αρνητικά Moments (με −30% όταν καλύπτονται πλήρως)· προσφορά κατάθεσης ανά 5ετία.
+        savings: 0, savingsOffer: true, // αρχική προσφορά στα 25 (πρώτη ζαριά)
       })),
       decks: null,
       pending: null,
@@ -1253,6 +1275,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     p.loans = p.loans.filter(l => l.remaining > 0);
     doneLoans.forEach(l => log(state, 'lg_loanDone', { n: pname(p), a: fmt(l.amount) }));
     p.age++;
+    // v1.6: κάθε 5 χρόνια (30,35,…,60) προσφέρεται κατάθεση στην ΑΠΟΤΑΜΙΕΥΣΗ
+    if (p.age % 5 === 0 && p.age <= 60 && p.retiredAge === null) p.savingsOffer = true;
     // 4 παραλλαγές μηνύματος ανάλογα με τόκους ομολόγων/δόσεις (για σωστή μετάφραση)
     const ck = bondInterest > 0 ? (loanPay > 0 ? 'lg_collectBL' : 'lg_collectB') : (loanPay > 0 ? 'lg_collectL' : 'lg_collect');
     log(state, ck, { n: pname(p), net: fmt(net), age: p.age, bi: fmt(bondInterest), lp: fmt(loanPay) });
@@ -1339,6 +1363,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
   // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
   function bankruptIfBroke(state, p) {
+    // v1.6: έσχατη διάσωση — πριν τη χρεοκοπία, η ΑΠΟΤΑΜΙΕΥΣΗ ρευστοποιείται 1:1
+    // (αυτός είναι άλλωστε ο ρόλος ενός ταμείου έκτακτης ανάγκης)
+    if (p.cash < 0 && p.inv.length === 0 && (p.savings || 0) > 0 && isActive(p)) {
+      p.cash += p.savings;
+      log(state, 'lg_savRescue', { n: pname(p), a: fmt(p.savings) });
+      p.savings = 0;
+    }
     if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
       p.bankrupt = true;
       log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
@@ -1465,8 +1496,17 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       log(state, undone.length ? 'lg_momentCancel' : 'lg_momentCancelNone', { n: pname(p), cid: c.id, cids: undone.join(',') });
     } else {
       const amt = momentAmount(state, c);
-      p.cash += amt;
-      log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
+      // v1.6: αρνητικό Moment που ΚΑΛΥΠΤΕΤΑΙ ΠΛΗΡΩΣ από την ΑΠΟΤΑΜΙΕΥΣΗ πληρώνεται
+      // από εκεί με έκπτωση 30% (επιβράβευση πρόνοιας) — τα μετρητά μένουν ανέπαφα.
+      // Αν δεν καλύπτεται ολόκληρο, πληρώνεται κανονικά από τα μετρητά, χωρίς έκπτωση.
+      if (amt < 0 && (p.savings || 0) >= -amt) {
+        const pay = Math.round(-amt * 0.7);
+        p.savings -= pay;
+        log(state, 'lg_savPaid', { n: pname(p), cid: c.id, v: fmt(-amt), d: fmt(pay), s: fmt(p.savings) });
+      } else {
+        p.cash += amt;
+        log(state, amt !== c.amount ? 'lg_momentInfl' : 'lg_moment', { e: (amt >= 0 ? '🟢' : '🔻'), n: pname(p), cid: c.id, v: (amt > 0 ? '+' : '') + fmt(amt) });
+      }
     }
     discard(state, 'moments', cid);
     // v0.2: reveal για ανθρώπους — το forced sale (αν χρειάζεται) ακολουθεί μετά το κλείσιμο της κάρτας
@@ -1623,6 +1663,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         if (!isActive(p)) return finishTurn(state), null;
         if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'square'; return null; }
         if (!isActive(p)) return finishTurn(state), null; // v1.4: χρεοκόπησε στο πέρασμα από Salary
+        // v1.6: εκκρεμεί προσφορά ΑΠΟΤΑΜΙΕΥΣΗΣ (25 ή κάθε 5ετία) — πριν το κουτί προορισμού
+        if (p.savingsOffer) {
+          p.savingsOffer = false;
+          state.pending = { type: 'savings', playerId: p.id, canWithdraw: p.age >= 60, then: 'square' };
+          return null;
+        }
         resolveSquare(state, p);
         return null;
       }
@@ -1786,6 +1832,28 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         return finishTurn(state), null;
       }
 
+      case 'savings': {
+        // v1.6: κατάθεση σε πολλαπλάσια του 50€ / παράλειψη / (στα 60) ανάληψη όλων
+        const ch2 = action.choice;
+        if (ch2 === 'deposit') {
+          const amt = Math.floor(action.amount || 0);
+          if (amt < 50) return err('Ελάχιστη κατάθεση 50€.');
+          if (amt % 50 !== 0) return err('Η αποταμίευση γίνεται σε πολλαπλάσια του 50€.');
+          if (amt > p.cash) return err('Δεν επαρκούν τα μετρητά (' + fmt(p.cash) + ').');
+          p.cash -= amt;
+          p.savings = (p.savings || 0) + amt;
+          log(state, 'lg_savDeposit', { n: pname(p), a: fmt(amt), s: fmt(p.savings) });
+        } else if (ch2 === 'withdraw') {
+          if (!pend.canWithdraw) return err('Ανάληψη μόνο στα 60.');
+          p.cash += p.savings || 0;
+          log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings || 0) });
+          p.savings = 0;
+        } else if (ch2 !== 'skip') return err('Μη έγκυρη επιλογή.');
+        state.pending = null;
+        if (pend.then === 'square') { resolveSquare(state, p); return null; }
+        return finishTurn(state), null;
+      }
+
       case 'funding-offer': {
         const from = state.players.find(x => x.id === pend.fromId);
         if (action.choice === 'accept') {
@@ -1815,7 +1883,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
-    _internals: { pickVictim, doInflation, collect, sweepInstantQuit },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment },
   };
 });
 
@@ -1923,6 +1991,16 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         const prof = profileOf(p);
         const ok = pend.income / pend.price >= 0.08 && p.cash - pend.price >= prof.cushion * 2;
         return { a: 'resolve', choice: ok ? 'accept' : 'decline' };
+      }
+      case 'savings': {
+        // v1.6: ο αμυντικός αποταμιεύει γενναία, ο ισορροπημένος λίγο, ο επιθετικός καθόλου·
+        // στα 60 όλοι ρευστοποιούν (τα κλειδωμένα χρήματα δεν βοηθούν πια στην κατάταξη κίνησης)
+        const prof = profileOf(p);
+        if (pend.canWithdraw && (p.savings || 0) > 0) return { a: 'resolve', choice: 'withdraw' };
+        const pct = { aggressive: 0, balanced: 0.06, defensive: 0.15 }[p.strategy] || 0.06;
+        const amt = Math.floor((p.cash * pct) / 50) * 50;
+        if (amt >= 50 && p.cash - amt >= prof.cushion * 2) return { a: 'resolve', choice: 'deposit', amount: amt };
+        return { a: 'resolve', choice: 'skip' };
       }
       default:
         return { a: 'resolve', choice: 'decline' };
@@ -2933,6 +3011,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
       '<div class="statgrid">' +
       '<div class="stat"><div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
+      // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
+      '<div class="stat"><div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
@@ -2988,7 +3068,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       return '<div class="op' + (p.id === actorId && g.phase === 'playing' ? ' turn' : '') + '">' +
         '<div class="top"><span class="opdot" style="background:' + p.color + '">' + (p.pawn || esc((p.name[0] || '?').toUpperCase())) + '</span>' +
         '<span class="nm">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</span>' + flags + '</div>' +
-        '<div class="st"><span>' + t('yearsOld', { n: p.age }) + '</span><span>' + fmt(p.cash) + '</span></div>' +
+        '<div class="st"><span>' + t('yearsOld', { n: p.age }) + '</span><span>' + fmt(p.cash) +
+        ((p.savings || 0) > 0 ? ' <span style="color:var(--yellow)" title="' + t('savings') + '">🐖' + fmt(p.savings) + '</span>' : '') + '</span></div>' +
         '<div class="st"><span>' + t('passiveShort', { v: fmt(E.passive(p)) }) + '</span><span>' + pct + '%</span></div>' +
         '<div class="st" style="margin-top:2px;"><span>📍 ' + esc(CARDS.BOARD[p.pos].label) + '</span></div>' +
         '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div></div>';
@@ -3224,6 +3305,29 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         }).join('') + '</div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-fs]').forEach(b => b.onclick = () => act({ a: 'resolve', uid: b.dataset.fs }));
+      return;
+    } else if (pend.type === 'savings') {
+      // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — προσφορά κατάθεσης ανά 5ετία (και ανάληψη στα 60)
+      const maxDep = Math.floor(p.cash / 50) * 50;
+      const defDep = Math.min(maxDep, Math.max(50, Math.floor(p.cash * 0.1 / 50) * 50));
+      let html = '<div class="gamecard gc-inflation" style="border-color:var(--yellow); background:#211d0d;">' +
+        '<div class="cat">' + t('savTitle') + '</div>' +
+        '<div class="ttl" style="font-size:20px;">🐖 ' + t('savAsk', { age: p.age }) + '</div>' +
+        '<div style="margin-top:10px; font-size:13px; line-height:1.6; text-align:left;">' + t('savExplain') + '</div>' +
+        '<div class="muted" style="margin-top:8px;">' + t('savBalance', { v: fmt(p.savings || 0), c: fmt(p.cash) }) + '</div></div>' +
+        '<div class="acts">';
+      if (maxDep >= 50) {
+        html += '<div class="row" style="margin:2px 0;"><input id="savAmt" type="number" step="50" min="50" max="' + maxDep + '" value="' + defDep + '" inputmode="numeric" style="flex:1;">' +
+          '<button class="buy" id="savGo" style="flex:0 0 auto; padding:12px;">' + t('savDeposit') + '</button></div>';
+      }
+      if (pend.canWithdraw && (p.savings || 0) > 0) {
+        html += '<button class="wildbtn" data-sv="withdraw">' + t('savWithdraw', { v: fmt(p.savings || 0) }) + '</button>';
+      }
+      html += '<button class="ghost" data-sv="skip">' + t('savSkip') + '</button></div>';
+      overlay(html);
+      const sg = $('savGo');
+      if (sg) sg.onclick = () => { const v = Math.floor(parseFloat($('savAmt').value)); if (v >= 50) act({ a: 'resolve', choice: 'deposit', amount: v }); };
+      $('modalBody').querySelectorAll('[data-sv]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: b.dataset.sv }));
       return;
     } else if (pend.type === 'funding-offer') {
       const from = g.players.find(x => x.id === pend.fromId);
