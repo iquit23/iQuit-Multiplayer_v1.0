@@ -204,6 +204,43 @@ section('v1.2 Dynamic Inflation');
   assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
 }
 
+// ---------- 3ε9. v1.8: ΑΠΟΤΑΜΙΕΥΣΗ και για Tax + κάρτα απώλειας Crash/FFail
+section('v1.8 Tax μέσω αποταμίευσης & κάρτες απώλειας');
+{
+  const TAX_POS = CARDS.BOARD.findIndex(s => s.t === 'tax');
+  const CRASH_POS = CARDS.BOARD.findIndex(s => s.t === 'crash');
+  // Tax που ΚΑΛΥΠΤΕΤΑΙ από την αποταμίευση → −30%, μετρητά ανέπαφα
+  let sT = E.newGame([{ id: 'a', name: 'A', isBot: true }, { id: 'b', name: 'B', isBot: true }], 111);
+  const PT = sT.players[0];
+  PT.inv.push({ uid: 't1', cardId: 'BB13', kind: 'bb', title: 'X', cost: 10000, income: 600 }); // φόρος 300
+  PT.savings = 400; PT.cash = 5000; PT.pos = TAX_POS; sT.turn = 0;
+  E._internals.resolveSquare(sT, PT);
+  assert(PT.savings === 400 - 210 && PT.cash === 5000, 'φόρος 300 με ταμείο 400: −210 από ΑΠΟΤΑΜΙΕΥΣΗ, μετρητά ανέπαφα');
+  // Tax που ΔΕΝ καλύπτεται → πλήρης από μετρητά
+  const PT2 = sT.players[1];
+  PT2.inv.push({ uid: 't2', cardId: 'BB19', kind: 'bb', title: 'Y', cost: 10000, income: 600 });
+  PT2.savings = 200; PT2.cash = 5000; PT2.pos = TAX_POS; sT.turn = 1;
+  E._internals.resolveSquare(sT, PT2);
+  assert(PT2.savings === 200 && PT2.cash === 4700, 'ταμείο 200 < φόρος 300: πλήρη 300 από μετρητά');
+  // Crash σε ΑΝΘΡΩΠΟ → pending κάρτα απώλειας που κλείνει με κλικ
+  let sC = E.newGame([{ id: 'h', name: 'H' }, { id: 'b', name: 'B', isBot: true }], 112);
+  const PH = sC.players[0];
+  PH.inv.push({ uid: 'c1', cardId: 'PR2', kind: 'P', color: 'R', title: 'Μετοχή', cost: 800, income: 160 });
+  PH.pos = CRASH_POS; sC.turn = 0;
+  E._internals.resolveSquare(sC, PH);
+  assert(sC.pending && sC.pending.type === 'reveal' && sC.pending.special === 'crash' && sC.pending.lostV === 800,
+    'crash ανθρώπου → κάρτα απώλειας (reveal) με την επένδυση που χάθηκε');
+  let rC = E.applyAction(sC, 'h', { a: 'resolve', choice: 'ok' });
+  assert((!rC || !rC.error) && sC.pending === null, 'η κάρτα απώλειας κλείνει με κλικ και η σειρά προχωρά');
+  // Crash σε BOT → χωρίς pending (κλείνει μόνο του)
+  let sB = E.newGame([{ id: 'b1', name: 'B1', isBot: true }, { id: 'b2', name: 'B2', isBot: true }], 113);
+  const PB = sB.players[0];
+  PB.inv.push({ uid: 'c2', cardId: 'PG2', kind: 'P', color: 'G', title: 'ΑΚ', cost: 800, income: 48 });
+  PB.pos = CRASH_POS; sB.turn = 0;
+  E._internals.resolveSquare(sB, PB);
+  assert(sB.pending === null, 'crash σε bot: καμία εκκρεμότητα — η ροή συνεχίζεται');
+}
+
 // ---------- 3ε8. v1.7: quitPct = floor (bugfix «100% χωρίς νίκη»)
 section('v1.7 quitPct floor');
 {
@@ -446,9 +483,10 @@ assert(!r || !r.error, 'Ο τρέχων παίκτης ρίχνει ζάρια �
 // ---------- 5. Bot-vs-bot πλήρη παιχνίδια (ACCEPTANCE TEST) ----------
 section('Bot-vs-bot πλήρη παιχνίδια');
 function runFullGame(seed, numPlayers) {
-  const strategies = ['aggressive', 'balanced', 'defensive'];
+  // v1.8: καλύπτονται ΚΑΙ τα θεματικά bots (tycoon/stockpicker/scholar)
+  const strategies = ['aggressive', 'balanced', 'defensive', 'tycoon', 'stockpicker', 'scholar'];
   const spec = [];
-  for (let i = 0; i < numPlayers; i++) spec.push({ id: 'p' + i, name: 'Bot' + (i + 1), isBot: true, strategy: strategies[(seed + i) % 3] });
+  for (let i = 0; i < numPlayers; i++) spec.push({ id: 'p' + i, name: 'Bot' + (i + 1), isBot: true, strategy: strategies[(seed + i) % strategies.length] });
   const st = E.newGame(spec, seed);
   let guard = 0;
   while (st.phase === 'playing' && guard++ < 20000) {

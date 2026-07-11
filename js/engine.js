@@ -363,9 +363,17 @@
       case 'tax': {
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
-          p.cash -= t;
-          log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
-          if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+          // v1.8 (απόφαση Γιώργου): η ΑΠΟΤΑΜΙΕΥΣΗ καλύπτει και τη φορολογία BB —
+          // αν καλύπτει ΟΛΟ τον φόρο, πληρώνεται από εκεί με έκπτωση 30%.
+          if ((p.savings || 0) >= t) {
+            const pay = Math.round(t * 0.7);
+            p.savings -= pay;
+            log(state, 'lg_savTax', { n: pname(p), v: fmt(t), d: fmt(pay), s: fmt(p.savings) });
+          } else {
+            p.cash -= t;
+            log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
+            if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+          }
         } else {
           log(state, 'lg_taxNone', { n: pname(p) });
         }
@@ -381,6 +389,8 @@
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
         log(state, 'lg_crashHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost), inc: fmt(victim.income) });
+        // v1.8 (αίτημα Γιώργου): ο άνθρωπος ΒΛΕΠΕΙ ποια επένδυση χάθηκε — κάρτα που κλείνει με κλικ
+        if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, special: 'crash', lostId: victim.cardId, lostV: victim.cost, lostInc: victim.income }; return; }
         return finishTurn(state);
       }
       case 'fundingfails': {
@@ -393,6 +403,8 @@
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
         log(state, 'lg_ffHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost) });
+        // v1.8: κάρτα απώλειας και για Funding Fails (μόνο για ανθρώπους)
+        if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, special: 'ffail', lostId: victim.cardId, lostV: victim.cost, lostInc: victim.income }; return; }
         return finishTurn(state);
       }
     }
@@ -821,6 +833,6 @@
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
-    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment, resolveSquare },
   };
 });

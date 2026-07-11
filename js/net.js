@@ -6,6 +6,9 @@
 
   const PREFIX = 'iquit-v1-';
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // χωρίς I/O/0/1
+  // v1.8: fast mode (?fast=1) — μικρότερα timeouts, ΜΟΝΟ για automated tests
+  const FAST = typeof location !== 'undefined' && /[?&]fast=1/.test(location.search);
+  const FAIL_MS = FAST ? 4000 : 25000;
 
   function makeCode() {
     let c = '';
@@ -58,10 +61,11 @@
     // v0.8: αν πέσει η σύνδεση με τον broker, νέοι παίκτες δεν βρίσκουν το δωμάτιο — αυτόματο reconnect
     peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch (e) {} });
     peer.on('error', (e) => {
-      if (e.type === 'unavailable-id') cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.');
-      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Δεν υπάρχει σύνδεση με τον διακομιστή γνωριμίας. Έλεγξε το internet σου.');
+      // v1.8: περνάμε και το e.type ώστε το UI να χειρίζεται ειδικά το unavailable-id (host migration)
+      if (e.type === 'unavailable-id') cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.', e.type);
+      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Δεν υπάρχει σύνδεση με τον διακομιστή γνωριμίας. Έλεγξε το internet σου.', e.type);
       else if (e.type === 'peer-unavailable') { /* κάποιος guest εξαφανίστηκε — όχι μοιραίο για τον host */ }
-      else cb.onError('Σφάλμα δικτύου: ' + e.type);
+      else cb.onError('Σφάλμα δικτύου: ' + e.type, e.type);
     });
     peer.on('connection', (conn) => {
       const clientId = 'c' + (++seq) + '-' + makeToken().slice(0, 4);
@@ -109,7 +113,7 @@
             ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε. Δοκιμάστε: (1) ανανέωση σελίδας και ξανά, (2) άλλο δίκτυο (π.χ. Wi-Fi αντί για δεδομένα), (3) απενεργοποίηση VPN.'
             : 'Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό και ότι ο host έχει ανοιχτή τη σελίδα του παιχνιδιού.');
         }
-      }, 25000);
+      }, FAIL_MS);
       conn.on('open', () => {
         opened = true; clearTimeout(failTimer);
         guest.send(Object.assign({ t: 'hello' }, hello));

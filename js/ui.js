@@ -17,8 +17,18 @@
     { name: 'Καλυψώ', strategy: 'balanced' },
     { name: 'Δανάη', strategy: 'defensive' },
     { name: 'Ορφέας', strategy: 'defensive' },
+    // v1.8: θεματικά bots (αίτημα Γιώργου)
+    { name: 'Κροίσος', strategy: 'tycoon' },
+    { name: 'Ερμής', strategy: 'stockpicker' },
+    { name: 'Αθηνά', strategy: 'scholar' },
   ];
-  const BOT_DELAY = 5200, DISCO_DELAY = 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
+  // v1.8: fast mode για automated tests (?fast=1) — μικρά διαστήματα heartbeat/migration/bots
+  const FAST = /[?&]fast=1/.test(location.search);
+  const BOT_DELAY = FAST ? 900 : 5200, DISCO_DELAY = FAST ? 3000 : 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
+  const HB_MS = FAST ? 1200 : 5000;          // κάθε πότε «χτυπά» ο host
+  const HB_LOST_MS = FAST ? 4000 : 15000;    // πόση σιωπή = χαμένος host
+  const MIG_BASE_MS = FAST ? 2500 : 12000;   // αναμονή πριν το takeover (πρώτος διάδοχος)
+  const MIG_STEP_MS = FAST ? 4000 : 10000;   // επιπλέον αναμονή ανά επόμενο διάδοχο
   const HOST_KEY = 'iquit_host_v1', GUEST_KEY = 'iquit_guest_v1', NAME_KEY = 'iquit_name';
   const PAWNS = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$'];
 
@@ -249,24 +259,53 @@
   }
 
   // ============================================================ HOST
-  function hostCreate(resume) {
+  function hostCreate(resume, asId) {
+    // v1.8: το asId επιτρέπει σε ΔΙΑΔΟΧΟ guest να γίνει host κρατώντας τη δική του ταυτότητα παίκτη
     const saved = resume ? JSON.parse(localStorage.getItem(HOST_KEY) || 'null') : null;
-    App.role = 'host'; App.myId = 'p0';
+    App.role = 'host'; App.myId = asId || 'p0';
     const cbs = {
       onReady(code) {
         if (saved) {
           App.lobby = saved.lobby;
           App.game = saved.game;
           App.chat = saved.chat || [];
-          App.lobby.players.forEach(p => { if (!p.isBot && p.id !== 'p0') p.connected = false; });
+          App.lobby.players.forEach(p => { if (!p.isBot && p.id !== App.myId) p.connected = false; });
+          // v1.8 BUGFIX: τα connected flags συγχρονίζονται ΚΑΙ στο game state — αλλιώς
+          // οι απόντες δείχνουν «συνδεδεμένοι» και δεν παίζει ποτέ κανείς για αυτούς (stall)
+          if (App.game) App.game.players.forEach(gp => {
+            const lp = App.lobby.players.find(x => x.id === gp.id);
+            gp.connected = gp.isBot ? true : !!(lp && lp.connected);
+          });
         } else {
           App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, token: NET.makeToken() }] };
         }
+        if (App.migrating) { App.migrating = false; App.migAt = null; toast('👑 ' + t('nowHost')); }
         saveHostSession();
         if (App.game) { show('game'); render(); scheduleAuto(); }
         else { show('lobby'); renderLobby(); }
       },
-      onError(msg) { show('home'); homeErr(msg); },
+      onError(msg, type) {
+        // v1.8α: αποτυχία claim κατά τη ΜΕΤΑΒΑΣΗ (ο παλιός host επέστρεψε ή άλλος πρόλαβε) → πίσω σε guest
+        if (type === 'unavailable-id' && App.migrating && App.migGuestSaved) {
+          const s = App.migGuestSaved;
+          App.migrating = false; App.migAt = null; App.role = 'guest';
+          try { localStorage.setItem(GUEST_KEY, JSON.stringify(s)); localStorage.removeItem(HOST_KEY); } catch (e) {}
+          guestJoin(s.code, s.token);
+          return;
+        }
+        // v1.8β: ο ΠΑΛΙΟΣ host επιστρέφει αλλά το δωμάτιο συνεχίζεται από διάδοχο → μπαίνει ως παίκτης (p0)
+        if (type === 'unavailable-id' && resume && saved && saved.game) {
+          const me0 = saved.lobby.players.find(x => x.id === 'p0');
+          if (me0 && me0.token) {
+            App.role = 'guest'; App.myId = 'p0'; App.game = saved.game; App.chat = saved.chat || [];
+            try { localStorage.setItem(GUEST_KEY, JSON.stringify({ code: saved.lobby.code, name: me0.name, token: me0.token, playerId: 'p0' })); localStorage.removeItem(HOST_KEY); } catch (e) {}
+            toast('👑 ' + t('roomTakenJoin'));
+            guestJoin(saved.lobby.code, me0.token);
+            return;
+          }
+        }
+        show('home'); homeErr(msg);
+      },
       onHello(clientId, msg, send) {
         // Επανασύνδεση με token;
         const existing = App.lobby.players.find(p => p.token && p.token === msg.token);
@@ -339,7 +378,15 @@
   }
   function broadcastState() {
     if (App.role !== 'host' || !App.net || !App.game) return;
-    App.net.broadcast({ t: 'state', state: App.game });
+    // v1.8: μαζί με το state ταξιδεύει η «προίκα διαδοχής» — ό,τι χρειάζεται ένας guest
+    // για να αναλάβει το δωμάτιο αν χαθεί ο host (lobby με tokens + πρόσφατο chat)
+    App.net.broadcast({
+      t: 'state', state: App.game,
+      mig: {
+        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null })) },
+        chat: (App.chat || []).slice(-40),
+      },
+    });
   }
   function saveHostSession() {
     if (App.role !== 'host' || !App.lobby) return;
@@ -399,8 +446,10 @@
       onOpen() {},
       onMessage(msg) {
         if (!msg) return;
+        App.lastHostMsg = Date.now(); // v1.8: κάθε μήνυμα από τον host μηδενίζει το ρολόι σιωπής
         if (msg.t === 'welcome') {
           App.myId = msg.playerId;
+          App.guestRetryCount = 0; App.migAt = null; App.migrating = false; // v1.8: επανασύνδεση ΟΚ
           try { localStorage.setItem(GUEST_KEY, JSON.stringify({ code: msg.code, name, token: msg.token, playerId: msg.playerId })); } catch (e) {}
           if (App.myPawn) App.net.send({ t: 'pawn', pawn: App.myPawn }); // ξαναδήλωσε το αγαπημένο πιόνι
         } else if (msg.t === 'chat') {
@@ -413,6 +462,7 @@
           renderLobbyGuest(msg);
         } else if (msg.t === 'state') {
           App.game = msg.state;
+          if (msg.mig) { App.migLobby = msg.mig.lobby; App.migChat = msg.mig.chat; } // v1.8: προίκα διαδοχής
           if ($('screen-game').classList.contains('hidden')) show('game');
           render(); maybeToastNewLog();
         } else if (msg.t === 'rejected') {
@@ -423,14 +473,49 @@
         }
       },
       onClosed() {
-        toast('🔌 Χάθηκε η σύνδεση με τον host — προσπαθώ να επανασυνδεθώ…');
-        retryGuest();
+        onHostLost();
       },
       onError(msg) {
-        if (App.game) retryGuest();
+        if (App.game) onHostLost();
         else { show('home'); homeErr(msg); }
       },
     });
+  }
+
+  // v1.8: ο host χάθηκε — πρώτα προσπαθούμε επανασύνδεση (μπορεί απλώς να κάνει refresh),
+  // και αν αργεί, ο πρώτος διαθέσιμος guest ΑΝΑΛΑΜΒΑΝΕΙ το δωμάτιο (host migration).
+  function onHostLost() {
+    if (App.migrating) return;
+    const s = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
+    if (!s) return;
+    if (!App.migAt) {
+      toast('🔌 ' + t('hostLost'));
+      App.migAt = Date.now() + MIG_BASE_MS + migRank() * MIG_STEP_MS;
+    }
+    if (App.game && App.migLobby && Date.now() >= App.migAt) { attemptTakeover(s); return; }
+    retryGuest();
+  }
+
+  // Σειρά διαδοχής: η θέση μου ανάμεσα στους ανθρώπους-guests (κατά σειρά εισόδου)
+  function migRank() {
+    if (!App.game) return 0;
+    const humans = App.game.players.filter(x => !x.isBot && x.id !== 'p0').map(x => x.id);
+    const i = humans.indexOf(App.myId);
+    return i < 0 ? 0 : i;
+  }
+
+  function attemptTakeover(s) {
+    App.migrating = true;
+    App.migGuestSaved = s; // για επιστροφή σε guest mode αν το claim αποτύχει
+    try { if (App.net) App.net.close(); } catch (e) {}
+    const lobby = JSON.parse(JSON.stringify(App.migLobby));
+    lobby.players.forEach(pl => { pl.clientId = null; if (!pl.isBot) pl.connected = (pl.id === App.myId); });
+    try {
+      localStorage.setItem(HOST_KEY, JSON.stringify({ lobby, game: App.game, chat: App.migChat || App.chat || [] }));
+      localStorage.removeItem(GUEST_KEY);
+    } catch (e) {}
+    toast('👑 ' + t('takingOver'));
+    hostCreate(true, App.myId);
   }
 
   function retryGuest() {
@@ -441,7 +526,7 @@
       try { App.net.close(); } catch (e) {}
       guestJoin(s.code, s.token);
       if (App.game) { show('game'); render(); }
-    }, 4000);
+    }, FAST ? 1500 : 4000);
   }
 
   // ============================================================ LOBBY RENDER
@@ -468,8 +553,10 @@
       App.myPawn = pw;
       try { localStorage.setItem('iquit_pawn', pw); } catch (e) {}
       if (App.role === 'host') {
-        if (App.lobby.players.some(x => x.pawn === pw && x.id !== 'p0')) return;
-        App.lobby.players.find(x => x.id === 'p0').pawn = pw;
+        // v1.8: ο host δεν είναι απαραίτητα ο p0 (μετά από migration)
+        if (App.lobby.players.some(x => x.pawn === pw && x.id !== App.myId)) return;
+        const meL = App.lobby.players.find(x => x.id === App.myId);
+        if (meL) meL.pawn = pw;
         saveHostSession(); broadcastLobby(); renderLobby();
       } else {
         App.net.send({ t: 'pawn', pawn: pw });
@@ -961,21 +1048,31 @@
       '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody', { r: r }) + '</div></div>';
   }
 
+  // v1.8: κάρτα απώλειας επένδυσης (Crash / Funding Fails) — ο παίκτης βλέπει ΤΙ έχασε
+  function lostCardHtml(pend) {
+    const c = E.card(pend.lostId);
+    return '<div class="gamecard gc-project" style="border-color:var(--red); background:#2a1114;">' +
+      '<div class="cat" style="color:var(--red)">' + (pend.special === 'crash' ? '💥 CRASH' : '📉 FUNDING FAILS') + '</div>' +
+      '<div class="ttl">' + esc(c ? I.cardTitle(c) : '') + '</div>' +
+      '<div style="margin-top:10px; font-weight:800; font-size:17px; color:var(--red)">−' + fmt(pend.lostV) +
+      (pend.lostInc ? ' · −' + fmt(pend.lostInc) + t('perCycle') : '') + '</div>' +
+      '<div class="muted" style="margin-top:8px; font-size:12px; line-height:1.5;">' + t(pend.special === 'crash' ? 'crashLostBody' : 'ffailLostBody') + '</div></div>';
+  }
+
   function cardHtml(c, deck, discount, curPrice) {
     const ttl = I.cardTitle(c);
     if (deck === 'lifestyle') {
       const d = (curPrice != null ? curPrice : c.delta);
+      // v1.8 (αίτημα Γιώργου): καθαρή ένδειξη — μόνο «Κατηγορία +58€», χωρίς «/κύκλο (μόνιμα)(βασικό…)»
       return '<div class="gamecard gc-lifestyle"><div class="cat">LIFESTYLE</div><div class="ttl">' + esc(ttl) + '</div>' +
         '<div style="margin-top:10px; font-weight:800; font-size:17px; color:' + (d > 0 ? 'var(--red)' : 'var(--green)') + '">' +
-        esc(I.expName(c.cat)) + ' ' + (d > 0 ? '+' : '') + d + '€ ' + t('permanent') + (c.shared ? t('each') : '') +
-        (d !== c.delta ? ' <span class="muted" style="font-size:11px;">' + t('baseInfl', { v: c.delta + '€' }) + '</span>' : '') + '</div></div>';
+        esc(I.expName(c.cat)) + ' ' + (d > 0 ? '+' : '') + d + '€' + (c.shared ? t('each') : '') + '</div></div>';
     }
     if (deck === 'moments') {
       const amt = (curPrice != null ? curPrice : c.amount);
       const eff = c.cancels
         ? '<div style="margin-top:10px; font-weight:700; color:var(--green)">' + t('cancelsLS') + '</div>'
-        : '<div style="margin-top:10px; font-weight:800; font-size:19px; color:' + (amt >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (amt > 0 ? '+' : '') + fmt(amt) +
-          (amt !== c.amount ? ' <span class="muted" style="font-size:11px; font-weight:400;">' + t('baseInfl', { v: fmt(c.amount) }) + '</span>' : '') + '</div>';
+        : '<div style="margin-top:10px; font-weight:800; font-size:19px; color:' + (amt >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (amt > 0 ? '+' : '') + fmt(amt) + '</div>';
       return '<div class="gamecard gc-moments"><div class="cat">MOMENTS</div><div class="ttl">' + esc(ttl) + '</div>' + eff + '</div>';
     }
     const isBB = deck === 'bb';
@@ -1059,6 +1156,10 @@
           '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
         $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
+      } else if (pend.special === 'crash' || pend.special === 'ffail') {
+        // v1.8: οι άλλοι βλέπουν την απώλεια του παίκτη (view-only)
+        overlay(lostCardHtml(pend) +
+          '<div class="muted" style="text-align:center;">' + t('cardOf', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
@@ -1076,7 +1177,9 @@
       const rc = pend.special ? null : E.card(pend.cardId);
       const body = pend.special === 'inflation'
         ? inflationCardHtml(g)
-        : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
+        : (pend.special === 'crash' || pend.special === 'ffail')
+          ? lostCardHtml(pend)
+          : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
         '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
         '<div class="muted" style="text-align:center; margin-top:8px;">' + t('everyoneSees') + '</div>');
@@ -1273,6 +1376,20 @@
       render();
       scheduleAuto();
     });
+
+    // v1.8 HOST MIGRATION: (α) ο host «χτυπά» heartbeat ώστε οι guests να ξέρουν ότι ζει
+    setInterval(() => {
+      if (App.role === 'host' && App.net && App.game) App.net.broadcast({ t: 'hb' });
+    }, HB_MS);
+    // (β) guest: παρατεταμένη σιωπή του host (πέρα από συνδέσεις που «έκλεισαν» καθαρά,
+    // πιάνει και κινητά που απλώς εξαφανίζονται) → κινείται η διαδικασία επανασύνδεσης/διαδοχής
+    setInterval(() => {
+      if (App.role !== 'guest' || !App.game || App.migrating) return;
+      if (App.lastHostMsg && Date.now() - App.lastHostMsg > HB_LOST_MS) {
+        App.lastHostMsg = Date.now(); // μην πυροδοτείται σε κάθε tick
+        onHostLost();
+      }
+    }, FAST ? 900 : 3000);
 
     // v1.5: κλικ στο λογότυπο (topbar) → επιβεβαίωση → αρχική σελίδα
     const bh = $('brandHome');

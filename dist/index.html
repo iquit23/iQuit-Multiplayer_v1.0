@@ -348,7 +348,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.3</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.4</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -648,6 +648,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       shareText: 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: {url}',
       copied: '📋 Αντιγράφηκε το link πρόσκλησης!',
       strat_aggressive: 'Επιθετικός', strat_defensive: 'Αμυντικός', strat_balanced: 'Ισορροπημένος',
+      strat_tycoon: 'Μεγιστάνας', strat_stockpicker: 'Χρηματιστής', strat_scholar: 'Ακαδημαϊκός',
       // Game
       yourTurn: '▶ Η σειρά σου!', playing: 'Παίζει: {name}', gameOver: 'Τέλος παιχνιδιού',
       roll: '🎲 Ρίξε τα ζάρια', deciding: ' αποφασίζει…', rolling: ' ρίχνει ζάρια…',
@@ -684,6 +685,14 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_savWithdraw: '💶 {n}: ανάληψη όλης της αποταμίευσης στα 60 (+{a})',
       lg_savPaid: '🐖 {n}: το «{title}» ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}). Η πρόνοια επιβραβεύεται!',
       lg_savRescue: '🆘 {n}: η αποταμίευση ({a}) ρευστοποιήθηκε in extremis για να αποφευχθεί η χρεοκοπία.',
+      lg_savTax: '🐖 {n}: ο φόρος BB ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}).',
+      // v1.8: κάρτα απώλειας Crash/Funding Fails + host migration
+      crashLostBody: 'Η επένδυση χάθηκε λόγω κακής αξιολόγησης ρίσκου — το Crash χτυπά πάντα το χρώμα σου με τη μεγαλύτερη απόδοση. Οι υψηλές αποδόσεις κουβαλούν υψηλό ρίσκο!',
+      ffailLostBody: 'Η χρηματοδότηση με τη μεγαλύτερη απόδοση κατέρρευσε. Μην στηρίζεις το πλάνο σου σε μία μόνο πηγή εισοδήματος!',
+      hostLost: 'Χάθηκε η σύνδεση με τον host…',
+      takingOver: 'Ο host χάθηκε — αναλαμβάνεις εσύ το δωμάτιο!',
+      nowHost: 'Είσαι ο νέος host — το παιχνίδι συνεχίζεται!',
+      roomTakenJoin: 'Το δωμάτιο συνεχίζεται από άλλον παίκτη — μπαίνεις ξανά ως παίκτης.',
       stat_G: '🟢 Πράσινα Projects', stat_Y: '🟡 Κίτρινα Projects', stat_R: '🔴 Κόκκινα Projects',
       stat_funding: '💼 Χρηματοδοτήσεις', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Ομόλογα',
       stat_masters: '🎓 Μεταπτυχιακό', stat_taxprepay: '🧾 Προκαταβολή Φόρου', stat_betterloan: '🏦 Καλύτεροι Όροι Δανείου',
@@ -807,6 +816,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       shareText: 'We are playing I QUIT! 🎲 Tap the link to join my room: {url}',
       copied: '📋 Invite link copied!',
       strat_aggressive: 'Aggressive', strat_defensive: 'Defensive', strat_balanced: 'Balanced',
+      strat_tycoon: 'Tycoon', strat_stockpicker: 'Stock Picker', strat_scholar: 'Scholar',
       yourTurn: '▶ Your turn!', playing: 'Playing: {name}', gameOver: 'Game over',
       roll: '🎲 Roll the dice', deciding: ' is deciding…', rolling: ' is rolling…',
       yourDecision: 'Your decision — see the card window', results: '🏆 Results',
@@ -840,6 +850,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       lg_savWithdraw: '💶 {n}: withdrew all savings at 60 (+{a})',
       lg_savPaid: '🐖 {n}: “{title}” ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}). Foresight pays off!',
       lg_savRescue: '🆘 {n}: savings ({a}) were liquidated in extremis to avoid bankruptcy.',
+      lg_savTax: '🐖 {n}: BB tax ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}).',
+      crashLostBody: 'The investment was lost to poor risk assessment — a Crash always hits your color with the highest yield. High returns carry high risk!',
+      ffailLostBody: 'Your highest-yield funding collapsed. Never rely on a single source of income!',
+      hostLost: 'Lost connection to the host…',
+      takingOver: 'The host is gone — you are taking over the room!',
+      nowHost: 'You are the new host — the game continues!',
+      roomTakenJoin: 'The room continues under another player — rejoining as a player.',
       stat_G: '🟢 Green Projects', stat_Y: '🟡 Yellow Projects', stat_R: '🔴 Red Projects',
       stat_funding: '💼 Funding', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Bonds',
       stat_masters: '🎓 Master’s Degree', stat_taxprepay: '🧾 Tax Prepayment', stat_betterloan: '🏦 Better Loan Terms',
@@ -1435,9 +1452,17 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       case 'tax': {
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
-          p.cash -= t;
-          log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
-          if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+          // v1.8 (απόφαση Γιώργου): η ΑΠΟΤΑΜΙΕΥΣΗ καλύπτει και τη φορολογία BB —
+          // αν καλύπτει ΟΛΟ τον φόρο, πληρώνεται από εκεί με έκπτωση 30%.
+          if ((p.savings || 0) >= t) {
+            const pay = Math.round(t * 0.7);
+            p.savings -= pay;
+            log(state, 'lg_savTax', { n: pname(p), v: fmt(t), d: fmt(pay), s: fmt(p.savings) });
+          } else {
+            p.cash -= t;
+            log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
+            if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+          }
         } else {
           log(state, 'lg_taxNone', { n: pname(p) });
         }
@@ -1453,6 +1478,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
         log(state, 'lg_crashHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost), inc: fmt(victim.income) });
+        // v1.8 (αίτημα Γιώργου): ο άνθρωπος ΒΛΕΠΕΙ ποια επένδυση χάθηκε — κάρτα που κλείνει με κλικ
+        if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, special: 'crash', lostId: victim.cardId, lostV: victim.cost, lostInc: victim.income }; return; }
         return finishTurn(state);
       }
       case 'fundingfails': {
@@ -1465,6 +1492,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         p.inv = p.inv.filter(i => i.uid !== victim.uid);
         discard(state, 'project', victim.cardId);
         log(state, 'lg_ffHit', { n: pname(p), cid: victim.cardId, v: fmt(victim.cost) });
+        // v1.8: κάρτα απώλειας και για Funding Fails (μόνο για ανθρώπους)
+        if (!p.isBot) { state.pending = { type: 'reveal', playerId: p.id, special: 'ffail', lostId: victim.cardId, lostV: victim.cost, lostInc: victim.income }; return; }
         return finishTurn(state);
       }
     }
@@ -1893,7 +1922,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     maxLoan, loanBase, loanDebt, loanOwedNow, priceOf, lifestyleDelta, momentAmount, inflRate, INFLATION_BY_PLAYERS,
     isActive, currentPlayer, card, fmt,
     BOARD: CARDS.BOARD, COLORNAME, END_AGE, MAX_LOANS_TOTAL,
-    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment },
+    _internals: { pickVictim, doInflation, collect, sweepInstantQuit, applyMoment, resolveSquare },
   };
 });
 
@@ -1942,6 +1971,25 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       bondCushion: 2500,
       wildAge: 35, wildCash: 5000,
       repay: 'mid',
+    },
+    // v1.8 (αίτημα Γιώργου): θεματικά bots με δική τους «φιλοσοφία» προς τη νίκη
+    tycoon: { // 🏢 αγοράζει ΜΟΝΟ Big Business & Χρηματοδοτήσεις — τα Projects τα γυρίζει με Wild σε BB
+      label: 'Μεγιστάνας', icon: '🏢',
+      cushion: 400, bbAge: 26, bbEarlyMult: 1.2, redExtra: 0,
+      bondCushion: Infinity, wildAge: 26, wildCash: 2500,
+      repay: 'mid', focus: 'bigmoney',
+    },
+    stockpicker: { // 📈 αγοράζει ΜΟΝΟ Πράσινα/Κίτρινα/Κόκκινα Projects — ποτέ BB/ομόλογα
+      label: 'Χρηματιστής', icon: '📈',
+      cushion: 400, bbAge: 99, bbEarlyMult: 99, redExtra: 0,
+      bondCushion: Infinity, wildAge: 28, wildCash: 3000,
+      repay: 'mid', focus: 'stocks',
+    },
+    scholar: { // 🎓 μεταπτυχιακά/φοροτεχνικά/καλύτερα δάνεια, γρήγορη αποπληρωμή, BB μόνο μετά τα 38 με άνεση
+      label: 'Ακαδημαϊκός', icon: '🎓',
+      cushion: 800, bbAge: 38, bbEarlyMult: 2, redExtra: 0,
+      bondCushion: 2000, wildAge: 99, wildCash: 999999,
+      repay: 'early', focus: 'education',
     },
   };
   function profileOf(p) { return PROFILES[p.strategy] || PROFILES.balanced; }
@@ -2007,7 +2055,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         // στα 60 όλοι ρευστοποιούν (τα κλειδωμένα χρήματα δεν βοηθούν πια στην κατάταξη κίνησης)
         const prof = profileOf(p);
         if (pend.canWithdraw && (p.savings || 0) > 0) return { a: 'resolve', choice: 'withdraw' };
-        const pct = { aggressive: 0, balanced: 0.06, defensive: 0.15 }[p.strategy] || 0.06;
+        const pct = { aggressive: 0, balanced: 0.06, defensive: 0.15, tycoon: 0.04, stockpicker: 0.05, scholar: 0.12 }[p.strategy] || 0.06;
         const amt = Math.floor((p.cash * pct) / 50) * 50;
         if (amt >= 50 && p.cash - amt >= prof.cushion * 2) return { a: 'resolve', choice: 'deposit', amount: amt };
         return { a: 'resolve', choice: 'skip' };
@@ -2033,7 +2081,14 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     // η εξόφληση των δανείων — καμία νέα αγορά, κανένα νέο δάνειο!
     if (E.passive(p) >= E.totalExp(p)) return { a: 'resolve', choice: 'decline' };
 
+    const focus = prof.focus || null; // v1.8: θεματική στρατηγική
+
     if (isBB) {
+      // Χρηματιστής: ΔΕΝ αγοράζει ποτέ BB — αν έχει Wild, τη γυρίζει σε Project
+      if (focus === 'stocks') {
+        if (pend.canWild && p.wilds > 0 && p.cash >= prof.cushion + 400) return { a: 'resolve', choice: 'wild' };
+        return { a: 'resolve', choice: 'decline' };
+      }
       if (p.age >= prof.bbAge) {
         if (p.cash >= price) return { a: 'resolve', choice: 'buy' };
         if (canLoanCover && p.cash > 0) return { a: 'resolve', choice: 'buy-loan', loanAmount: loanAmount };
@@ -2046,6 +2101,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
     switch (c.kind) {
       case 'P': {
+        // Μεγιστάνας: τα Projects δεν τον ενδιαφέρουν — Wild προς BB αν γίνεται, αλλιώς πάσο
+        if (focus === 'bigmoney') {
+          if (pend.canWild && p.wilds > 0 && p.cash >= prof.cushion + 400) return { a: 'resolve', choice: 'wild' };
+          return { a: 'resolve', choice: 'decline' };
+        }
+        // Ακαδημαϊκός: αποφεύγει το υψηλό ρίσκο (κόκκινα)
+        if (focus === 'education' && c.color === 'R') return { a: 'resolve', choice: 'decline' };
         if (pend.canWild && p.wilds > 0 && p.age >= prof.wildAge && p.cash >= prof.wildCash + prof.cushion) {
           return { a: 'resolve', choice: 'wild' };
         }
@@ -2053,14 +2115,19 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         return { a: 'resolve', choice: (p.cash - price >= prof.cushion + extra ? 'buy' : 'decline') };
       }
       case 'funding':
+        if (focus === 'stocks') return { a: 'resolve', choice: 'decline' }; // μόνο μετοχές γι' αυτόν
         return { a: 'resolve', choice: affordable ? 'buy' : 'decline' };
       case 'bond':
         return { a: 'resolve', choice: (p.cash - price >= prof.bondCushion ? 'buy' : 'decline') };
       case 'masters':
+        // Ακαδημαϊκός: το μεταπτυχιακό είναι προτεραιότητα — το παίρνει σχεδόν πάντα
+        if (focus === 'education') return { a: 'resolve', choice: (p.cash - price >= 200 ? 'buy' : 'decline') };
         return { a: 'resolve', choice: affordable ? 'buy' : 'decline' };
       case 'taxprepay':
+        if (focus === 'education') return { a: 'resolve', choice: (p.cash - price >= prof.cushion ? 'buy' : 'decline') };
         return { a: 'resolve', choice: (p.cash - price >= prof.cushion * 2 ? 'buy' : 'decline') };
       case 'betterloan':
+        if (focus === 'education') return { a: 'resolve', choice: (p.loans.length > 0 && affordable ? 'buy' : 'decline') };
         return { a: 'resolve', choice: (E.loanOwedNow(p) > 2 * price && affordable ? 'buy' : 'decline') };
       default:
         return { a: 'resolve', choice: 'decline' };
@@ -2080,6 +2147,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
 
   const PREFIX = 'iquit-v1-';
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // χωρίς I/O/0/1
+  // v1.8: fast mode (?fast=1) — μικρότερα timeouts, ΜΟΝΟ για automated tests
+  const FAST = typeof location !== 'undefined' && /[?&]fast=1/.test(location.search);
+  const FAIL_MS = FAST ? 4000 : 25000;
 
   function makeCode() {
     let c = '';
@@ -2132,10 +2202,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     // v0.8: αν πέσει η σύνδεση με τον broker, νέοι παίκτες δεν βρίσκουν το δωμάτιο — αυτόματο reconnect
     peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch (e) {} });
     peer.on('error', (e) => {
-      if (e.type === 'unavailable-id') cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.');
-      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Δεν υπάρχει σύνδεση με τον διακομιστή γνωριμίας. Έλεγξε το internet σου.');
+      // v1.8: περνάμε και το e.type ώστε το UI να χειρίζεται ειδικά το unavailable-id (host migration)
+      if (e.type === 'unavailable-id') cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.', e.type);
+      else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') cb.onError('Δεν υπάρχει σύνδεση με τον διακομιστή γνωριμίας. Έλεγξε το internet σου.', e.type);
       else if (e.type === 'peer-unavailable') { /* κάποιος guest εξαφανίστηκε — όχι μοιραίο για τον host */ }
-      else cb.onError('Σφάλμα δικτύου: ' + e.type);
+      else cb.onError('Σφάλμα δικτύου: ' + e.type, e.type);
     });
     peer.on('connection', (conn) => {
       const clientId = 'c' + (++seq) + '-' + makeToken().slice(0, 4);
@@ -2183,7 +2254,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
             ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε. Δοκιμάστε: (1) ανανέωση σελίδας και ξανά, (2) άλλο δίκτυο (π.χ. Wi-Fi αντί για δεδομένα), (3) απενεργοποίηση VPN.'
             : 'Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό και ότι ο host έχει ανοιχτή τη σελίδα του παιχνιδιού.');
         }
-      }, 25000);
+      }, FAIL_MS);
       conn.on('open', () => {
         opened = true; clearTimeout(failTimer);
         guest.send(Object.assign({ t: 'hello' }, hello));
@@ -2227,8 +2298,18 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     { name: 'Καλυψώ', strategy: 'balanced' },
     { name: 'Δανάη', strategy: 'defensive' },
     { name: 'Ορφέας', strategy: 'defensive' },
+    // v1.8: θεματικά bots (αίτημα Γιώργου)
+    { name: 'Κροίσος', strategy: 'tycoon' },
+    { name: 'Ερμής', strategy: 'stockpicker' },
+    { name: 'Αθηνά', strategy: 'scholar' },
   ];
-  const BOT_DELAY = 5200, DISCO_DELAY = 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
+  // v1.8: fast mode για automated tests (?fast=1) — μικρά διαστήματα heartbeat/migration/bots
+  const FAST = /[?&]fast=1/.test(location.search);
+  const BOT_DELAY = FAST ? 900 : 5200, DISCO_DELAY = FAST ? 3000 : 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
+  const HB_MS = FAST ? 1200 : 5000;          // κάθε πότε «χτυπά» ο host
+  const HB_LOST_MS = FAST ? 4000 : 15000;    // πόση σιωπή = χαμένος host
+  const MIG_BASE_MS = FAST ? 2500 : 12000;   // αναμονή πριν το takeover (πρώτος διάδοχος)
+  const MIG_STEP_MS = FAST ? 4000 : 10000;   // επιπλέον αναμονή ανά επόμενο διάδοχο
   const HOST_KEY = 'iquit_host_v1', GUEST_KEY = 'iquit_guest_v1', NAME_KEY = 'iquit_name';
   const PAWNS = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$'];
 
@@ -2459,24 +2540,53 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
 
   // ============================================================ HOST
-  function hostCreate(resume) {
+  function hostCreate(resume, asId) {
+    // v1.8: το asId επιτρέπει σε ΔΙΑΔΟΧΟ guest να γίνει host κρατώντας τη δική του ταυτότητα παίκτη
     const saved = resume ? JSON.parse(localStorage.getItem(HOST_KEY) || 'null') : null;
-    App.role = 'host'; App.myId = 'p0';
+    App.role = 'host'; App.myId = asId || 'p0';
     const cbs = {
       onReady(code) {
         if (saved) {
           App.lobby = saved.lobby;
           App.game = saved.game;
           App.chat = saved.chat || [];
-          App.lobby.players.forEach(p => { if (!p.isBot && p.id !== 'p0') p.connected = false; });
+          App.lobby.players.forEach(p => { if (!p.isBot && p.id !== App.myId) p.connected = false; });
+          // v1.8 BUGFIX: τα connected flags συγχρονίζονται ΚΑΙ στο game state — αλλιώς
+          // οι απόντες δείχνουν «συνδεδεμένοι» και δεν παίζει ποτέ κανείς για αυτούς (stall)
+          if (App.game) App.game.players.forEach(gp => {
+            const lp = App.lobby.players.find(x => x.id === gp.id);
+            gp.connected = gp.isBot ? true : !!(lp && lp.connected);
+          });
         } else {
           App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, token: NET.makeToken() }] };
         }
+        if (App.migrating) { App.migrating = false; App.migAt = null; toast('👑 ' + t('nowHost')); }
         saveHostSession();
         if (App.game) { show('game'); render(); scheduleAuto(); }
         else { show('lobby'); renderLobby(); }
       },
-      onError(msg) { show('home'); homeErr(msg); },
+      onError(msg, type) {
+        // v1.8α: αποτυχία claim κατά τη ΜΕΤΑΒΑΣΗ (ο παλιός host επέστρεψε ή άλλος πρόλαβε) → πίσω σε guest
+        if (type === 'unavailable-id' && App.migrating && App.migGuestSaved) {
+          const s = App.migGuestSaved;
+          App.migrating = false; App.migAt = null; App.role = 'guest';
+          try { localStorage.setItem(GUEST_KEY, JSON.stringify(s)); localStorage.removeItem(HOST_KEY); } catch (e) {}
+          guestJoin(s.code, s.token);
+          return;
+        }
+        // v1.8β: ο ΠΑΛΙΟΣ host επιστρέφει αλλά το δωμάτιο συνεχίζεται από διάδοχο → μπαίνει ως παίκτης (p0)
+        if (type === 'unavailable-id' && resume && saved && saved.game) {
+          const me0 = saved.lobby.players.find(x => x.id === 'p0');
+          if (me0 && me0.token) {
+            App.role = 'guest'; App.myId = 'p0'; App.game = saved.game; App.chat = saved.chat || [];
+            try { localStorage.setItem(GUEST_KEY, JSON.stringify({ code: saved.lobby.code, name: me0.name, token: me0.token, playerId: 'p0' })); localStorage.removeItem(HOST_KEY); } catch (e) {}
+            toast('👑 ' + t('roomTakenJoin'));
+            guestJoin(saved.lobby.code, me0.token);
+            return;
+          }
+        }
+        show('home'); homeErr(msg);
+      },
       onHello(clientId, msg, send) {
         // Επανασύνδεση με token;
         const existing = App.lobby.players.find(p => p.token && p.token === msg.token);
@@ -2549,7 +2659,15 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
   function broadcastState() {
     if (App.role !== 'host' || !App.net || !App.game) return;
-    App.net.broadcast({ t: 'state', state: App.game });
+    // v1.8: μαζί με το state ταξιδεύει η «προίκα διαδοχής» — ό,τι χρειάζεται ένας guest
+    // για να αναλάβει το δωμάτιο αν χαθεί ο host (lobby με tokens + πρόσφατο chat)
+    App.net.broadcast({
+      t: 'state', state: App.game,
+      mig: {
+        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null })) },
+        chat: (App.chat || []).slice(-40),
+      },
+    });
   }
   function saveHostSession() {
     if (App.role !== 'host' || !App.lobby) return;
@@ -2609,8 +2727,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       onOpen() {},
       onMessage(msg) {
         if (!msg) return;
+        App.lastHostMsg = Date.now(); // v1.8: κάθε μήνυμα από τον host μηδενίζει το ρολόι σιωπής
         if (msg.t === 'welcome') {
           App.myId = msg.playerId;
+          App.guestRetryCount = 0; App.migAt = null; App.migrating = false; // v1.8: επανασύνδεση ΟΚ
           try { localStorage.setItem(GUEST_KEY, JSON.stringify({ code: msg.code, name, token: msg.token, playerId: msg.playerId })); } catch (e) {}
           if (App.myPawn) App.net.send({ t: 'pawn', pawn: App.myPawn }); // ξαναδήλωσε το αγαπημένο πιόνι
         } else if (msg.t === 'chat') {
@@ -2623,6 +2743,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           renderLobbyGuest(msg);
         } else if (msg.t === 'state') {
           App.game = msg.state;
+          if (msg.mig) { App.migLobby = msg.mig.lobby; App.migChat = msg.mig.chat; } // v1.8: προίκα διαδοχής
           if ($('screen-game').classList.contains('hidden')) show('game');
           render(); maybeToastNewLog();
         } else if (msg.t === 'rejected') {
@@ -2633,14 +2754,49 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         }
       },
       onClosed() {
-        toast('🔌 Χάθηκε η σύνδεση με τον host — προσπαθώ να επανασυνδεθώ…');
-        retryGuest();
+        onHostLost();
       },
       onError(msg) {
-        if (App.game) retryGuest();
+        if (App.game) onHostLost();
         else { show('home'); homeErr(msg); }
       },
     });
+  }
+
+  // v1.8: ο host χάθηκε — πρώτα προσπαθούμε επανασύνδεση (μπορεί απλώς να κάνει refresh),
+  // και αν αργεί, ο πρώτος διαθέσιμος guest ΑΝΑΛΑΜΒΑΝΕΙ το δωμάτιο (host migration).
+  function onHostLost() {
+    if (App.migrating) return;
+    const s = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
+    if (!s) return;
+    if (!App.migAt) {
+      toast('🔌 ' + t('hostLost'));
+      App.migAt = Date.now() + MIG_BASE_MS + migRank() * MIG_STEP_MS;
+    }
+    if (App.game && App.migLobby && Date.now() >= App.migAt) { attemptTakeover(s); return; }
+    retryGuest();
+  }
+
+  // Σειρά διαδοχής: η θέση μου ανάμεσα στους ανθρώπους-guests (κατά σειρά εισόδου)
+  function migRank() {
+    if (!App.game) return 0;
+    const humans = App.game.players.filter(x => !x.isBot && x.id !== 'p0').map(x => x.id);
+    const i = humans.indexOf(App.myId);
+    return i < 0 ? 0 : i;
+  }
+
+  function attemptTakeover(s) {
+    App.migrating = true;
+    App.migGuestSaved = s; // για επιστροφή σε guest mode αν το claim αποτύχει
+    try { if (App.net) App.net.close(); } catch (e) {}
+    const lobby = JSON.parse(JSON.stringify(App.migLobby));
+    lobby.players.forEach(pl => { pl.clientId = null; if (!pl.isBot) pl.connected = (pl.id === App.myId); });
+    try {
+      localStorage.setItem(HOST_KEY, JSON.stringify({ lobby, game: App.game, chat: App.migChat || App.chat || [] }));
+      localStorage.removeItem(GUEST_KEY);
+    } catch (e) {}
+    toast('👑 ' + t('takingOver'));
+    hostCreate(true, App.myId);
   }
 
   function retryGuest() {
@@ -2651,7 +2807,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       try { App.net.close(); } catch (e) {}
       guestJoin(s.code, s.token);
       if (App.game) { show('game'); render(); }
-    }, 4000);
+    }, FAST ? 1500 : 4000);
   }
 
   // ============================================================ LOBBY RENDER
@@ -2678,8 +2834,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       App.myPawn = pw;
       try { localStorage.setItem('iquit_pawn', pw); } catch (e) {}
       if (App.role === 'host') {
-        if (App.lobby.players.some(x => x.pawn === pw && x.id !== 'p0')) return;
-        App.lobby.players.find(x => x.id === 'p0').pawn = pw;
+        // v1.8: ο host δεν είναι απαραίτητα ο p0 (μετά από migration)
+        if (App.lobby.players.some(x => x.pawn === pw && x.id !== App.myId)) return;
+        const meL = App.lobby.players.find(x => x.id === App.myId);
+        if (meL) meL.pawn = pw;
         saveHostSession(); broadcastLobby(); renderLobby();
       } else {
         App.net.send({ t: 'pawn', pawn: pw });
@@ -3171,21 +3329,31 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody', { r: r }) + '</div></div>';
   }
 
+  // v1.8: κάρτα απώλειας επένδυσης (Crash / Funding Fails) — ο παίκτης βλέπει ΤΙ έχασε
+  function lostCardHtml(pend) {
+    const c = E.card(pend.lostId);
+    return '<div class="gamecard gc-project" style="border-color:var(--red); background:#2a1114;">' +
+      '<div class="cat" style="color:var(--red)">' + (pend.special === 'crash' ? '💥 CRASH' : '📉 FUNDING FAILS') + '</div>' +
+      '<div class="ttl">' + esc(c ? I.cardTitle(c) : '') + '</div>' +
+      '<div style="margin-top:10px; font-weight:800; font-size:17px; color:var(--red)">−' + fmt(pend.lostV) +
+      (pend.lostInc ? ' · −' + fmt(pend.lostInc) + t('perCycle') : '') + '</div>' +
+      '<div class="muted" style="margin-top:8px; font-size:12px; line-height:1.5;">' + t(pend.special === 'crash' ? 'crashLostBody' : 'ffailLostBody') + '</div></div>';
+  }
+
   function cardHtml(c, deck, discount, curPrice) {
     const ttl = I.cardTitle(c);
     if (deck === 'lifestyle') {
       const d = (curPrice != null ? curPrice : c.delta);
+      // v1.8 (αίτημα Γιώργου): καθαρή ένδειξη — μόνο «Κατηγορία +58€», χωρίς «/κύκλο (μόνιμα)(βασικό…)»
       return '<div class="gamecard gc-lifestyle"><div class="cat">LIFESTYLE</div><div class="ttl">' + esc(ttl) + '</div>' +
         '<div style="margin-top:10px; font-weight:800; font-size:17px; color:' + (d > 0 ? 'var(--red)' : 'var(--green)') + '">' +
-        esc(I.expName(c.cat)) + ' ' + (d > 0 ? '+' : '') + d + '€ ' + t('permanent') + (c.shared ? t('each') : '') +
-        (d !== c.delta ? ' <span class="muted" style="font-size:11px;">' + t('baseInfl', { v: c.delta + '€' }) + '</span>' : '') + '</div></div>';
+        esc(I.expName(c.cat)) + ' ' + (d > 0 ? '+' : '') + d + '€' + (c.shared ? t('each') : '') + '</div></div>';
     }
     if (deck === 'moments') {
       const amt = (curPrice != null ? curPrice : c.amount);
       const eff = c.cancels
         ? '<div style="margin-top:10px; font-weight:700; color:var(--green)">' + t('cancelsLS') + '</div>'
-        : '<div style="margin-top:10px; font-weight:800; font-size:19px; color:' + (amt >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (amt > 0 ? '+' : '') + fmt(amt) +
-          (amt !== c.amount ? ' <span class="muted" style="font-size:11px; font-weight:400;">' + t('baseInfl', { v: fmt(c.amount) }) + '</span>' : '') + '</div>';
+        : '<div style="margin-top:10px; font-weight:800; font-size:19px; color:' + (amt >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (amt > 0 ? '+' : '') + fmt(amt) + '</div>';
       return '<div class="gamecard gc-moments"><div class="cat">MOMENTS</div><div class="ttl">' + esc(ttl) + '</div>' + eff + '</div>';
     }
     const isBB = deck === 'bb';
@@ -3269,6 +3437,10 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
           '<div class="muted" style="text-align:center;">' + t('landedBy', { name: esc(actorP.name) }) + '</div>');
         $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
+      } else if (pend.special === 'crash' || pend.special === 'ffail') {
+        // v1.8: οι άλλοι βλέπουν την απώλεια του παίκτη (view-only)
+        overlay(lostCardHtml(pend) +
+          '<div class="muted" style="text-align:center;">' + t('cardOf', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
@@ -3286,7 +3458,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       const rc = pend.special ? null : E.card(pend.cardId);
       const body = pend.special === 'inflation'
         ? inflationCardHtml(g)
-        : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
+        : (pend.special === 'crash' || pend.special === 'ffail')
+          ? lostCardHtml(pend)
+          : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
         '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
         '<div class="muted" style="text-align:center; margin-top:8px;">' + t('everyoneSees') + '</div>');
@@ -3483,6 +3657,20 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       render();
       scheduleAuto();
     });
+
+    // v1.8 HOST MIGRATION: (α) ο host «χτυπά» heartbeat ώστε οι guests να ξέρουν ότι ζει
+    setInterval(() => {
+      if (App.role === 'host' && App.net && App.game) App.net.broadcast({ t: 'hb' });
+    }, HB_MS);
+    // (β) guest: παρατεταμένη σιωπή του host (πέρα από συνδέσεις που «έκλεισαν» καθαρά,
+    // πιάνει και κινητά που απλώς εξαφανίζονται) → κινείται η διαδικασία επανασύνδεσης/διαδοχής
+    setInterval(() => {
+      if (App.role !== 'guest' || !App.game || App.migrating) return;
+      if (App.lastHostMsg && Date.now() - App.lastHostMsg > HB_LOST_MS) {
+        App.lastHostMsg = Date.now(); // μην πυροδοτείται σε κάθε tick
+        onHostLost();
+      }
+    }, FAST ? 900 : 3000);
 
     // v1.5: κλικ στο λογότυπο (topbar) → επιβεβαίωση → αρχική σελίδα
     const bh = $('brandHome');
