@@ -14,6 +14,10 @@ body{background:var(--bg); color:var(--txt);
 button{font-family:inherit; cursor:pointer; border:none; border-radius:12px;
   font-size:15px; font-weight:600; color:#fff; background:var(--card2);}
 button:disabled{opacity:.45; cursor:default;}
+/* v1.7 MOBILE FIX: το iOS αγνοεί το user-scalable=no — το double-tap πάνω σε κουμπιά
+   έκανε zoom in/out στο ταμπλό («το board μεγάλωνε/μίκραινε»). Το touch-action:manipulation
+   απενεργοποιεί το double-tap zoom αλλά ΚΡΑΤΑ scroll & taps. */
+html,body,button,input,select,.board,#boardOverlay{touch-action:manipulation;}
 input,select{font-family:inherit; font-size:16px; background:#0a1320; color:var(--txt);
   border:1px solid var(--line); border-radius:10px; padding:12px; width:100%;}
 h1,h2,h3{margin:0;}
@@ -212,7 +216,11 @@ h1,h2,h3{margin:0;}
 .bar{height:14px; background:#0a1320; border-radius:10px; overflow:hidden; border:1px solid var(--line);}
 .fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width .35s ease;}
 .statgrid{display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-top:10px;} /* v1.6: +ΑΠΟΤΑΜΙΕΥΣΗ */
-.stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0;}
+.stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0; position:relative;}
+/* v1.7: αιωρούμενος δείκτης αλλαγής ποσού (+200€ / −150€) πάνω από τα stat boxes */
+.dpop{position:absolute; top:-15px; right:2px; font-weight:800; font-size:12px; white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.7); animation:dpop 3.6s ease forwards; pointer-events:none; z-index:5;}
+@keyframes dpop{0%{opacity:0; transform:translateY(7px);} 12%{opacity:1; transform:translateY(0);} 80%{opacity:1;} 100%{opacity:0; transform:translateY(-9px);}}
 .stat .k{color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
 .stat .v{font-size:14px; font-weight:700; margin-top:1px; white-space:nowrap;}
 .inv{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px;}

@@ -50,7 +50,9 @@
   function bondValue(i) { return i.cost; }
   function bondInterestOf(i) { return i.cost * 0.04; }
   function capital(p) { return p.cash + (p.savings || 0) + p.inv.reduce((s, i) => s + i.cost, 0); }
-  function quitPct(p) { const e = totalExp(p); return e > 0 ? Math.round(passive(p) / e * 100) : 0; }
+  // v1.7 BUGFIX: floor αντί για round — με round, παίκτης με παθητικό 99,6% των εξόδων
+  // έβλεπε «100%» χωρίς να δικαιούται I QUIT (αναφορά παίκτη: «πέρασα το 100% χωρίς νίκη»)
+  function quitPct(p) { const e = totalExp(p); return e > 0 ? Math.floor(passive(p) / e * 100) : 0; }
   // v0.2: τα ομόλογα ΔΕΝ μετράνε ως επενδύσεις για το όριο δανείου
   function loanBase(p) { return p.inv.filter(i => i.kind !== 'bond').reduce((s, i) => s + i.cost, 0); }
   // v0.5 (κανόνας Γιώργου): υπόλοιπο "κεφαλαίου" ενός δανείου = ποσό × (δόσεις που μένουν / 20)

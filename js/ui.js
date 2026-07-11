@@ -187,6 +187,7 @@
       if (steps > 0) {
         // v0.6: πρώτα τα ζάρια "γυρνάνε" με αγωνία, μετά αποκαλύπτονται, μετά περπατάει το πιόνι
         App.anim = { playerId: lr.playerId, at: lr.from, to: lr.to, remaining: steps, phase: 'dice' };
+        App.animStartedAt = Date.now(); // v1.7: για το watchdog κολλημένων animations (mobile)
         sound('dice');
         render(); // ζωγραφίζει τα ζάρια σε κατάσταση "rolling"
         let spins = 0;
@@ -670,9 +671,15 @@
 
     renderBoard(g);
     renderCenter(g, actorId);
-    renderMyDash(g);
-    renderOthers(g, actorId);
-    renderLog(g);
+    // v1.7 (αίτημα Γιώργου): όσο μια κάρτα reveal (Moments/Lifestyle/Πληθωρισμός) είναι
+    // ανοιχτή, ταμεία/έξοδα/ιστορικό ΔΕΝ ενημερώνονται — πρώτα διαβάζεις την κάρτα,
+    // και μόλις την κλείσεις βλέπεις την αλλαγή με δείκτες +/− στα ποσά.
+    const frozenPanels = g.phase === 'playing' && g.pending && g.pending.type === 'reveal';
+    if (!frozenPanels) {
+      renderMyDash(g);
+      renderOthers(g, actorId);
+      renderLog(g);
+    }
     renderModal(g, actorId);
   }
 
@@ -754,6 +761,33 @@
     const net = p.salary - exp + pas + bondInc - loanPay;
     const myTurn = g.phase === 'playing' && !g.pending && g.players[g.turn].id === p.id;
 
+    // v1.7 (αίτημα Γιώργου): δείκτες παρατήρησης — όταν αλλάζουν μετρητά/αποταμίευση/έξοδα,
+    // εμφανίζεται +X€/−X€ πάνω από το αντίστοιχο κουτάκι (και δίπλα στην κατηγορία εξόδων)
+    if (!App.deltas) App.deltas = { exp: {} };
+    const nowTs = Date.now();
+    if (App.prevMe && App.prevMe.id === p.id && p.age >= App.prevMe.age) {
+      const dC = p.cash - App.prevMe.cash;
+      if (dC) App.deltas.cash = { v: dC, ts: nowTs };
+      const dS = (p.savings || 0) - App.prevMe.savings;
+      if (dS) App.deltas.savings = { v: dS, ts: nowTs };
+      Object.keys(p.expenses).forEach(k => {
+        const d = p.expenses[k] - (App.prevMe.exp[k] || 0);
+        if (d) App.deltas.exp[k] = { v: d, ts: nowTs };
+      });
+      const dT = exp - App.prevMe.total;
+      if (dT) App.deltas.total = { v: dT, ts: nowTs };
+    } else {
+      App.deltas = { exp: {} }; // νέο παιχνίδι/παίκτης — καθαρό ξεκίνημα χωρίς δείκτες
+    }
+    App.prevMe = { id: p.id, age: p.age, cash: p.cash, savings: p.savings || 0, exp: Object.assign({}, p.expenses), total: exp };
+    // dpop: αιωρούμενος δείκτης πάνω από stat box · inv=true αντιστρέφει χρώματα (για έξοδα: αύξηση=κόκκινο)
+    const dpop = (d, ms, inv) => (d && nowTs - d.ts < ms)
+      ? '<span class="dpop" style="color:var(--' + ((d.v > 0) !== !!inv ? 'green' : 'red') + ')">' + (d.v > 0 ? '+' : '−') + fmt(Math.abs(d.v)) + '</span>' : '';
+    const dinline = (d) => (d && nowTs - d.ts < 6000)
+      ? ' <b style="color:var(--' + (d.v > 0 ? 'red' : 'green') + '); font-size:11px;">' + (d.v > 0 ? '+' : '−') + fmt(Math.abs(d.v)) + '</b>' : '';
+    const anyFresh = [App.deltas.cash, App.deltas.savings, App.deltas.total].concat(Object.values(App.deltas.exp)).some(d => d && nowTs - d.ts < 6000);
+    if (anyFresh) { clearTimeout(App.deltaTimer); App.deltaTimer = setTimeout(() => { if (App.game) render(); }, 6300); }
+
     let status = '';
     if (p.retiredAge !== null) status = '<div class="notice" style="margin-bottom:10px;">' + t('retired', { age: p.retiredAge }) + '</div>';
     else if (p.bankrupt) status = '<div class="notice" style="margin-bottom:10px; border-color:var(--red); color:var(--red);">' + t('bankruptNote') + '</div>';
@@ -810,16 +844,17 @@
       '<div style="text-align:right"><div class="muted">' + t('age') + '</div><div style="font-size:26px; font-weight:800">' + p.age + '</div></div></div>' +
       '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
       '<div class="statgrid">' +
-      '<div class="stat"><div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
+      '<div class="stat">' + dpop(App.deltas.cash, 3800, false) + '<div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
-      '<div class="stat"><div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
+      '<div class="stat">' + dpop(App.deltas.savings, 3800, false) + '<div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
-      '<div class="stat"><div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
+      '<div class="stat">' + dpop(App.deltas.total, 6000, true) + '<div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
       '</div>' +
       '<div class="muted" style="margin:8px 0 2px;">' + t('netPer') + ' <b style="color:var(--txt)">' + fmt(net) + '</b> · 🃏 ' + t('wild') + ': ' + p.wilds + '</div>' +
-      '<details class="exp" id="expDetails"' + (App.expOpen ? ' open' : '') + '><summary>' + t('expByCat') + (g.inflMult > 1 ? ' <span style="color:var(--yellow)">' + t('inflatedTag', { m: g.inflMult.toFixed(2) }) + '</span>' : '') + '</summary>' +
-      Object.keys(p.expenses).map(k => '<div class="exprow"><span>' + esc(I.expName(k)) + '</span><b>' + fmt(p.expenses[k]) + '</b></div>').join('') +
+      // v1.7: αν μόλις άλλαξε κατηγορία εξόδων, τα «Έξοδα ανά κατηγορία» ανοίγουν μόνα τους για να φανεί το +/−
+      '<details class="exp" id="expDetails"' + ((App.expOpen || Object.values(App.deltas.exp).some(d => d && nowTs - d.ts < 6000)) ? ' open' : '') + '><summary>' + t('expByCat') + (g.inflMult > 1 ? ' <span style="color:var(--yellow)">' + t('inflatedTag', { m: g.inflMult.toFixed(2) }) + '</span>' : '') + '</summary>' +
+      Object.keys(p.expenses).map(k => '<div class="exprow"><span>' + esc(I.expName(k)) + dinline(App.deltas.exp[k]) + '</span><b>' + fmt(p.expenses[k]) + '</b></div>').join('') +
       '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalExp') + '</b></span><b style="color:var(--yellow)">' + fmt(exp) + '</b></div>' +
       '</details>' +
       '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">' + t('portfolio') + '</h3>' +
@@ -900,6 +935,7 @@
     const g = App.game;
     if (!g) return;
     if (App.anim || App.drawAnimBusy) return; // v1.0: κανένα spoiler όσο κινείται το πιόνι/η κάρτα
+    if (g.pending && g.pending.type === 'reveal') return; // v1.7: ούτε όσο διαβάζεται μια κάρτα
     if (App.lastToastSeq === 0) { App.lastToastSeq = g.logSeq; return; }
     const fresh = g.logSeq - App.lastToastSeq;
     if (fresh > 0) {
@@ -980,6 +1016,7 @@
     if (!App.muted) { try { noiseBurst(.09, 1400, .05); } catch (e) {} } // "σβούρισμα" χαρτιού
     requestAnimationFrame(() => requestAnimationFrame(() => fly.classList.add('go')));
     App.drawAnimBusy = true;
+    App.drawAnimStartedAt = Date.now(); // v1.7: watchdog
     setTimeout(() => { fly.remove(); App.drawAnimBusy = false; render(); }, 600);
   }
 
@@ -1215,6 +1252,27 @@
     $('playerName').value = localStorage.getItem(NAME_KEY) || '';
     $('playerName').addEventListener('input', () => localStorage.setItem(NAME_KEY, $('playerName').value));
     $('joinCode').addEventListener('input', () => { $('joinCode').value = $('joinCode').value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
+
+    // v1.7 MOBILE FIX: σε κινητά, όταν η καρτέλα πάει στο background τα timers
+    // παγώνουν και τα animations μπορεί να μείνουν «κολλημένα» (App.anim/drawAnimBusy
+    // αληθή για πάντα → δεν ανοίγει ποτέ το modal → «δεν με αφήνει να συνεχίσω»).
+    // (α) watchdog: κάθε 4s ξεκολλάει animation που κρατά υπερβολικά πολύ
+    setInterval(() => {
+      const now = Date.now();
+      let stuck = false;
+      if (App.anim && now - (App.animStartedAt || 0) > 20000) { App.anim = null; stuck = true; }
+      if (App.drawAnimBusy && now - (App.drawAnimStartedAt || 0) > 12000) { App.drawAnimBusy = false; stuck = true; }
+      if (stuck && App.game) render();
+    }, 4000);
+    // (β) όταν η καρτέλα ξαναγίνει ορατή: ξεκόλλημα, φρέσκο render και επανεκκίνηση bot timer
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || !App.game) return;
+      const now = Date.now();
+      if (App.anim && now - (App.animStartedAt || 0) > 8000) App.anim = null;
+      if (App.drawAnimBusy && now - (App.drawAnimStartedAt || 0) > 8000) App.drawAnimBusy = false;
+      render();
+      scheduleAuto();
+    });
 
     // v1.5: κλικ στο λογότυπο (topbar) → επιβεβαίωση → αρχική σελίδα
     const bh = $('brandHome');

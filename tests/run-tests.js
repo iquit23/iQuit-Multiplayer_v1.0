@@ -204,6 +204,17 @@ section('v1.2 Dynamic Inflation');
   assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
 }
 
+// ---------- 3ε8. v1.7: quitPct = floor (bugfix «100% χωρίς νίκη»)
+section('v1.7 quitPct floor');
+{
+  let sQ = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 101);
+  const P = sQ.players[0]; // έξοδα 1500
+  P.inv.push({ uid: 'q1', cardId: 'BB13', kind: 'bb', title: 'X', cost: 10000, income: 1495 });
+  assert(E.quitPct(P) === 99, 'παθητικό 1495/1500 = 99,67% → δείχνει 99% (ΟΧΙ 100%)');
+  P.inv[0].income = 1500;
+  assert(E.quitPct(P) === 100, 'παθητικό 1500/1500 → 100% ακριβώς');
+}
+
 // ---------- 3ε7. v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης)
 section('v1.6 Αποταμίευση');
 {
