@@ -10,14 +10,11 @@
   function invTitle(i) { const c = i.cardId && E.card(i.cardId); return c ? I.cardTitle(c) : i.title; }
 
   // v0.5: επώνυμα bots με στρατηγική — αυτά επιλέγει ο host στο lobby
+  // v1.9: ένα bot ανά χαρακτήρα (έφυγαν τα διπλά Ηλέκτρα/Φοίβος/Ορφέας)
   const BOT_ROSTER = [
     { name: 'Ίκαρος', strategy: 'aggressive' },
-    { name: 'Ηλέκτρα', strategy: 'aggressive' },
-    { name: 'Φοίβος', strategy: 'balanced' },
     { name: 'Καλυψώ', strategy: 'balanced' },
     { name: 'Δανάη', strategy: 'defensive' },
-    { name: 'Ορφέας', strategy: 'defensive' },
-    // v1.8: θεματικά bots (αίτημα Γιώργου)
     { name: 'Κροίσος', strategy: 'tycoon' },
     { name: 'Ερμής', strategy: 'stockpicker' },
     { name: 'Αθηνά', strategy: 'scholar' },
@@ -747,6 +744,7 @@
     if (App.anim && g.phase === 'playing') {
       renderBoard(g);
       renderCenter(g, g.pending ? g.pending.playerId : g.players[g.turn].id);
+      renderHint(g); // κρύβεται όσο κινείται το πιόνι
       return;
     }
     $('gameCode').textContent = App.lobby ? App.lobby.code : (JSON.parse(localStorage.getItem(GUEST_KEY) || '{}').code || '');
@@ -767,7 +765,41 @@
       renderOthers(g, actorId);
       renderLog(g);
     }
+    renderHint(g);
     renderModal(g, actorId);
+  }
+
+  // v1.9 (αίτημα Γιώργου): επεξηγηματικό «συννεφάκι» αριστερά από το ταμπλό —
+  // εξηγεί ΤΙ σημαίνει το κουτί/η κάρτα που είναι σε εξέλιξη, για όσο διαρκεί η απόφαση
+  function hintKeyFor(pend) {
+    if (!pend) return null;
+    if (pend.type === 'savings') return 'savings';
+    if (pend.type === 'forced-sale') return 'forced';
+    if (pend.type === 'funding-offer') return 'offer';
+    if (pend.type === 'lifestyle-partner') return 'lifestyle';
+    if (pend.type === 'reveal') {
+      if (pend.special === 'inflation') return 'inflation';
+      if (pend.special === 'crash') return 'crash';
+      if (pend.special === 'ffail') return 'ffail';
+      return pend.deck === 'moments' ? 'moments' : 'lifestyle';
+    }
+    if (pend.type === 'card') {
+      if (pend.deck === 'bb') return 'bb';
+      const c = E.card(pend.cardId);
+      if (!c) return null;
+      if (c.kind === 'P') return 'P' + c.color; // PG / PY / PR
+      return c.kind; // funding / bond / masters / taxprepay / betterloan
+    }
+    return null;
+  }
+  function renderHint(g) {
+    const box = $('hintBox');
+    if (!box) return;
+    const k = (g && g.phase === 'playing' && !App.anim && !App.drawAnimBusy) ? hintKeyFor(g.pending) : null;
+    if (!k) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    $('hintT').innerHTML = t('hintT_' + k);
+    $('hintB').innerHTML = t('hintB_' + k);
   }
 
   // v0.7: το ταμπλό είναι πλέον το πραγματικό board art — τα πάντα τοποθετούνται σε % πάνω του
@@ -1002,6 +1034,9 @@
   function logText(e) {
     if (typeof e === 'string') return e; // συμβατότητα με παλιές παρτίδες
     const P = Object.assign({}, e.p);
+    // v1.9: σωστό άρθρο ανά γένος — «Η Καλυψώ πέτυχε…» αντί «Ο Καλυψώ πέτυχε…»
+    if (P.n != null) { const f = I.isFemale(P.n); P.o = f ? 'Η' : 'Ο'; P.ol = f ? 'η' : 'ο'; }
+    if (P.n2 != null) { const f2 = I.isFemale(P.n2); P.o2 = f2 ? 'Η' : 'Ο'; P.ol2 = f2 ? 'η' : 'ο'; P.acc2 = f2 ? 'στην' : 'στον'; P.ton2 = f2 ? 'την' : 'τον'; }
     if (P.cid) { const c = E.card(P.cid); P.title = c ? I.cardTitle(c) : ''; }
     if (P.cids != null) P.list = String(P.cids).split(',').filter(Boolean).map(id => { const c = E.card(id); return c ? I.cardTitle(c) : id; }).join(' & ');
     if (P.colors) P.colors = String(P.colors).split(',').map(cc => t('color_' + cc)).join('/');
@@ -1086,7 +1121,8 @@
     const price = Math.round(base * (1 - (discount || 0)));
     costLine = t('cost') + ' <b>' + fmt(price) + '</b>' + (discount ? ' <s class="muted">' + fmt(base) + '</s> (-10%)' : '');
     let effect = '';
-    if (c.income) effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(c.income) + ' ' + t('perCycle') + ' (' + (100 * c.income / base).toFixed(1) + '%)</div>';
+    // v1.9 (αίτημα Γιώργου): «+50€ / Είσπραξη» — χωρίς το ποσοστό απόδοσης
+    if (c.income) effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">+' + fmt(c.income) + ' ' + t('perCycle') + '</div>';
     if (c.kind === 'bond') effect = '<div style="margin-top:6px; font-weight:800; color:var(--bond)">' + t('bondEffect', { v: fmt(c.cost * 0.04) }) + '</div>' +
       '<div style="margin-top:4px;" class="muted">' + t('bondNote', { v: fmt(c.cost) }) + '</div>';
     if (c.kind === 'masters') effect = '<div style="margin-top:6px; font-weight:800; color:var(--accent)">' + t('mastersEffect', { v: fmt(c.salaryUp) }) + '</div>';
