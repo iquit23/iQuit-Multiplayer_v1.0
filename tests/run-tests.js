@@ -204,6 +204,40 @@ section('v1.2 Dynamic Inflation');
   assert(dB && dB.a === 'resolve', 'σε παρτίδα μόνο με bots η κάρτα κλείνει αυτόματα');
 }
 
+// ---------- 3ε6. v1.5: Player analytics
+section('v1.5 Player analytics');
+{
+  let sA = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 95);
+  sA.turn = 0;
+  const P = sA.players[0];
+  // Αγορά πράσινου project → buy.G
+  P.cash = 10000;
+  sA.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PG2', discount: 0, canWild: false, viaWild: false };
+  E.applyAction(sA, 'a', { a: 'resolve', choice: 'buy' });
+  assert(P.stats.buy.G === 1, 'analytics: αγορά πράσινου → buy.G = 1');
+  // Απόρριψη ΕΝΩ επαρκούν τα μετρητά → skip
+  sA.turn = 0;
+  sA.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PG3', discount: 0, canWild: false, viaWild: false };
+  E.applyAction(sA, 'a', { a: 'resolve', choice: 'decline' });
+  assert(P.stats.skip.G === 1, 'analytics: απόρριψη με αρκετά μετρητά → skip.G = 1');
+  // Απόρριψη ΧΩΡΙΣ αρκετά μετρητά → ΔΕΝ μετρά
+  P.cash = 10;
+  sA.turn = 0;
+  sA.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PY2', discount: 0, canWild: false, viaWild: false };
+  E.applyAction(sA, 'a', { a: 'resolve', choice: 'decline' });
+  assert(!P.stats.skip.Y, 'analytics: απόρριψη χωρίς μετρητά ΔΕΝ μετρά');
+  // Wild swap: η πρώτη κάρτα ΔΕΝ μετρά — μετρά η απόφαση στη δεύτερη
+  P.cash = 100000; P.wilds = 1;
+  sA.turn = 0;
+  const skipsBefore = JSON.stringify(P.stats.skip);
+  sA.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PR2', discount: 0, canWild: true, viaWild: false };
+  E.applyAction(sA, 'a', { a: 'resolve', choice: 'wild' });
+  assert(JSON.stringify(P.stats.skip) === skipsBefore && !P.stats.skip.R, 'analytics: το wild swap ΔΕΝ μετρά ως απόρριψη');
+  assert(sA.pending && sA.pending.viaWild === true && sA.pending.deck === 'bb', 'μετά το wild εκκρεμεί η δεύτερη κάρτα (BB)');
+  E.applyAction(sA, 'a', { a: 'resolve', choice: 'buy' });
+  assert(P.stats.buy.bb === 1, 'analytics: η αγορά της δεύτερης κάρτας μετρά κανονικά → buy.bb = 1');
+}
+
 // ---------- 3ε5. v1.4: Χρεοκοπία
 section('v1.4 Χρεοκοπία');
 {

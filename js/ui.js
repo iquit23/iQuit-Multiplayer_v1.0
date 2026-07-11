@@ -557,6 +557,17 @@
         xlHdr.push('Q' + (qi + 1) + ' (' + q.id + ')');
         xlVal.push(val.replace(/[;\n]/g, ','));
       });
+      // v1.5 (αίτημα Γιώργου): player analytics του παίκτη που στέλνει το feedback —
+      // αγορές & απορρίψεις-ενώ-μπορούσε ανά κατηγορία (χωρίς wild, βλ. engine)
+      const meP = me();
+      if (meP && meP.stats) {
+        STAT_CATS.forEach(cat => {
+          const b = meP.stats.buy[cat] || 0, s = meP.stats.skip[cat] || 0;
+          data['📊 ' + t('stat_' + cat)] = '✔ ' + t('statBought') + ': ' + b + ' · ✋ ' + t('statSkipped') + ': ' + s;
+          xlHdr.push('buy_' + cat, 'skip_' + cat);
+          xlVal.push(String(b), String(s));
+        });
+      }
       data['📋 Excel ΓΡΑΜΜΗ ΤΙΤΛΩΝ (επικόλληση → Δεδομένα → Κείμενο σε στήλες, διαχωριστικό ";")'] = xlHdr.join(';');
       data['📋 Excel ΓΡΑΜΜΗ ΑΠΑΝΤΗΣΕΩΝ'] = xlVal.join(';');
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
@@ -1125,6 +1136,31 @@
     $('fsCancel').onclick = closeOverlay;
   }
 
+  // v1.5: κατηγορίες των player analytics (σειρά εμφάνισης)
+  const STAT_CATS = ['G', 'Y', 'R', 'funding', 'bb', 'bond', 'masters', 'taxprepay', 'betterloan'];
+
+  // v1.5: «Αναλυτικά» — τι αγόρασε και τι απέρριψε (ενώ μπορούσε) κάθε παίκτης
+  function showStats() {
+    const g = App.game;
+    if (!g) return;
+    const td = 'padding:5px 8px; border-bottom:1px solid var(--line); text-align:center;';
+    let html = '<div class="rulesbox"><h2 style="margin:0 0 4px;">' + t('analyticsTitle') + '</h2>' +
+      '<div class="muted" style="margin-bottom:10px; font-size:12px;">' + t('analyticsLegend') + '</div>' +
+      '<table style="border-collapse:collapse; width:100%; font-size:13px;"><tr><th style="' + td + ' text-align:left;"></th>' +
+      g.players.map(p => '<th style="' + td + '">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</th>').join('') + '</tr>';
+    STAT_CATS.forEach(cat => {
+      html += '<tr><td style="' + td + ' text-align:left;">' + t('stat_' + cat) + '</td>' +
+        g.players.map(p => {
+          const st = p.stats || { buy: {}, skip: {} };
+          const b = st.buy[cat] || 0, s = st.skip[cat] || 0;
+          return '<td style="' + td + '">' + (b || s ? ('<b style="color:var(--green)">✔' + b + '</b> · <span style="color:var(--red)">✋' + s + '</span>') : '<span class="muted">—</span>') + '</td>';
+        }).join('') + '</tr>';
+    });
+    html += '</table></div><div class="acts" style="margin-top:12px;"><button class="ghost" id="statsClose">✕ ' + t('cancel') + '</button></div>';
+    overlay(html, true);
+    $('statsClose').onclick = () => showEnd();
+  }
+
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
@@ -1135,11 +1171,13 @@
           (r.bankrupt ? '💥 ' + t('bankruptTag') :
             (r.months !== null ? t('survive', { n: r.months }) : t('reached65')))) + '</div></div></div>').join('');
     html += '<div class="acts" style="margin-top:14px;">' +
+      '<button class="wildbtn" id="btnStats">' + t('analyticsBtn') + '</button>' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
       (App.role === 'host' ? '<button class="buy" id="btnAgain">' + t('playAgain') + '</button>' : '') +
       '<button class="ghost" id="btnExit">' + t('exit') + '</button></div>';
     App.localModal = true;
     overlay(html);
+    $('btnStats').onclick = () => showStats();
     $('btnFeedback').onclick = () => showFeedback();
     const ba = $('btnAgain');
     if (ba) ba.onclick = () => { App.localModal = null; hostStart(); closeOverlay(); };
@@ -1151,6 +1189,21 @@
     $('playerName').value = localStorage.getItem(NAME_KEY) || '';
     $('playerName').addEventListener('input', () => localStorage.setItem(NAME_KEY, $('playerName').value));
     $('joinCode').addEventListener('input', () => { $('joinCode').value = $('joinCode').value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
+
+    // v1.5: κλικ στο λογότυπο (topbar) → επιβεβαίωση → αρχική σελίδα
+    const bh = $('brandHome');
+    if (bh) bh.onclick = () => {
+      App.localModal = true;
+      overlay('<h3 style="margin-bottom:6px;">' + t('leaveTitle') + '</h3>' +
+        '<div class="muted" style="margin-bottom:12px;">' + t('leaveBody') + '</div>' +
+        '<div class="acts"><button class="danger" id="leaveYes" style="padding:12px;">' + t('leaveYes') + '</button>' +
+        '<button class="ghost" id="leaveNo">' + t('cancel') + '</button></div>');
+      $('leaveYes').onclick = () => {
+        localStorage.removeItem(HOST_KEY); localStorage.removeItem(GUEST_KEY);
+        location.href = location.pathname; // καθαρή αρχική (χωρίς ?room=)
+      };
+      $('leaveNo').onclick = () => { closeOverlay(); if (App.game) render(); };
+    };
 
     $('btnCreate').onclick = () => {
       if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }

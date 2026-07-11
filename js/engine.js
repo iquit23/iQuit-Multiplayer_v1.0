@@ -103,6 +103,8 @@
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
         retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
+        // v1.5: analytics — buy: αγορές ανά κατηγορία, skip: απορρίψεις ΕΝΩ επαρκούσαν τα μετρητά
+        stats: { buy: {}, skip: {} },
       })),
       decks: null,
       pending: null,
@@ -512,6 +514,20 @@
   let _uidCounter = 0;
   function uid(state) { state.invSeq = (state.invSeq || 0) + 1; return 'i' + state.invSeq; }
 
+  // v1.5: Player analytics — κατηγορία κάρτας για τα στατιστικά συμπεριφοράς.
+  // Κανόνες Γιώργου: (1) οι κάρτες που ήρθαν μέσω Wild μετρούν στη ΔΕΥΤΕΡΗ κάρτα
+  // (η απόφαση καταγράφεται στο τελικό pending, το swap δεν μετρά ως απόρριψη),
+  // (2) το «απέρριψε» μετρά ΜΟΝΟ αν τα μετρητά επαρκούσαν για την τιμή.
+  function statCat(c, deck) {
+    if (deck === 'bb' || c.id.startsWith('BB')) return 'bb';
+    if (c.kind === 'P') return c.color; // G / Y / R
+    return c.kind; // funding, bond, masters, taxprepay, betterloan
+  }
+  function statBump(p, kind, cat) {
+    if (!p.stats) p.stats = { buy: {}, skip: {} };
+    p.stats[kind][cat] = (p.stats[kind][cat] || 0) + 1;
+  }
+
   function err(message) { return { error: message }; }
 
   // v1.0 (#4β): ΑΜΕΣΟ I QUIT — τη στιγμή που το παθητικό καλύπτει τα έξοδα ΚΑΙ δεν υπάρχουν
@@ -660,9 +676,13 @@
         if (ch === 'buy' || ch === 'buy-loan') {
           const e = buyCard(state, p, pend, ch === 'buy-loan' ? { loanAmount: action.loanAmount } : null);
           if (e) return e;
+          statBump(p, 'buy', statCat(c, pend.deck)); // v1.5 analytics
           return finishTurn(state), null;
         }
         if (ch === 'decline') {
+          // v1.5 analytics: απόρριψη ΕΝΩ τα μετρητά επαρκούσαν για την (τυχόν εκπτωτική) τιμή
+          const declinedPrice = Math.round(priceOf(state, c) * (1 - (pend.discount || 0)));
+          if (p.cash >= declinedPrice) statBump(p, 'skip', statCat(c, pend.deck));
           if (pend.deck === 'bb' && !pend.isDiscountOffer) {
             // Ο επόμενος ενεργός παίκτης μπορεί να αγοράσει με -10%
             const ni = nextActiveIndex(state, state.players.findIndex(x => x.id === p.id));

@@ -339,6 +339,8 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
+  <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.1</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -387,7 +389,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 <!-- ============ GAME ============ -->
 <div id="screen-game" class="hidden">
   <div class="topbar">
-    <span style="font-weight:900;">I QUIT<em style="color:var(--accent); font-style:normal;">!</em></span>
+    <span id="brandHome" title="Αρχική σελίδα" style="font-weight:900; cursor:pointer;">I QUIT<em style="color:var(--accent); font-style:normal;">!</em></span>
     <span class="code" id="gameCode"></span>
     <button class="tbtn" id="btnSound" title="Ήχος">🔊</button>
     <button class="tbtn" id="btn3d" title="Όψη ταμπλό">3D</button>
@@ -659,6 +661,14 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       loanCap: '🔒 Χρησιμοποίησες και τα {n} δάνεια που επιτρέπονται σε όλο το παιχνίδι.',
       yearsOld: '{n} ετών', passiveShort: 'Παθητικό {v}', iquitAt: 'I QUIT στα {age}!', at65: 'στα 65',
       bankruptTag: 'Χρεοκοπία', bankruptNote: '💥 Χρεοκόπησες — αρνητικά μετρητά χωρίς περιουσία για πώληση. Εκτός παιχνιδιού.',
+      // v1.5: αποχώρηση από topbar + player analytics
+      leaveTitle: '🏠 Επιστροφή στην αρχική;', leaveBody: 'Θα σταματήσεις την παρτίδα. Είσαι σίγουρος/η;', leaveYes: 'Ναι, σταμάτα την παρτίδα',
+      analyticsBtn: '📊 Αναλυτικά', analyticsTitle: '📊 Αναλυτικά παρτίδας',
+      analyticsLegend: '✔ = αγόρασε · ✋ = απέρριψε ενώ τα μετρητά επαρκούσαν. Οι κάρτες μέσω Wild μετρούν στη δεύτερη κάρτα.',
+      statBought: 'αγόρασε', statSkipped: 'απέρριψε ενώ μπορούσε',
+      stat_G: '🟢 Πράσινα Projects', stat_Y: '🟡 Κίτρινα Projects', stat_R: '🔴 Κόκκινα Projects',
+      stat_funding: '💼 Χρηματοδοτήσεις', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Ομόλογα',
+      stat_masters: '🎓 Μεταπτυχιακό', stat_taxprepay: '🧾 Προκαταβολή Φόρου', stat_betterloan: '🏦 Καλύτεροι Όροι Δανείου',
       // Cards & modals
       cost: 'Κόστος:', perCycle: '/ κύκλο', permanent: '/ κύκλο (μόνιμα)', each: ' — έκαστος',
       baseInfl: '(βασικό {v} + πληθωρισμός)', cancelsLS: 'Αναιρεί τις αντίστοιχες Lifestyle κάρτες σου ✨',
@@ -799,6 +809,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       loanCap: '🔒 You have used all {n} loans allowed for the whole game.',
       yearsOld: 'age {n}', passiveShort: 'Passive {v}', iquitAt: 'I QUIT at {age}!', at65: 'at 65',
       bankruptTag: 'Bankrupt', bankruptNote: '💥 You went bankrupt — negative cash with nothing to sell. Out of the game.',
+      leaveTitle: '🏠 Back to home?', leaveBody: 'This will stop the current game. Are you sure?', leaveYes: 'Yes, stop the game',
+      analyticsBtn: '📊 Details', analyticsTitle: '📊 Game analytics',
+      analyticsLegend: '✔ = bought · ✋ = declined while having enough cash. Cards drawn via Wild count on the second card.',
+      statBought: 'bought', statSkipped: 'declined while affordable',
+      stat_G: '🟢 Green Projects', stat_Y: '🟡 Yellow Projects', stat_R: '🔴 Red Projects',
+      stat_funding: '💼 Funding', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Bonds',
+      stat_masters: '🎓 Master’s Degree', stat_taxprepay: '🧾 Tax Prepayment', stat_betterloan: '🏦 Better Loan Terms',
       cost: 'Cost:', perCycle: '/ cycle', permanent: '/ cycle (permanent)', each: ' — each',
       baseInfl: '(base {v} + inflation)', cancelsLS: 'Cancels your matching Lifestyle cards ✨',
       yourCash: 'Your cash: {v}', buy: '✔ Buy {v}', decline: '✋ No, thanks',
@@ -1131,6 +1148,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         strategy: ps.strategy || 'balanced',
         wilds: WILDS_PER_PLAYER,
         retiredAge: null, finished: false, bankrupt: false, // v1.4: χρεοκοπία = εκτός παιχνιδιού
+        // v1.5: analytics — buy: αγορές ανά κατηγορία, skip: απορρίψεις ΕΝΩ επαρκούσαν τα μετρητά
+        stats: { buy: {}, skip: {} },
       })),
       decks: null,
       pending: null,
@@ -1540,6 +1559,20 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   let _uidCounter = 0;
   function uid(state) { state.invSeq = (state.invSeq || 0) + 1; return 'i' + state.invSeq; }
 
+  // v1.5: Player analytics — κατηγορία κάρτας για τα στατιστικά συμπεριφοράς.
+  // Κανόνες Γιώργου: (1) οι κάρτες που ήρθαν μέσω Wild μετρούν στη ΔΕΥΤΕΡΗ κάρτα
+  // (η απόφαση καταγράφεται στο τελικό pending, το swap δεν μετρά ως απόρριψη),
+  // (2) το «απέρριψε» μετρά ΜΟΝΟ αν τα μετρητά επαρκούσαν για την τιμή.
+  function statCat(c, deck) {
+    if (deck === 'bb' || c.id.startsWith('BB')) return 'bb';
+    if (c.kind === 'P') return c.color; // G / Y / R
+    return c.kind; // funding, bond, masters, taxprepay, betterloan
+  }
+  function statBump(p, kind, cat) {
+    if (!p.stats) p.stats = { buy: {}, skip: {} };
+    p.stats[kind][cat] = (p.stats[kind][cat] || 0) + 1;
+  }
+
   function err(message) { return { error: message }; }
 
   // v1.0 (#4β): ΑΜΕΣΟ I QUIT — τη στιγμή που το παθητικό καλύπτει τα έξοδα ΚΑΙ δεν υπάρχουν
@@ -1688,9 +1721,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         if (ch === 'buy' || ch === 'buy-loan') {
           const e = buyCard(state, p, pend, ch === 'buy-loan' ? { loanAmount: action.loanAmount } : null);
           if (e) return e;
+          statBump(p, 'buy', statCat(c, pend.deck)); // v1.5 analytics
           return finishTurn(state), null;
         }
         if (ch === 'decline') {
+          // v1.5 analytics: απόρριψη ΕΝΩ τα μετρητά επαρκούσαν για την (τυχόν εκπτωτική) τιμή
+          const declinedPrice = Math.round(priceOf(state, c) * (1 - (pend.discount || 0)));
+          if (p.cash >= declinedPrice) statBump(p, 'skip', statCat(c, pend.deck));
           if (pend.deck === 'bb' && !pend.isDiscountOffer) {
             // Ο επόμενος ενεργός παίκτης μπορεί να αγοράσει με -10%
             const ni = nextActiveIndex(state, state.players.findIndex(x => x.id === p.id));
@@ -2642,6 +2679,17 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         xlHdr.push('Q' + (qi + 1) + ' (' + q.id + ')');
         xlVal.push(val.replace(/[;\n]/g, ','));
       });
+      // v1.5 (αίτημα Γιώργου): player analytics του παίκτη που στέλνει το feedback —
+      // αγορές & απορρίψεις-ενώ-μπορούσε ανά κατηγορία (χωρίς wild, βλ. engine)
+      const meP = me();
+      if (meP && meP.stats) {
+        STAT_CATS.forEach(cat => {
+          const b = meP.stats.buy[cat] || 0, s = meP.stats.skip[cat] || 0;
+          data['📊 ' + t('stat_' + cat)] = '✔ ' + t('statBought') + ': ' + b + ' · ✋ ' + t('statSkipped') + ': ' + s;
+          xlHdr.push('buy_' + cat, 'skip_' + cat);
+          xlVal.push(String(b), String(s));
+        });
+      }
       data['📋 Excel ΓΡΑΜΜΗ ΤΙΤΛΩΝ (επικόλληση → Δεδομένα → Κείμενο σε στήλες, διαχωριστικό ";")'] = xlHdr.join(';');
       data['📋 Excel ΓΡΑΜΜΗ ΑΠΑΝΤΗΣΕΩΝ'] = xlVal.join(';');
       $('fbSend').disabled = true; $('fbSend').textContent = '…';
@@ -3210,6 +3258,31 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     $('fsCancel').onclick = closeOverlay;
   }
 
+  // v1.5: κατηγορίες των player analytics (σειρά εμφάνισης)
+  const STAT_CATS = ['G', 'Y', 'R', 'funding', 'bb', 'bond', 'masters', 'taxprepay', 'betterloan'];
+
+  // v1.5: «Αναλυτικά» — τι αγόρασε και τι απέρριψε (ενώ μπορούσε) κάθε παίκτης
+  function showStats() {
+    const g = App.game;
+    if (!g) return;
+    const td = 'padding:5px 8px; border-bottom:1px solid var(--line); text-align:center;';
+    let html = '<div class="rulesbox"><h2 style="margin:0 0 4px;">' + t('analyticsTitle') + '</h2>' +
+      '<div class="muted" style="margin-bottom:10px; font-size:12px;">' + t('analyticsLegend') + '</div>' +
+      '<table style="border-collapse:collapse; width:100%; font-size:13px;"><tr><th style="' + td + ' text-align:left;"></th>' +
+      g.players.map(p => '<th style="' + td + '">' + (p.isBot ? '🤖 ' : '') + esc(p.name) + '</th>').join('') + '</tr>';
+    STAT_CATS.forEach(cat => {
+      html += '<tr><td style="' + td + ' text-align:left;">' + t('stat_' + cat) + '</td>' +
+        g.players.map(p => {
+          const st = p.stats || { buy: {}, skip: {} };
+          const b = st.buy[cat] || 0, s = st.skip[cat] || 0;
+          return '<td style="' + td + '">' + (b || s ? ('<b style="color:var(--green)">✔' + b + '</b> · <span style="color:var(--red)">✋' + s + '</span>') : '<span class="muted">—</span>') + '</td>';
+        }).join('') + '</tr>';
+    });
+    html += '</table></div><div class="acts" style="margin-top:12px;"><button class="ghost" id="statsClose">✕ ' + t('cancel') + '</button></div>';
+    overlay(html, true);
+    $('statsClose').onclick = () => showEnd();
+  }
+
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
@@ -3220,11 +3293,13 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           (r.bankrupt ? '💥 ' + t('bankruptTag') :
             (r.months !== null ? t('survive', { n: r.months }) : t('reached65')))) + '</div></div></div>').join('');
     html += '<div class="acts" style="margin-top:14px;">' +
+      '<button class="wildbtn" id="btnStats">' + t('analyticsBtn') + '</button>' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
       (App.role === 'host' ? '<button class="buy" id="btnAgain">' + t('playAgain') + '</button>' : '') +
       '<button class="ghost" id="btnExit">' + t('exit') + '</button></div>';
     App.localModal = true;
     overlay(html);
+    $('btnStats').onclick = () => showStats();
     $('btnFeedback').onclick = () => showFeedback();
     const ba = $('btnAgain');
     if (ba) ba.onclick = () => { App.localModal = null; hostStart(); closeOverlay(); };
@@ -3236,6 +3311,21 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     $('playerName').value = localStorage.getItem(NAME_KEY) || '';
     $('playerName').addEventListener('input', () => localStorage.setItem(NAME_KEY, $('playerName').value));
     $('joinCode').addEventListener('input', () => { $('joinCode').value = $('joinCode').value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
+
+    // v1.5: κλικ στο λογότυπο (topbar) → επιβεβαίωση → αρχική σελίδα
+    const bh = $('brandHome');
+    if (bh) bh.onclick = () => {
+      App.localModal = true;
+      overlay('<h3 style="margin-bottom:6px;">' + t('leaveTitle') + '</h3>' +
+        '<div class="muted" style="margin-bottom:12px;">' + t('leaveBody') + '</div>' +
+        '<div class="acts"><button class="danger" id="leaveYes" style="padding:12px;">' + t('leaveYes') + '</button>' +
+        '<button class="ghost" id="leaveNo">' + t('cancel') + '</button></div>');
+      $('leaveYes').onclick = () => {
+        localStorage.removeItem(HOST_KEY); localStorage.removeItem(GUEST_KEY);
+        location.href = location.pathname; // καθαρή αρχική (χωρίς ?room=)
+      };
+      $('leaveNo').onclick = () => { closeOverlay(); if (App.game) render(); };
+    };
 
     $('btnCreate').onclick = () => {
       if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }
