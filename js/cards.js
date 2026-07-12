@@ -113,9 +113,11 @@
     { id: 'PB3', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 2000 },
     { id: 'PB4', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 2000 },
     { id: 'PB5', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 1500 },
-    // Μεταπτυχιακό — μόνιμη αύξηση μισθού
+    // Μεταπτυχιακό — μόνιμη αύξηση μισθού · v1.12: +PM3 1.800€/+180€ (αίτημα Γιώργου)
     { id: 'PM1', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 2400, salaryUp: 240 },
     { id: 'PM2', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1200, salaryUp: 120 },
+    { id: 'PM3', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1800, salaryUp: 180 }, // v1.12 (αίτημα Γιώργου)
+    { id: 'PM3', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1800, salaryUp: 180 },
     // Προκαταβολή Φόρου — μόνιμη μείωση εξόδου «Φόροι»
     { id: 'PT1', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 2400, taxDown: 120 },
     { id: 'PT2', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 1600, taxDown: 80 },

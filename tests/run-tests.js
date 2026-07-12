@@ -17,7 +17,8 @@ section('Δεδομένα καρτών');
 assert(CARDS.LIFESTYLE.length === 24, 'Lifestyle = 24 (' + CARDS.LIFESTYLE.length + ')');
 assert(CARDS.MOMENTS.length === 26, 'Moments = 26 (' + CARDS.MOMENTS.length + ')');
 assert(CARDS.BIG_BUSINESS.length === 20, 'Big Business = 20 (' + CARDS.BIG_BUSINESS.length + ')');
-assert(CARDS.PROJECTS.length === 44, 'v1.11: Project = 44 με τα αντίτυπα (' + CARDS.PROJECTS.length + ')');
+assert(CARDS.PROJECTS.length === 45, 'v1.12: Project = 45 (' + CARDS.PROJECTS.length + ')');
+assert(CARDS.PROJECTS.filter(c => c.kind === 'masters').length === 3 && CARDS.PROJECTS.find(c => c.id === 'PM3').cost === 1800 && CARDS.PROJECTS.find(c => c.id === 'PM3').salaryUp === 180, 'v1.12: 3ο Μεταπτυχιακό 1.800€/+180€');
 // v1.11: νέες κάρτες από IQuit_Cards_v3.key
 assert(CARDS.PROJECTS.filter(c => c.kind === 'bond').length === 5, 'Ομόλογα = 5 (2×1.000, 2×2.000, 1×1.500)');
 assert(CARDS.PROJECTS.filter(c => c.kind === 'P' && c.color === 'G').length === 10, 'Πράσινα = 10');
