@@ -23,10 +23,12 @@ body{background:var(--bg); color:var(--txt);
 button{font-family:inherit; cursor:pointer; border:none; border-radius:12px;
   font-size:15px; font-weight:600; color:#fff; background:var(--card2);}
 button:disabled{opacity:.45; cursor:default;}
-/* v1.7 MOBILE FIX: το iOS αγνοεί το user-scalable=no — το double-tap πάνω σε κουμπιά
-   έκανε zoom in/out στο ταμπλό («το board μεγάλωνε/μίκραινε»). Το touch-action:manipulation
-   απενεργοποιεί το double-tap zoom αλλά ΚΡΑΤΑ scroll & taps. */
-html,body,button,input,select,.board,#boardOverlay{touch-action:manipulation;}
+/* v1.8 MOBILE FIX: το iOS αγνοεί το user-scalable=no. Το προηγούμενο fix στόχευε στο
+   ΑΝΥΠΑΡΚΤΟ «.board» και δεν κάλυπτε το πραγματικό ταμπλό (.boardbox/.tiltwrap/#boardImg/
+   .boardCenter — το tiltwrap έχει 3D transform που σπάει την αλυσίδα) ούτε τις κάρτες/modals,
+   οπότε το double-tap πάνω τους έκανε zoom που ΔΕΝ επανερχόταν → το board «μεγάλωνε» σταδιακά.
+   Καθολικό touch-action:manipulation: κόβει ΜΟΝΟ το double-tap zoom, κρατά scroll ΚΑΙ pinch. */
+*{touch-action:manipulation;}
 input,select{font-family:inherit; font-size:16px; background:#0a1320; color:var(--txt);
   border:1px solid var(--line); border-radius:10px; padding:12px; width:100%;}
 h1,h2,h3{margin:0;}
@@ -343,7 +345,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 .fbopt{display:inline-flex; align-items:center; gap:5px; font-size:13px; background:#0a1320;
   border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;}
 .fbopt:has(input:checked){border-color:var(--accent); background:#12233f;}
-.fbtext,.fbother{width:100%; font-size:14px;}
+.fbtext,.fbother{width:100%; font-size:16px;}
 
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>">
@@ -364,7 +366,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.7</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.8</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -573,9 +575,10 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
     { id: 'PB3', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 2000 },
     { id: 'PB4', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 2000 },
     { id: 'PB5', en: 'Government Bond', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 1500 },
-    // Μεταπτυχιακό — μόνιμη αύξηση μισθού
+    // Μεταπτυχιακό — μόνιμη αύξηση μισθού · v1.12: +PM3 1.800€/+180€ (αίτημα Γιώργου)
     { id: 'PM1', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 2400, salaryUp: 240 },
     { id: 'PM2', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1200, salaryUp: 120 },
+    { id: 'PM3', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1800, salaryUp: 180 }, // v1.12 (αίτημα Γιώργου)
     // Προκαταβολή Φόρου — μόνιμη μείωση εξόδου «Φόροι»
     { id: 'PT1', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 2400, taxDown: 120 },
     { id: 'PT2', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 1600, taxDown: 80 },
@@ -3882,6 +3885,49 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   init();
 })();
 
+</script>
+<script>
+/* ===== IQUIT DEBUG INSTRUMENTATION (προσωρινό — αφαιρείται μετά την απόδειξη) =====
+   Ενεργό ΜΟΝΟ με ?debug=1 (fix ενεργό) ή ?debug=raw (απενεργοποιεί ΠΡΟΣΩΡΙΝΑ το touch-action
+   fix ώστε να αναπαραχθεί το bug). Καταγράφει vv.scale / innerW×H / computed transform του board
+   σε κάθε ζαριά, popup, double-tap και όποτε αλλάξει το browser zoom (visualViewport resize/scroll). */
+(function(){
+  var q=new URLSearchParams(location.search), mode=q.get('debug');
+  if(!mode) return;
+  var RAW=(mode==='raw');
+  if(RAW){ var st=document.createElement('style'); st.textContent='*{touch-action:auto !important;}'; document.head.appendChild(st); }
+  var buf=[], lastSc=null;
+  var panel=document.createElement('div');
+  panel.style.cssText='position:fixed;left:0;bottom:0;z-index:99999;max-width:100vw;max-height:44vh;overflow:hidden;font:10px/1.3 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.85);padding:4px 6px;pointer-events:none;white-space:pre-wrap;';
+  var head=document.createElement('div'); head.style.cssText='color:#fff;font-weight:700;pointer-events:auto;margin-bottom:2px;';
+  function hdr(){ return 'IQUIT DEBUG '+(RAW?'[RAW · fix OFF]':'[fix ON]')+' · tap=copy'; }
+  head.textContent=hdr();
+  var live=document.createElement('div'); live.style.color='#7fd0ff';
+  var logEl=document.createElement('div'); logEl.style.color='#8f8';
+  panel.appendChild(head); panel.appendChild(live); panel.appendChild(logEl);
+  head.addEventListener('click',function(){ try{ navigator.clipboard.writeText('MODE='+mode+'\n'+buf.join('\n')); head.textContent='COPIED ✓'; setTimeout(function(){head.textContent=hdr();},1200);}catch(e){} });
+  function sc(el){ if(!el) return 1; var tr=getComputedStyle(el).transform; if(!tr||tr==='none') return 1;
+    var m=tr.match(/matrix3d\(([^)]+)\)/); if(m){var a=m[1].split(',').map(Number); return +Math.hypot(a[0],a[1],a[2]).toFixed(3);}
+    m=tr.match(/matrix\(([^)]+)\)/); if(m){var b=m[1].split(',').map(Number); return +Math.hypot(b[0],b[1]).toFixed(3);}
+    return 1; }
+  function vals(){ var vv=window.visualViewport; return {
+    s: vv?+vv.scale.toFixed(3):'n/a', w:window.innerWidth, h:window.innerHeight,
+    vw: vv?Math.round(vv.width):'-', vh: vv?Math.round(vv.height):'-', ox: vv?Math.round(vv.offsetLeft):'-', oy: vv?Math.round(vv.offsetTop):'-',
+    box:sc(document.getElementById('boardbox')), tilt:sc(document.getElementById('tiltwrap')), img:sc(document.getElementById('boardImg')) }; }
+  function liveTxt(v){ return 'LIVE vv.scale='+v.s+'  inner='+v.w+'x'+v.h+'  vvSize='+v.vw+'x'+v.vh+'  off='+v.ox+','+v.oy+'\nboard transform-scale → box='+v.box+' tilt='+v.tilt+' img='+v.img; }
+  function push(trig){ var v=vals(); var chg=(lastSc!==null && v.s!==lastSc);
+    var ln='['+(performance.now()/1000).toFixed(1)+'s '+trig+'] vv.scale='+v.s+' inner='+v.w+'x'+v.h+' img='+v.img;
+    if(chg) ln='!! vv.scale '+lastSc+' -> '+v.s+'   '+ln;
+    lastSc=v.s; buf.push(ln); if(buf.length>80) buf.shift(); logEl.textContent=buf.slice(-16).reverse().join('\n'); }
+  function refresh(){ var v=vals(); live.textContent=liveTxt(v); if(lastSc!==null && v.s!==lastSc) push('AUTO'); lastSc=v.s; }
+  if(window.visualViewport){ visualViewport.addEventListener('resize',function(){push('VV-RESIZE');}); visualViewport.addEventListener('scroll',function(){push('VV-SCROLL');}); }
+  var lt=0,lx=0,ly=0;
+  document.addEventListener('touchend',function(e){ var t=Date.now(),c=e.changedTouches[0]||{},x=c.clientX||0,y=c.clientY||0;
+    if(t-lt<320 && Math.abs(x-lx)<45 && Math.abs(y-ly)<45) push('DOUBLE-TAP'); lt=t;lx=x;ly=y; },{passive:true});
+  function obs(id,label,opt){ var el=document.getElementById(id); if(el) new MutationObserver(function(){push(label);}).observe(el,opt); }
+  function start(){ document.body.appendChild(panel); obs('overlay','POPUP',{attributes:true,attributeFilter:['class']}); obs('boardCenter','ROLL',{childList:true}); push('INIT'); setInterval(refresh,400); }
+  if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
+})();
 </script>
 </body>
 </html>

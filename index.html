@@ -124,5 +124,48 @@
 <script src="js/bots.js"></script>
 <script src="js/net.js"></script>
 <script src="js/ui.js"></script>
+<script>
+/* ===== IQUIT DEBUG INSTRUMENTATION (προσωρινό — αφαιρείται μετά την απόδειξη) =====
+   Ενεργό ΜΟΝΟ με ?debug=1 (fix ενεργό) ή ?debug=raw (απενεργοποιεί ΠΡΟΣΩΡΙΝΑ το touch-action
+   fix ώστε να αναπαραχθεί το bug). Καταγράφει vv.scale / innerW×H / computed transform του board
+   σε κάθε ζαριά, popup, double-tap και όποτε αλλάξει το browser zoom (visualViewport resize/scroll). */
+(function(){
+  var q=new URLSearchParams(location.search), mode=q.get('debug');
+  if(!mode) return;
+  var RAW=(mode==='raw');
+  if(RAW){ var st=document.createElement('style'); st.textContent='*{touch-action:auto !important;}'; document.head.appendChild(st); }
+  var buf=[], lastSc=null;
+  var panel=document.createElement('div');
+  panel.style.cssText='position:fixed;left:0;bottom:0;z-index:99999;max-width:100vw;max-height:44vh;overflow:hidden;font:10px/1.3 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.85);padding:4px 6px;pointer-events:none;white-space:pre-wrap;';
+  var head=document.createElement('div'); head.style.cssText='color:#fff;font-weight:700;pointer-events:auto;margin-bottom:2px;';
+  function hdr(){ return 'IQUIT DEBUG '+(RAW?'[RAW · fix OFF]':'[fix ON]')+' · tap=copy'; }
+  head.textContent=hdr();
+  var live=document.createElement('div'); live.style.color='#7fd0ff';
+  var logEl=document.createElement('div'); logEl.style.color='#8f8';
+  panel.appendChild(head); panel.appendChild(live); panel.appendChild(logEl);
+  head.addEventListener('click',function(){ try{ navigator.clipboard.writeText('MODE='+mode+'\n'+buf.join('\n')); head.textContent='COPIED ✓'; setTimeout(function(){head.textContent=hdr();},1200);}catch(e){} });
+  function sc(el){ if(!el) return 1; var tr=getComputedStyle(el).transform; if(!tr||tr==='none') return 1;
+    var m=tr.match(/matrix3d\(([^)]+)\)/); if(m){var a=m[1].split(',').map(Number); return +Math.hypot(a[0],a[1],a[2]).toFixed(3);}
+    m=tr.match(/matrix\(([^)]+)\)/); if(m){var b=m[1].split(',').map(Number); return +Math.hypot(b[0],b[1]).toFixed(3);}
+    return 1; }
+  function vals(){ var vv=window.visualViewport; return {
+    s: vv?+vv.scale.toFixed(3):'n/a', w:window.innerWidth, h:window.innerHeight,
+    vw: vv?Math.round(vv.width):'-', vh: vv?Math.round(vv.height):'-', ox: vv?Math.round(vv.offsetLeft):'-', oy: vv?Math.round(vv.offsetTop):'-',
+    box:sc(document.getElementById('boardbox')), tilt:sc(document.getElementById('tiltwrap')), img:sc(document.getElementById('boardImg')) }; }
+  function liveTxt(v){ return 'LIVE vv.scale='+v.s+'  inner='+v.w+'x'+v.h+'  vvSize='+v.vw+'x'+v.vh+'  off='+v.ox+','+v.oy+'\nboard transform-scale → box='+v.box+' tilt='+v.tilt+' img='+v.img; }
+  function push(trig){ var v=vals(); var chg=(lastSc!==null && v.s!==lastSc);
+    var ln='['+(performance.now()/1000).toFixed(1)+'s '+trig+'] vv.scale='+v.s+' inner='+v.w+'x'+v.h+' img='+v.img;
+    if(chg) ln='!! vv.scale '+lastSc+' -> '+v.s+'   '+ln;
+    lastSc=v.s; buf.push(ln); if(buf.length>80) buf.shift(); logEl.textContent=buf.slice(-16).reverse().join('\n'); }
+  function refresh(){ var v=vals(); live.textContent=liveTxt(v); if(lastSc!==null && v.s!==lastSc) push('AUTO'); lastSc=v.s; }
+  if(window.visualViewport){ visualViewport.addEventListener('resize',function(){push('VV-RESIZE');}); visualViewport.addEventListener('scroll',function(){push('VV-SCROLL');}); }
+  var lt=0,lx=0,ly=0;
+  document.addEventListener('touchend',function(e){ var t=Date.now(),c=e.changedTouches[0]||{},x=c.clientX||0,y=c.clientY||0;
+    if(t-lt<320 && Math.abs(x-lx)<45 && Math.abs(y-ly)<45) push('DOUBLE-TAP'); lt=t;lx=x;ly=y; },{passive:true});
+  function obs(id,label,opt){ var el=document.getElementById(id); if(el) new MutationObserver(function(){push(label);}).observe(el,opt); }
+  function start(){ document.body.appendChild(panel); obs('overlay','POPUP',{attributes:true,attributeFilter:['class']}); obs('boardCenter','ROLL',{childList:true}); push('INIT'); setInterval(refresh,400); }
+  if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
+})();
+</script>
 </body>
 </html>

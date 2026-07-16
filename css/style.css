@@ -14,10 +14,12 @@ body{background:var(--bg); color:var(--txt);
 button{font-family:inherit; cursor:pointer; border:none; border-radius:12px;
   font-size:15px; font-weight:600; color:#fff; background:var(--card2);}
 button:disabled{opacity:.45; cursor:default;}
-/* v1.7 MOBILE FIX: το iOS αγνοεί το user-scalable=no — το double-tap πάνω σε κουμπιά
-   έκανε zoom in/out στο ταμπλό («το board μεγάλωνε/μίκραινε»). Το touch-action:manipulation
-   απενεργοποιεί το double-tap zoom αλλά ΚΡΑΤΑ scroll & taps. */
-html,body,button,input,select,.board,#boardOverlay{touch-action:manipulation;}
+/* v1.8 MOBILE FIX: το iOS αγνοεί το user-scalable=no. Το προηγούμενο fix στόχευε στο
+   ΑΝΥΠΑΡΚΤΟ «.board» και δεν κάλυπτε το πραγματικό ταμπλό (.boardbox/.tiltwrap/#boardImg/
+   .boardCenter — το tiltwrap έχει 3D transform που σπάει την αλυσίδα) ούτε τις κάρτες/modals,
+   οπότε το double-tap πάνω τους έκανε zoom που ΔΕΝ επανερχόταν → το board «μεγάλωνε» σταδιακά.
+   Καθολικό touch-action:manipulation: κόβει ΜΟΝΟ το double-tap zoom, κρατά scroll ΚΑΙ pinch. */
+*{touch-action:manipulation;}
 input,select{font-family:inherit; font-size:16px; background:#0a1320; color:var(--txt);
   border:1px solid var(--line); border-radius:10px; padding:12px; width:100%;}
 h1,h2,h3{margin:0;}
@@ -334,4 +336,4 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 .fbopt{display:inline-flex; align-items:center; gap:5px; font-size:13px; background:#0a1320;
   border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;}
 .fbopt:has(input:checked){border-color:var(--accent); background:#12233f;}
-.fbtext,.fbother{width:100%; font-size:14px;}
+.fbtext,.fbother{width:100%; font-size:16px;}

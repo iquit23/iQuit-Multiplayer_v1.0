@@ -117,7 +117,6 @@
     { id: 'PM1', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 2400, salaryUp: 240 },
     { id: 'PM2', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1200, salaryUp: 120 },
     { id: 'PM3', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1800, salaryUp: 180 }, // v1.12 (αίτημα Γιώργου)
-    { id: 'PM3', en: 'Master\'s degree opportunity', kind: 'masters', title: 'Ευκαιρία για Μεταπτυχιακό', cost: 1800, salaryUp: 180 },
     // Προκαταβολή Φόρου — μόνιμη μείωση εξόδου «Φόροι»
     { id: 'PT1', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 2400, taxDown: 120 },
     { id: 'PT2', en: 'Tax prepayment', kind: 'taxprepay', title: 'Προκαταβολή Φόρου', cost: 1600, taxDown: 80 },
