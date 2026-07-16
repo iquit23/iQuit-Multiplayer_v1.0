@@ -117,6 +117,9 @@
       lastRoll: null,
       log: [], logSeq: 0,
       rankings: null,
+      // v1.13: εκπαιδευτικά hints — ΜΙΑ φορά ανά μηχανισμό για ΟΛΟ το τραπέζι.
+      // hintSeen: ποια hints έχουν ήδη εμφανιστεί · hintActive: το τρέχον (το γράφει ο host)
+      hintSeen: {}, hintActive: null,
     };
     state.decks = {
       project: shuffle(state, CARDS.PROJECTS.map(c => c.id)),
@@ -680,6 +683,18 @@
         return null;
       }
 
+      case 'sav-withdraw': {
+        // v1.13 (απόφαση Γιώργου): ανάληψη ΟΛΗΣ της αποταμίευσης στη σειρά σου,
+        // όταν είσαι 60+ Ή το I QUIT meter σου είναι ≥ 100% (π.χ. για εξόφληση δανείων)
+        if (currentPlayer(state).id !== playerId || state.pending) return err('Ανάληψη μόνο στη σειρά σου, χωρίς εκκρεμότητες.');
+        if (!((p.savings || 0) > 0)) return err('Δεν έχεις αποταμίευση.');
+        if (!(p.age >= 60 || passive(p) >= totalExp(p))) return err('Ανάληψη μόνο στα 60 ή με γεμάτο I QUIT meter (100%).');
+        p.cash += p.savings;
+        log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings) });
+        p.savings = 0;
+        return null;
+      }
+
       case 'offer-funding': {
         if (currentPlayer(state).id !== playerId || state.pending) return err('Προσφορά μόνο στη σειρά σου.');
         const inv = p.inv.find(i => i.uid === action.uid && i.kind === 'funding');
@@ -794,7 +809,8 @@
           p.savings = (p.savings || 0) + amt;
           log(state, 'lg_savDeposit', { n: pname(p), a: fmt(amt), s: fmt(p.savings) });
         } else if (ch2 === 'withdraw') {
-          if (!pend.canWithdraw) return err('Ανάληψη μόνο στα 60.');
+          // v1.13 (απόφαση Γιώργου): ανάληψη στα 60 Ή όταν το I QUIT meter είναι ≥ 100%
+          if (!pend.canWithdraw && passive(p) < totalExp(p)) return err('Ανάληψη μόνο στα 60 ή με γεμάτο I QUIT meter (100%).');
           p.cash += p.savings || 0;
           log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings || 0) });
           p.savings = 0;

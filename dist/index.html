@@ -366,7 +366,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.8</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.9</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -707,11 +707,12 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ (Ταμείο Έκτακτης Ανάγκης)
       savings: 'Αποταμίευση', savTitle: 'ΤΑΜΕΙΟ ΕΚΤΑΚΤΗΣ ΑΝΑΓΚΗΣ',
       savAsk: 'Έκλεισες τα {age} — θα αποταμιεύσεις;',
-      savExplain: 'Βάλε χρήματα στην άκρη (πολλαπλάσια του 50€). Είναι <b>κλειδωμένα</b>: χρησιμοποιούνται ΜΟΝΟ όταν σε χτυπήσει αρνητική κάρτα Moment — και τότε, αν η αποταμίευση καλύπτει ΟΛΟ το ποσό, πληρώνεις μόνο το 70% (<b>−30% επιβράβευση πρόνοιας</b>) χωρίς να αγγίξεις τα μετρητά σου. Αν δεν φτάνει, πληρώνεις κανονικά από τα μετρητά. Νέα κατάθεση κάθε 5 χρόνια · ανάληψη ΜΟΝΟ στα 60.',
+      savExplain: 'Βάλε χρήματα στην άκρη (πολλαπλάσια του 50€). Είναι <b>κλειδωμένα</b>: χρησιμοποιούνται ΜΟΝΟ όταν σε χτυπήσει αρνητική κάρτα Moment ή φόρος BB — και τότε, αν η αποταμίευση καλύπτει ΟΛΟ το ποσό, πληρώνεις μόνο το 70% (<b>−30% επιβράβευση πρόνοιας</b>) χωρίς να αγγίξεις τα μετρητά σου. Αν δεν φτάνει, πληρώνεις κανονικά από τα μετρητά. Νέα κατάθεση κάθε 5 χρόνια · ανάληψη στα 60 <b>ή όταν το I QUIT meter φτάσει το 100%</b>.',
       savBalance: 'Αποταμίευση: {v} · Μετρητά: {c}',
       savDeposit: '🐖 Κατάθεση', savSkip: '✋ Όχι τώρα', savWithdraw: '💶 Ανάληψη όλων ({v})',
+      savTakeTip: 'Ανάληψη όλης της αποταμίευσης (επιτρέπεται: 60+ ή meter 100%)',
       lg_savDeposit: '🐖 {n}: αποταμίευσε {a} (σύνολο ταμείου {s})',
-      lg_savWithdraw: '💶 {n}: ανάληψη όλης της αποταμίευσης στα 60 (+{a})',
+      lg_savWithdraw: '💶 {n}: ανάληψη όλης της αποταμίευσης (+{a})',
       lg_savPaid: '🐖 {n}: το «{title}» ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}). Η πρόνοια επιβραβεύεται!',
       lg_savRescue: '🆘 {n}: η αποταμίευση ({a}) ρευστοποιήθηκε in extremis για να αποφευχθεί η χρεοκοπία.',
       lg_savTax: '🐖 {n}: ο φόρος BB ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}).',
@@ -890,11 +891,12 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       statBought: 'bought', statSkipped: 'declined while affordable',
       savings: 'Savings', savTitle: 'EMERGENCY FUND',
       savAsk: 'You just turned {age} — save some money?',
-      savExplain: 'Put money aside (multiples of €50). It is <b>locked</b>: it is used ONLY when a negative Moment card hits you — and if your savings cover the FULL amount, you pay just 70% (<b>−30% foresight reward</b>) without touching your cash. If it does not cover it, you pay normally from cash. New deposit every 5 years · withdrawal ONLY at 60.',
+      savExplain: 'Put money aside (multiples of €50). It is <b>locked</b>: it is used ONLY when a negative Moment card or BB tax hits you — and if your savings cover the FULL amount, you pay just 70% (<b>−30% foresight reward</b>) without touching your cash. If it does not cover it, you pay normally from cash. New deposit every 5 years · withdrawal at 60 <b>or once your I QUIT meter hits 100%</b>.',
       savBalance: 'Savings: {v} · Cash: {c}',
       savDeposit: '🐖 Deposit', savSkip: '✋ Not now', savWithdraw: '💶 Withdraw all ({v})',
+      savTakeTip: 'Withdraw all savings (allowed: 60+ or meter at 100%)',
       lg_savDeposit: '🐖 {n}: saved {a} (fund total {s})',
-      lg_savWithdraw: '💶 {n}: withdrew all savings at 60 (+{a})',
+      lg_savWithdraw: '💶 {n}: withdrew all savings (+{a})',
       lg_savPaid: '🐖 {n}: “{title}” ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}). Foresight pays off!',
       lg_savRescue: '🆘 {n}: savings ({a}) were liquidated in extremis to avoid bankruptcy.',
       lg_savTax: '🐖 {n}: BB tax ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}).',
@@ -1278,6 +1280,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       lastRoll: null,
       log: [], logSeq: 0,
       rankings: null,
+      // v1.13: εκπαιδευτικά hints — ΜΙΑ φορά ανά μηχανισμό για ΟΛΟ το τραπέζι.
+      // hintSeen: ποια hints έχουν ήδη εμφανιστεί · hintActive: το τρέχον (το γράφει ο host)
+      hintSeen: {}, hintActive: null,
     };
     state.decks = {
       project: shuffle(state, CARDS.PROJECTS.map(c => c.id)),
@@ -1841,6 +1846,18 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         return null;
       }
 
+      case 'sav-withdraw': {
+        // v1.13 (απόφαση Γιώργου): ανάληψη ΟΛΗΣ της αποταμίευσης στη σειρά σου,
+        // όταν είσαι 60+ Ή το I QUIT meter σου είναι ≥ 100% (π.χ. για εξόφληση δανείων)
+        if (currentPlayer(state).id !== playerId || state.pending) return err('Ανάληψη μόνο στη σειρά σου, χωρίς εκκρεμότητες.');
+        if (!((p.savings || 0) > 0)) return err('Δεν έχεις αποταμίευση.');
+        if (!(p.age >= 60 || passive(p) >= totalExp(p))) return err('Ανάληψη μόνο στα 60 ή με γεμάτο I QUIT meter (100%).');
+        p.cash += p.savings;
+        log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings) });
+        p.savings = 0;
+        return null;
+      }
+
       case 'offer-funding': {
         if (currentPlayer(state).id !== playerId || state.pending) return err('Προσφορά μόνο στη σειρά σου.');
         const inv = p.inv.find(i => i.uid === action.uid && i.kind === 'funding');
@@ -1955,7 +1972,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           p.savings = (p.savings || 0) + amt;
           log(state, 'lg_savDeposit', { n: pname(p), a: fmt(amt), s: fmt(p.savings) });
         } else if (ch2 === 'withdraw') {
-          if (!pend.canWithdraw) return err('Ανάληψη μόνο στα 60.');
+          // v1.13 (απόφαση Γιώργου): ανάληψη στα 60 Ή όταν το I QUIT meter είναι ≥ 100%
+          if (!pend.canWithdraw && passive(p) < totalExp(p)) return err('Ανάληψη μόνο στα 60 ή με γεμάτο I QUIT meter (100%).');
           p.cash += p.savings || 0;
           log(state, 'lg_savWithdraw', { n: pname(p), a: fmt(p.savings || 0) });
           p.savings = 0;
@@ -2075,6 +2093,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       return decidePending(state, p, state.pending);
     }
     if (!state.pending && E.currentPlayer(state).id === playerId && E.isActive(p)) {
+      // v1.13: γεμάτο meter + αποταμίευση + χρέη → ρευστοποίησε το ΤΕΑ για την τελική εξόφληση
+      if (E.passive(p) >= E.totalExp(p) && (p.savings || 0) > 0 && p.loans.length > 0) return { a: 'sav-withdraw' };
       // Πριν ρίξει ζάρια: σκέψου αποπληρωμή δανείων (v0.5 — απαιτείται για I QUIT)
       const rep = considerRepay(state, p);
       if (rep) return rep;
@@ -2230,22 +2250,42 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
   function makeToken() { return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); }
 
+  // v1.13: ΡΥΘΜΙΖΟΜΕΝΟΣ TURN relay. Χωρίς αξιόπιστο TURN, παίκτες σε ΔΙΑΦΟΡΕΤΙΚΑ δίκτυα
+  // (π.χ. WiFi ↔ κινητά δεδομένα, πίσω από CGNAT) συχνά ΔΕΝ μπορούν να συνδεθούν — γι' αυτό
+  // «μόνο στο ίδιο WiFi». Οι δωρεάν TURN του Open Relay Project έχουν πρακτικά πεθάνει.
+  // ΛΥΣΗ: βάλε δικά σου credentials (δωρεάν λογαριασμός στο metered.ca ή expressturn.com)
+  // ΕΔΩ στο TURN_SERVERS — ή προσωρινά στο localStorage κλειδί 'iquit_turn' ως JSON:
+  //   [{"urls":"turn:x.metered.ca:80","username":"...","credential":"..."}]
+  const TURN_SERVERS = [
+    // ⬇️ Συμπλήρωσε εδώ πραγματικά TURN credentials όταν υπάρξουν (βλ. σχόλιο πάνω)
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  ];
+  function customTurn() {
+    try {
+      const raw = localStorage.getItem('iquit_turn');
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [arr];
+    } catch (e) { return []; }
+  }
+
   function newPeer(id) {
     return new Peer(id || undefined, {
       debug: 1,
       config: {
-        // v0.8: Μόνο με STUN, η σύνδεση αποτυγχάνει πίσω από αυστηρά NAT (4G/CGNAT,
-        // εταιρικά δίκτυα). Προσθέτουμε δωρεάν δημόσιους TURN relays (Open Relay Project)
-        // ως δίχτυ ασφαλείας — αν το απευθείας P2P δεν περνά, η κίνηση δρομολογείται μέσω relay.
+        // v1.13: περισσότερα STUN (η ανακάλυψη δημόσιας IP πετυχαίνει συχνότερα σε
+        // «μέτρια» NAT) + TURN ως δίχτυ ασφαλείας για τα αυστηρά (CGNAT κινητής)
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'stun:global.stun.twilio.com:3478' },
           { urls: 'stun:stun.relay.metered.ca:80' },
-          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-        ],
-        iceCandidatePoolSize: 4,
+        ].concat(customTurn()).concat(TURN_SERVERS),
+        iceCandidatePoolSize: 6,
       },
     });
   }
@@ -2323,7 +2363,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         if (!opened) {
           // v0.8: διαφορετικό μήνυμα ανάλογα με το ΠΟΥ κόλλησε
           cb.onError(foundPeer
-            ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε. Δοκιμάστε: (1) ανανέωση σελίδας και ξανά, (2) άλλο δίκτυο (π.χ. Wi-Fi αντί για δεδομένα), (3) απενεργοποίηση VPN.'
+            ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε — συνήθως επειδή είστε σε διαφορετικά δίκτυα με αυστηρό NAT (π.χ. κινητά δεδομένα). Δοκιμάστε: (1) ανανέωση και ξανά, (2) να συνδεθείτε στο ΙΔΙΟ Wi-Fi ή ένας να ανοίξει hotspot για τον άλλον, (3) απενεργοποίηση VPN.'
             : 'Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό και ότι ο host έχει ανοιχτή τη σελίδα του παιχνιδιού.');
         }
       }, FAIL_MS);
@@ -2601,11 +2641,31 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   }
 
   function afterChange() {
+    updateHintState(); // v1.13: ο host αποφασίζει ποιο hint είναι ενεργό ΠΡΙΝ το broadcast
     saveHostSession();
     broadcastState();
     render();
     maybeToastNewLog();
     scheduleAuto();
+  }
+
+  // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
+  // (σε όλους τους παίκτες ταυτόχρονα, την πρώτη φορά που ο μηχανισμός συμβαίνει σε
+  // ΟΠΟΙΟΝΔΗΠΟΤΕ) και μένει ορατό μέχρι ο παίκτης που τον σκανδάλισε να δώσει τη σειρά του.
+  function updateHintState() {
+    if (App.role !== 'host' || !App.game || App.game.phase !== 'playing') return;
+    const g = App.game;
+    if (!g.hintSeen) g.hintSeen = {};
+    const k = g.pending ? hintKeyFor(g.pending) : null;
+    if (k && !g.hintSeen[k]) {
+      g.hintSeen[k] = true;
+      g.hintActive = { k: k, playerId: g.pending.playerId };
+    }
+    // Λήγει όταν η δράση περάσει σε ΑΛΛΟΝ παίκτη (τέλος της σειράς του σκανδαλιστή)
+    if (g.hintActive) {
+      const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
+      if (actorNow !== g.hintActive.playerId) g.hintActive = null;
+    }
   }
 
   // ============================================================ HOST
@@ -3148,11 +3208,12 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function renderHint(g) {
     const box = $('hintBox');
     if (!box) return;
-    const k = (g && g.phase === 'playing' && !App.anim && !App.drawAnimBusy) ? hintKeyFor(g.pending) : null;
-    if (!k) { box.classList.add('hidden'); return; }
+    // v1.13: όλοι (host & guests) δείχνουν απλώς το g.hintActive που όρισε ο host
+    const h = (g && g.phase === 'playing' && !App.anim && !App.drawAnimBusy) ? g.hintActive : null;
+    if (!h || !h.k) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    $('hintT').innerHTML = t('hintT_' + k);
-    $('hintB').innerHTML = t('hintB_' + k);
+    $('hintT').innerHTML = t('hintT_' + h.k);
+    $('hintB').innerHTML = t('hintB_' + h.k);
   }
 
   // v0.7: το ταμπλό είναι πλέον το πραγματικό board art — τα πάντα τοποθετούνται σε % πάνω του
@@ -3318,7 +3379,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       '<div class="statgrid">' +
       '<div class="stat">' + dpop(App.deltas.cash, 3800, false) + '<div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
-      '<div class="stat">' + dpop(App.deltas.savings, 3800, false) + '<div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
+      // v1.13: κουμπί ανάληψης όταν επιτρέπεται (60+ ή meter ≥100%), στη σειρά σου
+      '<div class="stat">' + dpop(App.deltas.savings, 3800, false) + '<div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) +
+      ((myTurn && (p.savings || 0) > 0 && (p.age >= 60 || pct >= 100)) ? ' <button class="mini" data-savw title="' + t('savTakeTip') + '" style="padding:2px 6px; font-size:11px;">💶</button>' : '') + '</div></div>' +
       '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
       '<div class="stat">' + dpop(App.deltas.total, 6000, true) + '<div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
@@ -3337,6 +3400,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
     box.querySelectorAll('[data-sellf]').forEach(b => b.onclick = () => openFundingSale(b.dataset.sellf));
     box.querySelectorAll('[data-repay]').forEach(b => b.onclick = () => act({ a: 'repay', uid: b.dataset.repay, count: +b.dataset.count }));
+    box.querySelectorAll('[data-savw]').forEach(b => b.onclick = () => act({ a: 'sav-withdraw' })); // v1.13
     const det = $('expDetails');
     if (det) det.ontoggle = () => { App.expOpen = det.open; }; // v0.6: μένει ανοιχτό μέχρι να το κλείσεις εσύ
     const bl = $('btnLoan');
@@ -3649,7 +3713,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         html += '<div class="row" style="margin:2px 0;"><input id="savAmt" type="number" step="50" min="50" max="' + maxDep + '" value="' + defDep + '" inputmode="numeric" style="flex:1;">' +
           '<button class="buy" id="savGo" style="flex:0 0 auto; padding:12px;">' + t('savDeposit') + '</button></div>';
       }
-      if (pend.canWithdraw && (p.savings || 0) > 0) {
+      // v1.13: ανάληψη και όταν το meter είναι ≥100% (όχι μόνο στα 60)
+      if ((pend.canWithdraw || E.quitPct(p) >= 100) && (p.savings || 0) > 0) {
         html += '<button class="wildbtn" data-sv="withdraw">' + t('savWithdraw', { v: fmt(p.savings || 0) }) + '</button>';
       }
       html += '<button class="ghost" data-sv="skip">' + t('savSkip') + '</button></div>';

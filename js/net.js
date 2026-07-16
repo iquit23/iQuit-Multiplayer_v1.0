@@ -17,22 +17,42 @@
   }
   function makeToken() { return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); }
 
+  // v1.13: ΡΥΘΜΙΖΟΜΕΝΟΣ TURN relay. Χωρίς αξιόπιστο TURN, παίκτες σε ΔΙΑΦΟΡΕΤΙΚΑ δίκτυα
+  // (π.χ. WiFi ↔ κινητά δεδομένα, πίσω από CGNAT) συχνά ΔΕΝ μπορούν να συνδεθούν — γι' αυτό
+  // «μόνο στο ίδιο WiFi». Οι δωρεάν TURN του Open Relay Project έχουν πρακτικά πεθάνει.
+  // ΛΥΣΗ: βάλε δικά σου credentials (δωρεάν λογαριασμός στο metered.ca ή expressturn.com)
+  // ΕΔΩ στο TURN_SERVERS — ή προσωρινά στο localStorage κλειδί 'iquit_turn' ως JSON:
+  //   [{"urls":"turn:x.metered.ca:80","username":"...","credential":"..."}]
+  const TURN_SERVERS = [
+    // ⬇️ Συμπλήρωσε εδώ πραγματικά TURN credentials όταν υπάρξουν (βλ. σχόλιο πάνω)
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  ];
+  function customTurn() {
+    try {
+      const raw = localStorage.getItem('iquit_turn');
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [arr];
+    } catch (e) { return []; }
+  }
+
   function newPeer(id) {
     return new Peer(id || undefined, {
       debug: 1,
       config: {
-        // v0.8: Μόνο με STUN, η σύνδεση αποτυγχάνει πίσω από αυστηρά NAT (4G/CGNAT,
-        // εταιρικά δίκτυα). Προσθέτουμε δωρεάν δημόσιους TURN relays (Open Relay Project)
-        // ως δίχτυ ασφαλείας — αν το απευθείας P2P δεν περνά, η κίνηση δρομολογείται μέσω relay.
+        // v1.13: περισσότερα STUN (η ανακάλυψη δημόσιας IP πετυχαίνει συχνότερα σε
+        // «μέτρια» NAT) + TURN ως δίχτυ ασφαλείας για τα αυστηρά (CGNAT κινητής)
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'stun:global.stun.twilio.com:3478' },
           { urls: 'stun:stun.relay.metered.ca:80' },
-          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-        ],
-        iceCandidatePoolSize: 4,
+        ].concat(customTurn()).concat(TURN_SERVERS),
+        iceCandidatePoolSize: 6,
       },
     });
   }
@@ -110,7 +130,7 @@
         if (!opened) {
           // v0.8: διαφορετικό μήνυμα ανάλογα με το ΠΟΥ κόλλησε
           cb.onError(foundPeer
-            ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε. Δοκιμάστε: (1) ανανέωση σελίδας και ξανά, (2) άλλο δίκτυο (π.χ. Wi-Fi αντί για δεδομένα), (3) απενεργοποίηση VPN.'
+            ? 'Το δωμάτιο «' + code + '» βρέθηκε, αλλά η σύνδεση των συσκευών δεν ολοκληρώθηκε — συνήθως επειδή είστε σε διαφορετικά δίκτυα με αυστηρό NAT (π.χ. κινητά δεδομένα). Δοκιμάστε: (1) ανανέωση και ξανά, (2) να συνδεθείτε στο ΙΔΙΟ Wi-Fi ή ένας να ανοίξει hotspot για τον άλλον, (3) απενεργοποίηση VPN.'
             : 'Δεν βρέθηκε το δωμάτιο «' + code + '». Έλεγξε τον κωδικό και ότι ο host έχει ανοιχτή τη σελίδα του παιχνιδιού.');
         }
       }, FAIL_MS);

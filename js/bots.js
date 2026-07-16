@@ -73,6 +73,8 @@
       return decidePending(state, p, state.pending);
     }
     if (!state.pending && E.currentPlayer(state).id === playerId && E.isActive(p)) {
+      // v1.13: γεμάτο meter + αποταμίευση + χρέη → ρευστοποίησε το ΤΕΑ για την τελική εξόφληση
+      if (E.passive(p) >= E.totalExp(p) && (p.savings || 0) > 0 && p.loans.length > 0) return { a: 'sav-withdraw' };
       // Πριν ρίξει ζάρια: σκέψου αποπληρωμή δανείων (v0.5 — απαιτείται για I QUIT)
       const rep = considerRepay(state, p);
       if (rep) return rep;

@@ -248,11 +248,31 @@
   }
 
   function afterChange() {
+    updateHintState(); // v1.13: ο host αποφασίζει ποιο hint είναι ενεργό ΠΡΙΝ το broadcast
     saveHostSession();
     broadcastState();
     render();
     maybeToastNewLog();
     scheduleAuto();
+  }
+
+  // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
+  // (σε όλους τους παίκτες ταυτόχρονα, την πρώτη φορά που ο μηχανισμός συμβαίνει σε
+  // ΟΠΟΙΟΝΔΗΠΟΤΕ) και μένει ορατό μέχρι ο παίκτης που τον σκανδάλισε να δώσει τη σειρά του.
+  function updateHintState() {
+    if (App.role !== 'host' || !App.game || App.game.phase !== 'playing') return;
+    const g = App.game;
+    if (!g.hintSeen) g.hintSeen = {};
+    const k = g.pending ? hintKeyFor(g.pending) : null;
+    if (k && !g.hintSeen[k]) {
+      g.hintSeen[k] = true;
+      g.hintActive = { k: k, playerId: g.pending.playerId };
+    }
+    // Λήγει όταν η δράση περάσει σε ΑΛΛΟΝ παίκτη (τέλος της σειράς του σκανδαλιστή)
+    if (g.hintActive) {
+      const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
+      if (actorNow !== g.hintActive.playerId) g.hintActive = null;
+    }
   }
 
   // ============================================================ HOST
@@ -795,11 +815,12 @@
   function renderHint(g) {
     const box = $('hintBox');
     if (!box) return;
-    const k = (g && g.phase === 'playing' && !App.anim && !App.drawAnimBusy) ? hintKeyFor(g.pending) : null;
-    if (!k) { box.classList.add('hidden'); return; }
+    // v1.13: όλοι (host & guests) δείχνουν απλώς το g.hintActive που όρισε ο host
+    const h = (g && g.phase === 'playing' && !App.anim && !App.drawAnimBusy) ? g.hintActive : null;
+    if (!h || !h.k) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
-    $('hintT').innerHTML = t('hintT_' + k);
-    $('hintB').innerHTML = t('hintB_' + k);
+    $('hintT').innerHTML = t('hintT_' + h.k);
+    $('hintB').innerHTML = t('hintB_' + h.k);
   }
 
   // v0.7: το ταμπλό είναι πλέον το πραγματικό board art — τα πάντα τοποθετούνται σε % πάνω του
@@ -965,7 +986,9 @@
       '<div class="statgrid">' +
       '<div class="stat">' + dpop(App.deltas.cash, 3800, false) + '<div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
-      '<div class="stat">' + dpop(App.deltas.savings, 3800, false) + '<div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) + '</div></div>' +
+      // v1.13: κουμπί ανάληψης όταν επιτρέπεται (60+ ή meter ≥100%), στη σειρά σου
+      '<div class="stat">' + dpop(App.deltas.savings, 3800, false) + '<div class="k">' + t('savings') + '</div><div class="v" style="color:var(--yellow)">' + fmt(p.savings || 0) +
+      ((myTurn && (p.savings || 0) > 0 && (p.age >= 60 || pct >= 100)) ? ' <button class="mini" data-savw title="' + t('savTakeTip') + '" style="padding:2px 6px; font-size:11px;">💶</button>' : '') + '</div></div>' +
       '<div class="stat"><div class="k">' + t('passive') + '</div><div class="v" style="color:var(--accent)">' + fmt(pas) + '</div></div>' +
       '<div class="stat"><div class="k">' + t('salary') + '</div><div class="v">' + fmt(p.salary) + '</div></div>' +
       '<div class="stat">' + dpop(App.deltas.total, 6000, true) + '<div class="k">' + t('expenses') + '</div><div class="v">' + fmt(exp) + '</div></div>' +
@@ -984,6 +1007,7 @@
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
     box.querySelectorAll('[data-sellf]').forEach(b => b.onclick = () => openFundingSale(b.dataset.sellf));
     box.querySelectorAll('[data-repay]').forEach(b => b.onclick = () => act({ a: 'repay', uid: b.dataset.repay, count: +b.dataset.count }));
+    box.querySelectorAll('[data-savw]').forEach(b => b.onclick = () => act({ a: 'sav-withdraw' })); // v1.13
     const det = $('expDetails');
     if (det) det.ontoggle = () => { App.expOpen = det.open; }; // v0.6: μένει ανοιχτό μέχρι να το κλείσεις εσύ
     const bl = $('btnLoan');
@@ -1296,7 +1320,8 @@
         html += '<div class="row" style="margin:2px 0;"><input id="savAmt" type="number" step="50" min="50" max="' + maxDep + '" value="' + defDep + '" inputmode="numeric" style="flex:1;">' +
           '<button class="buy" id="savGo" style="flex:0 0 auto; padding:12px;">' + t('savDeposit') + '</button></div>';
       }
-      if (pend.canWithdraw && (p.savings || 0) > 0) {
+      // v1.13: ανάληψη και όταν το meter είναι ≥100% (όχι μόνο στα 60)
+      if ((pend.canWithdraw || E.quitPct(p) >= 100) && (p.savings || 0) > 0) {
         html += '<button class="wildbtn" data-sv="withdraw">' + t('savWithdraw', { v: fmt(p.savings || 0) }) + '</button>';
       }
       html += '<button class="ghost" data-sv="skip">' + t('savSkip') + '</button></div>';

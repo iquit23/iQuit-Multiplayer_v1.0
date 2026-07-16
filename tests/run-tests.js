@@ -284,6 +284,21 @@ section('v1.6 Αποταμίευση');
   sS.pending = { type: 'savings', playerId: 'a', canWithdraw: true, then: null };
   r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'withdraw' });
   assert((!r || !r.error) && P.savings === 0 && P.cash === 2000, 'στα 60: ανάληψη όλων πίσω στα μετρητά');
+  // v1.13: ανάληψη ΚΑΙ με γεμάτο meter (πριν τα 60) — μέσω modal ΚΑΙ μέσω άμεσου action
+  P.savings = 300; P.cash = 1000;
+  P.inv.push({ uid: 'sv1', cardId: 'BB13', kind: 'bb', title: 'X', cost: 30000, income: 1600 }); // παθητικό ≥ 1500
+  P.loans.push({ uid: 'lx', amount: 1000, payment: 100, remaining: 10 }); // χρέος → όχι auto-IQUIT
+  P.loansTaken = 1;
+  sS.pending = { type: 'savings', playerId: 'a', canWithdraw: false, then: null };
+  r = E.applyAction(sS, 'a', { a: 'resolve', choice: 'withdraw' });
+  assert((!r || !r.error) && P.savings === 0 && P.cash === 1300, 'v1.13: ανάληψη μέσω modal με meter 100% (πριν τα 60)');
+  P.savings = 200; sS.turn = 0;
+  r = E.applyAction(sS, 'a', { a: 'sav-withdraw' });
+  assert((!r || !r.error) && P.savings === 0 && P.cash === 1500, 'v1.13: άμεσο sav-withdraw στη σειρά του με meter 100%');
+  const PB2 = sS.players[1];
+  PB2.savings = 100; sS.turn = 1;
+  r = E.applyAction(sS, 'b', { a: 'sav-withdraw' });
+  assert(r && r.error && PB2.savings === 100, 'v1.13: sav-withdraw απορρίπτεται χωρίς 60+ ή meter 100%');
   // Αρνητικό Moment ΚΑΛΥΠΤΟΜΕΝΟ πλήρως → −30% από το ταμείο, μετρητά ανέπαφα
   let sM = E.newGame([{ id: 'a', name: 'A', isBot: true }, { id: 'b', name: 'B', isBot: true }], 98);
   const PM = sM.players[0];
