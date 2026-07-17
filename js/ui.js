@@ -163,6 +163,7 @@
     el.scrollTop = el.scrollHeight;
   }
   function sendChat() {
+    if (App.role === 'tour') return; // v1.15: demo συνομιλία μόνο για ανάγνωση
     const inp = $('chatInput');
     const text = (inp.value || '').trim().slice(0, 200);
     if (!text) return;
@@ -232,6 +233,7 @@
 
   // ============================================================ ACTIONS (κοινό μονοπάτι host/guest)
   function act(action) {
+    if (App.role === 'tour') return; // v1.15: στην Ξενάγηση τίποτα δεν εκτελείται
     if (App.role === 'guest') { App.net.act(action); return; }
     applyAs(App.myId, action);
   }
@@ -424,7 +426,7 @@
 
   // Αυτόματο παίξιμο: bots + αποσυνδεδεμένοι
   function scheduleAuto() {
-    if (App.role === 'guest') return;
+    if (App.role !== 'host') return; // v1.15: bots/auto-play ΜΟΝΟ στον host (όχι guest/tour)
     clearTimeout(App.botTimer);
     if (!App.game || App.game.phase !== 'playing') return;
     const actorId = App.game.pending ? App.game.pending.playerId : E.currentPlayer(App.game).id;
@@ -590,7 +592,7 @@
     const set = (id, key, html) => { const el = $(id); if (el) { if (html) el.innerHTML = t(key); else el.textContent = t(key); } };
     set('lblTagline', 'tagline'); set('lblName', 'yourName'); set('lblNew', 'newGame');
     set('lblJoin', 'joinRoom'); set('lblHomeFoot', 'homeFoot', true);
-    set('btnCreate', 'createRoom'); set('btnJoin', 'joinBtn'); set('btnRulesHome', 'rulesBtn');
+    set('btnCreate', 'createRoom'); set('btnJoin', 'joinBtn'); set('btnRulesHome', 'rulesBtn'); set('btnTour', 'tourBtn');
     $('playerName').placeholder = t('namePh'); $('joinCode').placeholder = t('codePh');
     set('lblRoom', 'room'); set('btnShare', 'shareBtn'); set('lblPlayers', 'players');
     set('lblPickPawn', 'pickPawn'); set('lblAddBot', 'addBot'); set('btnStart', 'startBtn');
@@ -982,10 +984,11 @@
     }
 
     box.innerHTML = status +
-      '<div class="meter-top"><div><div class="muted">' + t('meterLbl') + '</div>' +
+      // v1.15: το #tourMeter είναι «αγκίστρι» για την Ξενάγηση (spotlight στο meter)
+      '<div id="tourMeter"><div class="meter-top"><div><div class="muted">' + t('meterLbl') + '</div>' +
       '<div class="meter-pct">' + pct + '%</div></div>' +
       '<div style="text-align:right"><div class="muted">' + t('age') + '</div><div style="font-size:26px; font-weight:800">' + p.age + '</div></div></div>' +
-      '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
+      '<div class="bar"><div class="fill" style="width:' + Math.min(100, pct) + '%"></div></div></div>' +
       '<div class="statgrid">' +
       '<div class="stat">' + dpop(App.deltas.cash, 3800, false) + '<div class="k">' + t('cash') + '</div><div class="v"' + (p.cash < 0 ? ' style="color:var(--red)"' : '') + '>' + fmt(p.cash) + '</div></div>' +
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — δεξιά από τα ΜΕΤΡΗΤΑ, αριστερά από το ΠΑΘΗΤΙΚΟ (θέση Γιώργου)
@@ -1002,10 +1005,12 @@
       Object.keys(p.expenses).map(k => '<div class="exprow"><span>' + esc(I.expName(k)) + dinline(App.deltas.exp[k]) + '</span><b>' + fmt(p.expenses[k]) + '</b></div>').join('') +
       '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalExp') + '</b></span><b style="color:var(--yellow)">' + fmt(exp) + '</b></div>' +
       '</details>' +
+      // v1.15: #tourPortfolio — αγκίστρι Ξενάγησης (χαρτοφυλάκιο + δάνεια)
+      '<div id="tourPortfolio">' +
       '<h3 style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:10px 0 4px;">' + t('portfolio') + '</h3>' +
       inv +
       (p.inv.length ? '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('totalInvInc') + '</b></span><b style="color:var(--accent)">+' + fmt(pas + bondInc) + t('perCycle') + ' <span class="muted" style="font-weight:400;">(' + t('valueTag', { v: fmt(E.invTotalCost(p)) }) + ')</span></b></div>' : '') +
-      loanHtml;
+      loanHtml + '</div>';
 
     box.querySelectorAll('[data-redeem]').forEach(b => b.onclick = () => act({ a: 'redeem-bond', uid: b.dataset.redeem }));
     box.querySelectorAll('[data-sellf]').forEach(b => b.onclick = () => openFundingSale(b.dataset.sellf));
@@ -1367,6 +1372,135 @@
     $('fsCancel').onclick = closeOverlay;
   }
 
+  // ============================================================ v1.15: ΞΕΝΑΓΗΣΗ (guided tour)
+  // Demo παρτίδα στο ΠΡΑΓΜΑΤΙΚΟ interface, με ρόλο 'tour' — μηδέν δίκτυο/δωμάτιο/αποθήκευση.
+  const TOUR_STEPS = [
+    { sel: '#boardbox', k: 'board' },
+    { sel: '#boardbox', k: 'stacks', glow: true },
+    { sel: '#tourMeter', k: 'meter' },
+    { sel: '#myDash .statgrid', k: 'stats' },
+    { sel: '#tourPortfolio', k: 'portfolio' },
+    { sel: '#logCard', k: 'log' },
+    { sel: '#chatCard', k: 'chat' },
+    { sel: '#boardCenter', k: 'roll' },
+    { sel: null, k: 'done' },
+  ];
+
+  function makeTourGame() {
+    const you = I.lang === 'en' ? 'You' : 'Εσύ';
+    const g = E.newGame([
+      { id: 'p0', name: you, pawn: '🐎' },
+      { id: 'p1', name: 'Ελένη', pawn: '🚗' },
+      { id: 'p2', name: 'Κροίσος', isBot: true, strategy: 'tycoon' },
+    ], 12345);
+    const p = g.players[0];
+    p.age = 33; p.cash = 2650; p.savings = 400;
+    p.inv.push({ uid: 'd1', cardId: 'PG4', kind: 'P', color: 'G', title: 'Αμοιβαίο Κεφάλαιο Δυτικής Ευρώπης', cost: 1000, income: 60 });
+    p.inv.push({ uid: 'd2', cardId: 'PY1', kind: 'P', color: 'Y', title: 'REIT εστιατορίων', cost: 600, income: 80 });
+    p.inv.push({ uid: 'd3', cardId: 'BB16', kind: 'bb', title: 'Καντίνα δίπλα σε παραλία.', cost: 5000, income: 275 });
+    p.inv.push({ uid: 'd4', cardId: 'PB1', kind: 'bond', title: 'Κρατικό Ομόλογο', cost: 1000, income: 0, tokens: 4 });
+    p.loans.push({ uid: 'dl', amount: 1000, payment: 100, remaining: 7 });
+    p.loansTaken = 1;
+    p.pos = 6;
+    g.players[1].pos = 12; g.players[1].age = 32; g.players[1].cash = 3100;
+    g.players[2].pos = 19; g.players[2].age = 34; g.players[2].cash = 1900;
+    g.players[2].inv.push({ uid: 'd5', cardId: 'BB10', kind: 'bb', title: 'Δημιουργείς το επιτραπέζιο «I Quit».', cost: 4000, income: 280 });
+    g.turn = 0; g.pending = null; g.lastRoll = null;
+    g.log = [
+      { k: 'lg_roll', p: { n: 'Ελένη', d1: 4, d2: 3, s: 7 } },
+      { k: 'lg_buyP', p: { n: you, colors: 'G', cid: 'PG4', v: '1.000€', inc: '60€' } },
+      { k: 'lg_inflation', p: { r: 4 } },
+    ];
+    g.logSeq = 3;
+    return g;
+  }
+
+  function tourStart() {
+    App.tourSaved = { role: App.role, myId: App.myId, game: App.game, chat: App.chat, logOpen: App.logOpen };
+    App.role = 'tour'; App.myId = 'p0';
+    App.game = makeTourGame();
+    App.prevMe = null; App.deltas = { exp: {} }; // καθαροί δείκτες — όχι +/- «φαντάσματα»
+    App.chat = [
+      { from: 'p1', name: 'Ελένη', color: '#e25b54', text: t('tourChat1') },
+      { from: 'p0', name: I.lang === 'en' ? 'You' : 'Εσύ', color: '#3b82f6', text: t('tourChat2') },
+    ];
+    App.logOpen = true;
+    show('game');
+    render();
+    renderChat();
+    tourGo(0);
+  }
+
+  function tourEnd() {
+    clearTimeout(App.tourPosTimer);
+    ['tourScrim', 'tourSpot', 'tourTip'].forEach(id => { const el = $(id); if (el) el.remove(); });
+    document.querySelectorAll('.tour-glow').forEach(el => el.classList.remove('tour-glow'));
+    const s = App.tourSaved || {};
+    App.role = s.role || null; App.myId = s.myId || null;
+    App.game = s.game || null; App.chat = s.chat || []; App.logOpen = s.logOpen;
+    App.prevMe = null; App.deltas = { exp: {} };
+    App.tourSaved = null; App.tourStep = null;
+    window.scrollTo({ top: 0 });
+    if (App.game) { show('game'); render(); }
+    else show('home');
+    renderChat();
+  }
+
+  function tourGo(i) {
+    if (i < 0 || i >= TOUR_STEPS.length) return tourEnd();
+    App.tourStep = i;
+    const st = TOUR_STEPS[i];
+    document.querySelectorAll('.stack').forEach(el => el.classList.toggle('tour-glow', !!st.glow));
+    const el = st.sel ? document.querySelector(st.sel) : null;
+    // mobile: κύλισε ομαλά στο στοιχείο ΠΡΙΝ μετρηθεί η θέση του (χωρίς zoom — μόνο scroll)
+    if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); } }
+    clearTimeout(App.tourPosTimer);
+    App.tourPosTimer = setTimeout(() => positionTour(), el ? 420 : 0);
+  }
+
+  function positionTour() {
+    if (App.tourStep == null) return;
+    const st = TOUR_STEPS[App.tourStep];
+    let scrim = $('tourScrim'), spot = $('tourSpot'), tip = $('tourTip');
+    if (!scrim) { scrim = document.createElement('div'); scrim.id = 'tourScrim'; document.body.appendChild(scrim); }
+    if (!spot) { spot = document.createElement('div'); spot.id = 'tourSpot'; document.body.appendChild(spot); }
+    if (!tip) { tip = document.createElement('div'); tip.id = 'tourTip'; document.body.appendChild(tip); }
+    const el = st.sel ? document.querySelector(st.sel) : null;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let r = null;
+    if (el) {
+      const b = el.getBoundingClientRect();
+      r = { left: Math.max(2, b.left - 6), top: Math.max(2, b.top - 6), width: Math.min(vw - 4, b.width + 12), height: b.height + 12 };
+      spot.style.cssText = 'display:block; left:' + r.left + 'px; top:' + r.top + 'px; width:' + r.width + 'px; height:' + r.height + 'px;';
+    } else {
+      spot.style.cssText = 'display:block; left:50vw; top:38vh; width:0; height:0; border:none;';
+    }
+    tip.innerHTML =
+      '<div class="tt-t">' + t('tourT_' + st.k) + '</div>' +
+      '<div class="tt-b">' + t('tourB_' + st.k) + '</div>' +
+      '<div class="tt-row"><span class="tt-n">' + (App.tourStep + 1) + '/' + TOUR_STEPS.length + '</span>' +
+      '<span style="flex:1"></span>' +
+      (App.tourStep > 0 ? '<button class="ghost" id="tourBack">' + t('tourBack') + '</button>' : '') +
+      '<button class="buy" id="tourNext">' + t(App.tourStep === TOUR_STEPS.length - 1 ? 'tourFinish' : 'tourNext') + '</button></div>' +
+      '<button class="tt-skip" id="tourSkip">' + t('tourSkip') + '</button>';
+    // Θέση tooltip: κάτω από το spotlight αν χωρά, αλλιώς από πάνω, αλλιώς κεντραρισμένο
+    tip.style.visibility = 'hidden'; tip.style.display = 'block';
+    const tw = Math.min(330, vw - 20), th = tip.offsetHeight || 170;
+    tip.style.width = tw + 'px';
+    let tl, tt;
+    if (!r) { tl = (vw - tw) / 2; tt = Math.max(12, (vh - th) / 2); }
+    else {
+      tl = Math.min(Math.max(10, r.left), vw - tw - 10);
+      if (r.top + r.height + th + 14 < vh) tt = r.top + r.height + 10;
+      else if (r.top - th - 14 > 0) tt = r.top - th - 10;
+      else { tt = Math.max(12, (vh - th) / 2); tl = Math.max(10, Math.min(vw - tw - 10, r.left + r.width + 12)); }
+    }
+    tip.style.left = tl + 'px'; tip.style.top = tt + 'px'; tip.style.visibility = 'visible';
+    $('tourNext').onclick = () => tourGo(App.tourStep + 1);
+    const tb = $('tourBack'); if (tb) tb.onclick = () => tourGo(App.tourStep - 1);
+    $('tourSkip').onclick = tourEnd;
+  }
+
   // v1.5: κατηγορίες των player analytics (σειρά εμφάνισης)
   const STAT_CATS = ['G', 'Y', 'R', 'funding', 'bb', 'bond', 'masters', 'taxprepay', 'betterloan'];
 
@@ -1504,6 +1638,11 @@
 
     // v0.9: Κανόνες & γλώσσα — διαθέσιμα από αρχική, lobby και μέσα στο παιχνίδι
     ['btnRules', 'btnRulesHome', 'btnRulesLobby'].forEach(id => { const b = $(id); if (b) b.onclick = showRules; });
+    // v1.15: Ξενάγηση + επανατοποθέτηση spotlight σε resize/scroll (mobile-safe)
+    const btnTour = $('btnTour');
+    if (btnTour) btnTour.onclick = tourStart;
+    window.addEventListener('resize', () => { if (App.tourStep != null) positionTour(); });
+    window.addEventListener('scroll', () => { if (App.tourStep != null) positionTour(); }, { passive: true });
     ['btnLang', 'btnLangHome'].forEach(id => { const b = $(id); if (b) b.onclick = toggleLang; });
     applyStatic();
 
