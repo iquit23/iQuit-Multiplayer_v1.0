@@ -114,7 +114,8 @@
         return { a: 'resolve', partnerId: partner.id };
       }
       case 'forced-sale': {
-        const sellable = p.inv.slice().sort((a, b) => yieldOf(a) - yieldOf(b));
+        // v1.14: μόνο BB/ομόλογα είναι πωλήσιμα — πούλα πρώτα το χαμηλότερης απόδοσης
+        const sellable = p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond').sort((a, b) => yieldOf(a) - yieldOf(b));
         return { a: 'resolve', uid: sellable[0].uid };
       }
       case 'funding-offer': {

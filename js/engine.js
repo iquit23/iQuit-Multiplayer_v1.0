@@ -300,18 +300,24 @@
   function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
   // ---------- Forced sale & bankruptcy ----------
-  function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }
+  // v1.14 (απόφαση Γιώργου): στην αναγκαστική πώληση πωλούνται ΜΟΝΟ Big Business (80%) —
+  // όχι Projects/Χρηματοδοτήσεις. Τα Ομόλογα (100%) παραμένουν πωλήσιμα ως εργαλείο
+  // ρευστότητας (ο κανόνας τους: «πωλούνται οποιαδήποτε στιγμή»). Χωρίς πωλήσιμα → ΧΡΕΟΚΟΠΙΑ.
+  function forcedSellable(p) { return p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond'); }
+  function needForcedSale(p) { return p.cash < 0 && forcedSellable(p).length > 0; }
   // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
   // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
   function bankruptIfBroke(state, p) {
     // v1.6: έσχατη διάσωση — πριν τη χρεοκοπία, η ΑΠΟΤΑΜΙΕΥΣΗ ρευστοποιείται 1:1
     // (αυτός είναι άλλωστε ο ρόλος ενός ταμείου έκτακτης ανάγκης)
-    if (p.cash < 0 && p.inv.length === 0 && (p.savings || 0) > 0 && isActive(p)) {
+    if (p.cash < 0 && forcedSellable(p).length === 0 && (p.savings || 0) > 0 && isActive(p)) {
       p.cash += p.savings;
       log(state, 'lg_savRescue', { n: pname(p), a: fmt(p.savings) });
       p.savings = 0;
     }
-    if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
+    // v1.14: χρεοκοπία όταν δεν υπάρχει ΤΙΠΟΤΑ πωλήσιμο (BB/ομόλογο) — τα Projects
+    // δεν σώζουν πλέον από τη χρεοκοπία (απόφαση Γιώργου)
+    if (p.cash < 0 && forcedSellable(p).length === 0 && isActive(p)) {
       p.bankrupt = true;
       log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
       if (!activePlayers(state).length) endGame(state);
@@ -530,8 +536,9 @@
         discard(state, 'project', c.id);
         break;
       case 'betterloan': {
-        // Εφαρμόζεται στο δάνειο με τις περισσότερες δόσεις· αλλιώς πιστώνεται στο επόμενο
-        const active = p.loans.slice().sort((a, b) => b.remaining - a.remaining)[0];
+        // v1.14 (απόφαση Γιώργου): εφαρμόζεται στο δάνειο με τη ΜΕΓΑΛΥΤΕΡΗ ΔΟΣΗ
+        // (το πιο «βαρύ» ανά είσπραξη)· αλλιώς πιστώνεται στο επόμενο δάνειο
+        const active = p.loans.slice().sort((a, b) => b.payment - a.payment)[0];
         if (active) {
           active.remaining = Math.max(0, active.remaining - c.fewerPayments);
           log(state, 'lg_blActive', { n: pname(p), f: c.fewerPayments, a: fmt(active.amount), r: active.remaining });
@@ -771,6 +778,8 @@
       case 'forced-sale': {
         const inv = p.inv.find(i => i.uid === action.uid);
         if (!inv) return err('Δεν βρέθηκε η επένδυση.');
+        // v1.14: πωλούνται ΜΟΝΟ Big Business (80%) ή Ομόλογα (100%) — όχι Projects
+        if (inv.kind !== 'bb' && inv.kind !== 'bond') return err('Στην αναγκαστική πώληση πωλούνται μόνο Big Business ή Ομόλογα.');
         const val = inv.kind === 'bond' ? bondValue(inv) : 0.8 * inv.cost;
         p.cash += val;
         p.inv = p.inv.filter(i => i.uid !== inv.uid);

@@ -287,6 +287,8 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 /* v1.10 (αίτημα Γιώργου): η καρτέλα του παίκτη (meter → δάνεια) μένει ΦΩΤΙΣΜΕΝΗ όσο είναι
    ανοιχτή μια κάρτα — μόνο ιστορικό/υπόλοιπα σκοτεινιάζουν. z-index 110 > overlay(100). */
 #myDash{position:relative; z-index:110;}
+/* v1.14: στο ΤΕΛΟΣ της παρτίδας η καρτέλα υποχωρεί — τα «Αναλυτικά παρτίδας» φαίνονται ολόκληρα */
+body.game-over #myDash{z-index:auto;}
 .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
   max-width:400px; width:100%; max-height:88vh; overflow:auto;}
 .gamecard{border-radius:14px; padding:16px; margin-bottom:14px; border:2px solid; text-align:center;}
@@ -366,7 +368,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 1.9</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.0</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -739,7 +741,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       hintT_crash: '💥 Crash', hintB_crash: 'Κραχ αγοράς: χάνεται μια Project επένδυση στο χρώμα που χτυπήθηκε. Γι’ αυτό αξίζει η διαφοροποίηση του χαρτοφυλακίου.',
       hintT_ffail: '📉 Funding Fails', hintB_ffail: 'Μια Χρηματοδότηση χάνεται. Μην στηρίζεις το πλάνο σου σε μία μόνο πηγή εισοδήματος.',
       hintT_savings: '🐖 ΑΠΟΤΑΜΙΕΥΣΗ', hintB_savings: 'Ταμείο έκτακτης ανάγκης: κλειδωμένα χρήματα που απορροφούν αρνητικά Moments και φόρους με έκπτωση 30%. Η πρόνοια επιβραβεύεται!',
-      hintT_forced: '⚠️ Αναγκαστική Πώληση', hintB_forced: 'Τα μετρητά σου έγιναν αρνητικά — πουλάς περιουσία στο 80% της αξίας της. Γι’ αυτό χρειάζεσαι πάντα «μαξιλάρι» ρευστότητας!',
+      hintT_forced: '⚠️ Αναγκαστική Πώληση', hintB_forced: 'Τα μετρητά σου έγιναν αρνητικά — πουλάς ΜΟΝΟ Big Business (στο 80%) ή Ομόλογα (στο 100%). Αν δεν έχεις τίποτα από τα δύο, χρεοκοπείς! Γι’ αυτό χρειάζεσαι πάντα «μαξιλάρι» ρευστότητας.',
       hintT_offer: '🤝 Προσφορά Χρηματοδότησης', hintB_offer: 'Ένας παίκτης σου προσφέρει Χρηματοδότησή του. Σύγκρινε τιμή και εισόδημα πριν αποφασίσεις — καμιά φορά η μεταπώληση συμφέρει και τους δύο.',
       stat_G: '🟢 Πράσινα Projects', stat_Y: '🟡 Κίτρινα Projects', stat_R: '🔴 Κόκκινα Projects',
       stat_funding: '💼 Χρηματοδοτήσεις', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Ομόλογα',
@@ -764,7 +766,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       mastersEffect: 'Μισθός +{v} μόνιμα', taxprepayEffect: 'Έξοδο «Φόροι» −{v} μόνιμα', betterloanEffect: '−{n} δόσεις δανείου',
       lsPartnerCat: 'LIFESTYLE — ΕΚΑΣΤΟΣ', lsPartnerBody: '{cat}: <b>{d}€</b> για σένα ΚΑΙ για όποιον διαλέξεις',
       forcedTitle: '⚠️ Αναγκαστική πώληση',
-      forcedBody: 'Τα μετρητά σου είναι {v}. Πούλα επενδύσεις στην τράπεζα (80% της αξίας — ομόλογα στο κεφάλαιό τους) μέχρι να καλύψεις το έλλειμμα.',
+      forcedBody: 'Τα μετρητά σου είναι {v}. Πούλα Big Business (80% της αξίας) ή Ομόλογα (στο κεφάλαιό τους) μέχρι να καλύψεις το έλλειμμα — τα Projects ΔΕΝ πωλούνται εδώ.',
       offerCat: 'ΠΡΟΣΦΟΡΑ ΧΡΗΜΑΤΟΔΟΤΗΣΗΣ', offerBody: 'Ο {name} σου την προσφέρει για <b>{v}</b>',
       fundingSale: 'Πώληση Χρηματοδότησης', fundingMin: '«{title}» — ελάχιστη τιμή {v}', cancel: 'Άκυρο',
       noTargets: 'Δεν υπάρχουν διαθέσιμοι παίκτες.',
@@ -921,7 +923,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       hintT_crash: '💥 Crash', hintB_crash: 'Market crash: a Project investment in the hit color is lost. That’s why diversification matters.',
       hintT_ffail: '📉 Funding Fails', hintB_ffail: 'A Funding is lost. Never rely on a single source of income.',
       hintT_savings: '🐖 SAVINGS', hintB_savings: 'Emergency fund: locked money that absorbs negative Moments and taxes at a 30% discount. Foresight pays!',
-      hintT_forced: '⚠️ Forced Sale', hintB_forced: 'Your cash went negative — you must sell assets at 80% of value. That’s why you always need a cash cushion!',
+      hintT_forced: '⚠️ Forced Sale', hintB_forced: 'Your cash went negative — you may sell ONLY Big Business (at 80%) or Bonds (at 100%). If you own neither, you go bankrupt! That’s why you always need a cash cushion.',
       hintT_offer: '🤝 Funding Offer', hintB_offer: 'A player is offering you one of their Fundings. Compare price and income before deciding — sometimes a resale benefits both.',
       stat_G: '🟢 Green Projects', stat_Y: '🟡 Yellow Projects', stat_R: '🔴 Red Projects',
       stat_funding: '💼 Funding', stat_bb: '🏆 Big Business', stat_bond: '🏛️ Bonds',
@@ -945,7 +947,7 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
       mastersEffect: 'Salary +{v} permanently', taxprepayEffect: '“Taxes” expense −{v} permanently', betterloanEffect: '−{n} loan payments',
       lsPartnerCat: 'LIFESTYLE — EACH', lsPartnerBody: '{cat}: <b>€{d}</b> for you AND a player of your choice',
       forcedTitle: '⚠️ Forced sale',
-      forcedBody: 'Your cash is {v}. Sell investments to the bank (80% of value — bonds at principal) until you cover the shortfall.',
+      forcedBody: 'Your cash is {v}. Sell Big Business (80% of value) or Bonds (at principal) until you cover the shortfall — Projects can NOT be sold here.',
       offerCat: 'FUNDING OFFER', offerBody: '{name} offers it to you for <b>{v}</b>',
       fundingSale: 'Sell a Funding card', fundingMin: '“{title}” — minimum price {v}', cancel: 'Cancel',
       noTargets: 'No available players.',
@@ -1463,18 +1465,24 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function momentAmount(state, c) { return Math.round(c.amount || 0); }
 
   // ---------- Forced sale & bankruptcy ----------
-  function needForcedSale(p) { return p.cash < 0 && p.inv.length > 0; }
+  // v1.14 (απόφαση Γιώργου): στην αναγκαστική πώληση πωλούνται ΜΟΝΟ Big Business (80%) —
+  // όχι Projects/Χρηματοδοτήσεις. Τα Ομόλογα (100%) παραμένουν πωλήσιμα ως εργαλείο
+  // ρευστότητας (ο κανόνας τους: «πωλούνται οποιαδήποτε στιγμή»). Χωρίς πωλήσιμα → ΧΡΕΟΚΟΠΙΑ.
+  function forcedSellable(p) { return p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond'); }
+  function needForcedSale(p) { return p.cash < 0 && forcedSellable(p).length > 0; }
   // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
   // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
   function bankruptIfBroke(state, p) {
     // v1.6: έσχατη διάσωση — πριν τη χρεοκοπία, η ΑΠΟΤΑΜΙΕΥΣΗ ρευστοποιείται 1:1
     // (αυτός είναι άλλωστε ο ρόλος ενός ταμείου έκτακτης ανάγκης)
-    if (p.cash < 0 && p.inv.length === 0 && (p.savings || 0) > 0 && isActive(p)) {
+    if (p.cash < 0 && forcedSellable(p).length === 0 && (p.savings || 0) > 0 && isActive(p)) {
       p.cash += p.savings;
       log(state, 'lg_savRescue', { n: pname(p), a: fmt(p.savings) });
       p.savings = 0;
     }
-    if (p.cash < 0 && p.inv.length === 0 && isActive(p)) {
+    // v1.14: χρεοκοπία όταν δεν υπάρχει ΤΙΠΟΤΑ πωλήσιμο (BB/ομόλογο) — τα Projects
+    // δεν σώζουν πλέον από τη χρεοκοπία (απόφαση Γιώργου)
+    if (p.cash < 0 && forcedSellable(p).length === 0 && isActive(p)) {
       p.bankrupt = true;
       log(state, 'lg_bankrupt', { n: pname(p), v: fmt(p.cash) });
       if (!activePlayers(state).length) endGame(state);
@@ -1693,8 +1701,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         discard(state, 'project', c.id);
         break;
       case 'betterloan': {
-        // Εφαρμόζεται στο δάνειο με τις περισσότερες δόσεις· αλλιώς πιστώνεται στο επόμενο
-        const active = p.loans.slice().sort((a, b) => b.remaining - a.remaining)[0];
+        // v1.14 (απόφαση Γιώργου): εφαρμόζεται στο δάνειο με τη ΜΕΓΑΛΥΤΕΡΗ ΔΟΣΗ
+        // (το πιο «βαρύ» ανά είσπραξη)· αλλιώς πιστώνεται στο επόμενο δάνειο
+        const active = p.loans.slice().sort((a, b) => b.payment - a.payment)[0];
         if (active) {
           active.remaining = Math.max(0, active.remaining - c.fewerPayments);
           log(state, 'lg_blActive', { n: pname(p), f: c.fewerPayments, a: fmt(active.amount), r: active.remaining });
@@ -1934,6 +1943,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       case 'forced-sale': {
         const inv = p.inv.find(i => i.uid === action.uid);
         if (!inv) return err('Δεν βρέθηκε η επένδυση.');
+        // v1.14: πωλούνται ΜΟΝΟ Big Business (80%) ή Ομόλογα (100%) — όχι Projects
+        if (inv.kind !== 'bb' && inv.kind !== 'bond') return err('Στην αναγκαστική πώληση πωλούνται μόνο Big Business ή Ομόλογα.');
         const val = inv.kind === 'bond' ? bondValue(inv) : 0.8 * inv.cost;
         p.cash += val;
         p.inv = p.inv.filter(i => i.uid !== inv.uid);
@@ -2134,7 +2145,8 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
         return { a: 'resolve', partnerId: partner.id };
       }
       case 'forced-sale': {
-        const sellable = p.inv.slice().sort((a, b) => yieldOf(a) - yieldOf(b));
+        // v1.14: μόνο BB/ομόλογα είναι πωλήσιμα — πούλα πρώτα το χαμηλότερης απόδοσης
+        const sellable = p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond').sort((a, b) => yieldOf(a) - yieldOf(b));
         return { a: 'resolve', uid: sellable[0].uid };
       }
       case 'funding-offer': {
@@ -3151,6 +3163,9 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
   function render() {
     const g = App.game;
     if (!g) return;
+    // v1.14: όταν η παρτίδα τελειώσει, η καρτέλα του παίκτη γίνεται «δευτερεύουσα» —
+    // τα modals τέλους (Αναλυτικά, κατάταξη) φαίνονται πλέον ολόκληρα
+    document.body.classList.toggle('game-over', g.phase === 'ended');
     checkAnim(g);
     $('boardbox').classList.toggle('tilt', App.board3d);
     // v1.0 (#6): όσο το πιόνι περπατάει, ΔΕΝ αποκαλύπτουμε ιστορικό/ταμεία/κάρτες — μόνο ταμπλό & ζάρια
@@ -3689,10 +3704,11 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
       $('modalBody').querySelectorAll('[data-partner]').forEach(b => b.onclick = () => act({ a: 'resolve', partnerId: b.dataset.partner }));
       return;
     } else if (pend.type === 'forced-sale') {
+      // v1.14: στην αναγκαστική πώληση προσφέρονται ΜΟΝΟ Big Business (80%) & Ομόλογα (100%)
       let html = '<h3 style="margin-bottom:6px;">' + t('forcedTitle') + '</h3>' +
         '<div class="muted" style="margin-bottom:12px;">' + t('forcedBody', { v: fmt(p.cash) }) + '</div>' +
         '<div class="choice-list">' +
-        p.inv.map(i => {
+        p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond').map(i => {
           const val = i.kind === 'bond' ? E.bondValue(i) : 0.8 * i.cost;
           return '<button data-fs="' + i.uid + '">' + esc(invTitle(i)) + ' <b style="float:right">+' + fmt(val) + '</b></button>';
         }).join('') + '</div>';

@@ -758,6 +758,9 @@
   function render() {
     const g = App.game;
     if (!g) return;
+    // v1.14: όταν η παρτίδα τελειώσει, η καρτέλα του παίκτη γίνεται «δευτερεύουσα» —
+    // τα modals τέλους (Αναλυτικά, κατάταξη) φαίνονται πλέον ολόκληρα
+    document.body.classList.toggle('game-over', g.phase === 'ended');
     checkAnim(g);
     $('boardbox').classList.toggle('tilt', App.board3d);
     // v1.0 (#6): όσο το πιόνι περπατάει, ΔΕΝ αποκαλύπτουμε ιστορικό/ταμεία/κάρτες — μόνο ταμπλό & ζάρια
@@ -1296,10 +1299,11 @@
       $('modalBody').querySelectorAll('[data-partner]').forEach(b => b.onclick = () => act({ a: 'resolve', partnerId: b.dataset.partner }));
       return;
     } else if (pend.type === 'forced-sale') {
+      // v1.14: στην αναγκαστική πώληση προσφέρονται ΜΟΝΟ Big Business (80%) & Ομόλογα (100%)
       let html = '<h3 style="margin-bottom:6px;">' + t('forcedTitle') + '</h3>' +
         '<div class="muted" style="margin-bottom:12px;">' + t('forcedBody', { v: fmt(p.cash) }) + '</div>' +
         '<div class="choice-list">' +
-        p.inv.map(i => {
+        p.inv.filter(i => i.kind === 'bb' || i.kind === 'bond').map(i => {
           const val = i.kind === 'bond' ? E.bondValue(i) : 0.8 * i.cost;
           return '<button data-fs="' + i.uid + '">' + esc(invTitle(i)) + ' <b style="float:right">+' + fmt(val) + '</b></button>';
         }).join('') + '</div>';

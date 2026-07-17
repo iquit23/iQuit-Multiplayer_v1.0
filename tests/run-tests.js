@@ -385,14 +385,54 @@ section('v1.4 Χρεοκοπία');
   E.applyAction(sS, 'x', { a: 'resolve', choice: 'ok' });
   assert(PX.bankrupt === true && sS.phase === 'ended', 'solo: η χρεοκοπία τερματίζει το παιχνίδι');
   // Με επενδύσεις: πρώτα forced sale· αν και μετά την πώληση ΟΛΩΝ μένει αρνητικός → χρεοκοπία
+  // v1.14: στην αναγκαστική πώληση πωλούνται ΜΟΝΟ BB (80%) / Ομόλογα (100%) — τα Projects ΟΧΙ
   let sF = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 93);
   const PF = sF.players[0];
   PF.cash = -2000;
-  PF.inv.push({ uid: 'z1', cardId: 'PG2', kind: 'P', color: 'G', title: 'Μετοχή', cost: 800, income: 48 });
+  PF.inv.push({ uid: 'z1', cardId: 'PG2', kind: 'P', color: 'G', title: 'ΑΚ', cost: 800, income: 48 });
+  PF.inv.push({ uid: 'z2', cardId: 'BB16', kind: 'bb', title: 'Καντίνα', cost: 5000, income: 275 });
   sF.pending = { type: 'forced-sale', playerId: 'a', deficit: 2000 };
-  E.applyAction(sF, 'a', { a: 'resolve', uid: 'z1' });
-  assert(PF.inv.length === 0 && PF.cash === -2000 + 640, 'πούλησε το μοναδικό asset στο 80% (+640)');
-  assert(PF.bankrupt === true, 'παρέμεινε αρνητικός χωρίς τίποτα να πουλήσει → ΧΡΕΟΚΟΠΙΑ');
+  let rF = E.applyAction(sF, 'a', { a: 'resolve', uid: 'z1' });
+  assert(rF && rF.error, 'v1.14: το Project ΔΕΝ πωλείται στην αναγκαστική πώληση');
+  rF = E.applyAction(sF, 'a', { a: 'resolve', uid: 'z2' });
+  assert((!rF || !rF.error) && PF.cash === -2000 + 4000 && PF.bankrupt === false, 'το BB πωλήθηκε στο 80% (+4.000) και τον έσωσε');
+  assert(PF.inv.length === 1 && PF.inv[0].uid === 'z1', 'το Project έμεινε στο χαρτοφυλάκιο');
+  // Με ΜΟΝΟ Project στο χαρτοφυλάκιο και αρνητικά μετρητά → κατευθείαν χρεοκοπία (δεν σώζει)
+  let sF2 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 94);
+  const PF2 = sF2.players[0];
+  PF2.cash = -500;
+  PF2.inv.push({ uid: 'q1', cardId: 'PR2', kind: 'P', color: 'R', title: 'Μετοχή', cost: 800, income: 160 });
+  sF2.pending = { type: 'reveal', playerId: 'a', cardId: 'M17', deck: 'moments' };
+  E.applyAction(sF2, 'a', { a: 'resolve', choice: 'ok' });
+  assert(PF2.bankrupt === true && PF2.inv.length === 1, 'v1.14: μόνο Projects στο χέρι = χρεοκοπία (δεν πωλούνται)');
+  // Ομόλογο σώζει (100% της αξίας)
+  let sF3 = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 95);
+  const PF3 = sF3.players[0];
+  PF3.cash = -500;
+  PF3.inv.push({ uid: 'b1', cardId: 'PB1', kind: 'bond', title: 'Ομόλογο', cost: 1000, income: 0, tokens: 3 });
+  sF3.pending = { type: 'reveal', playerId: 'a', cardId: 'M17', deck: 'moments' };
+  E.applyAction(sF3, 'a', { a: 'resolve', choice: 'ok' });
+  assert(sF3.pending && sF3.pending.type === 'forced-sale', 'με ομόλογο στο χέρι ανοίγει αναγκαστική πώληση');
+  E.applyAction(sF3, 'a', { a: 'resolve', uid: 'b1' });
+  assert(PF3.cash === 500 && PF3.bankrupt === false, 'το ομόλογο πωλήθηκε στο 100% και τον έσωσε');
+}
+
+// ---------- 3ε5β. v1.14: Ευνοϊκότερο Δάνειο → στο δάνειο με τη ΜΕΓΑΛΥΤΕΡΗ ΔΟΣΗ
+section('v1.14 Ευνοϊκότερο Δάνειο (μεγαλύτερη δόση)');
+{
+  let sL = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 96);
+  sL.turn = 0;
+  const PL = sL.players[0];
+  // Δύο δάνεια: το #1 έχει ΠΕΡΙΣΣΟΤΕΡΕΣ δόσεις, το #2 ΜΕΓΑΛΥΤΕΡΗ δόση
+  PL.loans.push({ uid: 'l1', amount: 500, payment: 50, remaining: 18 });
+  PL.loans.push({ uid: 'l2', amount: 2000, payment: 200, remaining: 5 });
+  PL.loansTaken = 2;
+  PL.cash = 5000;
+  sL.pending = { type: 'card', playerId: 'a', deck: 'project', cardId: 'PL1', discount: 0, canWild: false, viaWild: false };
+  let rL = E.applyAction(sL, 'a', { a: 'resolve', choice: 'buy' });
+  assert((!rL || !rL.error), 'αγόρασε Ευνοϊκότερο Δάνειο');
+  const l1 = PL.loans.find(x => x.uid === 'l1'), l2 = PL.loans.find(x => x.uid === 'l2');
+  assert(l2.remaining === 2 && l1.remaining === 18, 'v1.14: οι −3 δόσεις πήγαν στο δάνειο με τη ΜΕΓΑΛΥΤΕΡΗ ΔΟΣΗ (200€), όχι στις περισσότερες δόσεις');
 }
 
 // ---------- 3ε3. v0.5: Δάνεια v2
@@ -532,7 +572,7 @@ for (let seed = 1; seed <= GAMES; seed++) {
     assert(st.phase === 'ended' && st.rankings && st.rankings.length === np, 'παιχνίδι #' + seed + ' ολοκληρώθηκε με κατάταξη');
     st.players.forEach(p => {
       // v1.4: ο χρεοκοπημένος βγαίνει νωρίς — εξαιρείται από τα τελικά invariants
-      if (p.bankrupt) { assert(p.cash < 0 && p.inv.length === 0, 'χρεοκοπία μόνο με αρνητικά μετρητά χωρίς περιουσία'); return; }
+      if (p.bankrupt) { assert(p.cash < 0 && p.inv.every(i => i.kind !== 'bb' && i.kind !== 'bond'), 'v1.14: χρεοκοπία μόνο με αρνητικά μετρητά χωρίς ΠΩΛΗΣΙΜΑ (BB/ομόλογα)'); return; }
       assert(p.retiredAge !== null || p.age >= 65, 'παίκτης τερμάτισε (παραίτηση ή 65)');
       assert(p.loans.length === 0, 'όλα τα δάνεια εξοφλημένα στο τέλος (65 ή I QUIT)');
     });
