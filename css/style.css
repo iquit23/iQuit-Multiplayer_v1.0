@@ -220,16 +220,20 @@ h1,h2,h3{margin:0;}
 .statgrid{display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-top:10px;} /* v1.6: +ΑΠΟΤΑΜΙΕΥΣΗ */
 .stat{background:var(--card2); border-radius:10px; padding:7px 9px; min-width:0; position:relative;}
 /* v1.9: εκπαιδευτικό «συννεφάκι» αριστερά από το ταμπλό */
-/* v1.10: ψηλά αριστερά (η κάρτα ανοίγει χαμηλότερα — δεν συμπίπτουν) και ΠΑΝΩ από το
-   σκοτείνιασμα του overlay (z-index 120 > 100) ώστε να διαβάζεται σαν την κάρτα */
+/* v1.10: ψηλά αριστερά, πάνω από το σκοτείνιασμα (z120>100).
+   v1.16: εμφάνιση «συννεφάκι σκέψης» — ασύμμετρες στρογγυλές γωνίες, απαλή σκιά και
+   δύο φυσαλίδες-ουρά προς το ταμπλό. Διακριτικό: σκούρο φόντο του παιχνιδιού, όχι κόμικ. */
 #hintBox{position:fixed; left:14px; top:64px; width:215px; z-index:120;
-  background:linear-gradient(160deg,#122036,#0d1626); border:1px solid var(--accent); border-radius:14px;
-  padding:13px 14px; box-shadow:0 8px 26px rgba(0,0,0,.45); animation:hintIn .35s ease;}
-#hintBox::after{content:''; position:absolute; right:-8px; top:42px;
-  border-left:8px solid var(--accent); border-top:8px solid transparent; border-bottom:8px solid transparent;}
+  background:linear-gradient(160deg,#122036,#0d1626); border:1px solid var(--accent);
+  border-radius:26px 20px 24px 18px;
+  padding:14px 16px; box-shadow:0 10px 28px rgba(0,0,0,.5); animation:hintIn .35s ease;}
+#hintBox::before{content:''; position:absolute; right:-16px; top:44px; width:13px; height:13px;
+  border-radius:50%; background:#101c30; border:1px solid var(--accent); box-shadow:0 4px 10px rgba(0,0,0,.4);}
+#hintBox::after{content:''; position:absolute; right:-27px; top:58px; width:7px; height:7px;
+  border-radius:50%; background:#101c30; border:1px solid var(--accent);}
 #hintBox .hb-t{font-weight:800; font-size:13px; color:var(--accent); margin-bottom:6px; line-height:1.35;}
 #hintBox .hb-b{font-size:12px; line-height:1.55; color:var(--txt);}
-@keyframes hintIn{from{opacity:0; transform:translateX(-10px);} to{opacity:1; transform:translateX(0);}}
+@keyframes hintIn{from{opacity:0; transform:translateX(-10px) scale(.96);} to{opacity:1; transform:translateX(0) scale(1);}}
 @media (max-width:1180px){#hintBox{display:none;}} /* σε στενές οθόνες δεν χωρά χωρίς να κρύβει το ταμπλό */
 /* v1.7: αιωρούμενος δείκτης αλλαγής ποσού (+200€ / −150€) πάνω από τα stat boxes */
 .dpop{position:absolute; top:-15px; right:2px; font-weight:800; font-size:12px; white-space:nowrap;
@@ -286,8 +290,15 @@ body.game-over #myDash{z-index:auto;}
 #tourSpot{position:fixed; z-index:400; border-radius:12px; pointer-events:none;
   box-shadow:0 0 0 9999px rgba(3,8,16,.82); border:2px solid var(--accent);
   transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;}
+/* v1.16: και το tooltip της Ξενάγησης σε στυλ «συννεφάκι» με ουρά προς το στοιχείο */
 #tourTip{position:fixed; z-index:401; background:var(--card); border:1px solid var(--accent);
-  border-radius:14px; padding:14px 14px 10px; box-shadow:0 10px 34px rgba(0,0,0,.55);}
+  border-radius:24px 18px 22px 20px; padding:14px 16px 10px; box-shadow:0 10px 34px rgba(0,0,0,.55);}
+#tourTip::before,#tourTip::after{content:none; position:absolute; border-radius:50%;
+  background:var(--card); border:1px solid var(--accent);}
+#tourTip.tail-up::before{content:''; top:-16px; left:36px; width:13px; height:13px;}
+#tourTip.tail-up::after{content:''; top:-27px; left:56px; width:7px; height:7px;}
+#tourTip.tail-down::before{content:''; bottom:-16px; left:36px; width:13px; height:13px;}
+#tourTip.tail-down::after{content:''; bottom:-27px; left:56px; width:7px; height:7px;}
 #tourTip .tt-t{font-weight:800; font-size:15px; color:var(--accent); margin-bottom:6px;}
 #tourTip .tt-b{font-size:13px; line-height:1.55;}
 #tourTip .tt-row{display:flex; align-items:center; gap:8px; margin-top:12px;}

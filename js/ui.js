@@ -265,7 +265,9 @@
     if (App.role !== 'host' || !App.game || App.game.phase !== 'playing') return;
     const g = App.game;
     if (!g.hintSeen) g.hintSeen = {};
-    const k = g.pending ? hintKeyFor(g.pending) : null;
+    let k = g.pending ? hintKeyFor(g.pending) : null;
+    // v1.16: την ΠΡΩΤΗ φορά που ανοίγει κάρτα Project, προηγείται η γενική εξήγηση «PROJECT»
+    if (g.pending && g.pending.type === 'card' && g.pending.deck === 'project' && !g.hintSeen.project) k = 'project';
     if (k && !g.hintSeen[k]) {
       g.hintSeen[k] = true;
       g.hintActive = { k: k, playerId: g.pending.playerId };
@@ -274,6 +276,18 @@
     if (g.hintActive) {
       const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
       if (actorNow !== g.hintActive.playerId) g.hintActive = null;
+    }
+    // v1.16: Salary & Tax δεν έχουν «απόφαση» — ανιχνεύονται από το πρόσφατο ιστορικό
+    if (!g.hintActive) {
+      const recent = g.log.slice(-6);
+      const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
+      if (!g.hintSeen.salary && recent.some(e => e && e.k && e.k.indexOf('lg_collect') === 0)) {
+        g.hintSeen.salary = true;
+        g.hintActive = { k: 'salary', playerId: actorNow };
+      } else if (!g.hintSeen.tax && recent.some(e => e && (e.k === 'lg_tax' || e.k === 'lg_taxNone' || e.k === 'lg_savTax'))) {
+        g.hintSeen.tax = true;
+        g.hintActive = { k: 'tax', playerId: actorNow };
+      }
     }
   }
 
@@ -1495,6 +1509,9 @@
       else if (r.top - th - 14 > 0) tt = r.top - th - 10;
       else { tt = Math.max(12, (vh - th) / 2); tl = Math.max(10, Math.min(vw - tw - 10, r.left + r.width + 12)); }
     }
+    // v1.16: ουρά «συννεφιού» προς το στοιχείο (πάνω αν το tooltip είναι από κάτω, αλλιώς κάτω)
+    tip.classList.remove('tail-up', 'tail-down');
+    if (r) tip.classList.add(tt > r.top + r.height / 2 ? 'tail-up' : 'tail-down');
     tip.style.left = tl + 'px'; tip.style.top = tt + 'px'; tip.style.visibility = 'visible';
     $('tourNext').onclick = () => tourGo(App.tourStep + 1);
     const tb = $('tourBack'); if (tb) tb.onclick = () => tourGo(App.tourStep - 1);
