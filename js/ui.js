@@ -240,6 +240,7 @@
 
   function applyAs(playerId, action) {
     if (!App.game || !action) return;
+    App._lastActorId = playerId; // v1.17: ποιος ΕΚΑΝΕ την ενέργεια (για σωστή απόδοση των hints)
     const r = E.applyAction(App.game, playerId, action);
     if (r && r.error) {
       if (playerId === App.myId) toast('⚠️ ' + esc(r.error));
@@ -261,32 +262,51 @@
   // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
   // (σε όλους τους παίκτες ταυτόχρονα, την πρώτη φορά που ο μηχανισμός συμβαίνει σε
   // ΟΠΟΙΟΝΔΗΠΟΤΕ) και μένει ορατό μέχρι ο παίκτης που τον σκανδάλισε να δώσει τη σειρά του.
+  // v1.17: ΜΟΝΟ αυτά τα συννεφάκια επιτρέπονται (λίστα Γιώργου + 3 χρώματα + χρηματοδοτήσεις).
+  // Καθένα εμφανίζεται ΜΙΑ φορά σε όλο το παιχνίδι, για όλους.
+  const HINTABLE = { PG: 1, PY: 1, PR: 1, funding: 1, bb: 1, project: 1, crash: 1, moments: 1, inflation: 1, lifestyle: 1, tax: 1, salary: 1, savings: 1, ffail: 1 };
+
   function updateHintState() {
     if (App.role !== 'host' || !App.game || App.game.phase !== 'playing') return;
     const g = App.game;
     if (!g.hintSeen) g.hintSeen = {};
-    let k = g.pending ? hintKeyFor(g.pending) : null;
-    // v1.16: την ΠΡΩΤΗ φορά που ανοίγει κάρτα Project, προηγείται η γενική εξήγηση «PROJECT»
-    if (g.pending && g.pending.type === 'card' && g.pending.deck === 'project' && !g.hintSeen.project) k = 'project';
+    // Νέες εγγραφές ιστορικού ΑΥΤΗΣ της ενέργειας — όχι σάρωση παλιών (v1.16 bug:
+    // παλιά lg_collect πυροδοτούσαν το «SALARY» πάνω σε άσχετα κουτιά/κάρτες)
+    const prevSeq = App._hintSeq || 0;
+    const freshCount = Math.max(0, Math.min(g.log.length, g.logSeq - prevSeq));
+    const fresh = freshCount ? g.log.slice(-freshCount) : [];
+    App._hintSeq = g.logSeq;
+
+    // 1) Υποψήφιο ΜΟΝΟ από το ανοιχτό pending — ό,τι βλέπει μπροστά του ο παίκτης
+    const pend = g.pending;
+    let k = pend ? hintKeyFor(pend) : null;
+    if (pend && pend.type === 'card' && pend.deck === 'project') {
+      // Κάρτες Project: πρώτα η γενική εξήγηση «PROJECT»· μετά ΜΟΝΟ χρώματα/χρηματοδοτήσεις
+      if (!g.hintSeen.project) k = 'project';
+      else if (!HINTABLE[k]) k = null; // ομόλογα/μεταπτυχιακά/φόροι/δάνεια: κανένα συννεφάκι
+    }
+    if (k && !HINTABLE[k]) k = null; // εκτός λίστας (forced/offer κ.λπ.)
     if (k && !g.hintSeen[k]) {
       g.hintSeen[k] = true;
-      g.hintActive = { k: k, playerId: g.pending.playerId };
+      g.hintActive = { k: k, playerId: pend.playerId, round: g.round };
     }
-    // Λήγει όταν η δράση περάσει σε ΑΛΛΟΝ παίκτη (τέλος της σειράς του σκανδαλιστή)
+
+    // 2) Λήξη: όταν η δράση περάσει σε ΑΛΛΟΝ παίκτη — ή σε νέο γύρο (κάλυψη solo,
+    // όπου ο παίκτης δεν αλλάζει ποτέ)
     if (g.hintActive) {
-      const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
-      if (actorNow !== g.hintActive.playerId) g.hintActive = null;
+      const actorNow = pend ? pend.playerId : (g.players[g.turn] && g.players[g.turn].id);
+      if (actorNow !== g.hintActive.playerId || (g.hintActive.round != null && g.round !== g.hintActive.round)) g.hintActive = null;
     }
-    // v1.16: Salary & Tax δεν έχουν «απόφαση» — ανιχνεύονται από το πρόσφατο ιστορικό
-    if (!g.hintActive) {
-      const recent = g.log.slice(-6);
-      const actorNow = g.pending ? g.pending.playerId : (g.players[g.turn] && g.players[g.turn].id);
-      if (!g.hintSeen.salary && recent.some(e => e && e.k && e.k.indexOf('lg_collect') === 0)) {
+
+    // 3) Salary/Tax (χωρίς «απόφαση»): ΜΟΝΟ αν συνέβησαν ΣΕ ΑΥΤΗ την ενέργεια
+    //    και ΔΕΝ υπάρχει ανοιχτό modal — ώστε το συννεφάκι να ταιριάζει με ό,τι βλέπεις
+    if (!g.hintActive && !pend && App._lastActorId) {
+      if (!g.hintSeen.salary && fresh.some(e => e && e.k && e.k.indexOf('lg_collect') === 0)) {
         g.hintSeen.salary = true;
-        g.hintActive = { k: 'salary', playerId: actorNow };
-      } else if (!g.hintSeen.tax && recent.some(e => e && (e.k === 'lg_tax' || e.k === 'lg_taxNone' || e.k === 'lg_savTax'))) {
+        g.hintActive = { k: 'salary', playerId: App._lastActorId, round: g.round };
+      } else if (!g.hintSeen.tax && fresh.some(e => e && (e.k === 'lg_tax' || e.k === 'lg_taxNone' || e.k === 'lg_savTax'))) {
         g.hintSeen.tax = true;
-        g.hintActive = { k: 'tax', playerId: actorNow };
+        g.hintActive = { k: 'tax', playerId: App._lastActorId, round: g.round };
       }
     }
   }
