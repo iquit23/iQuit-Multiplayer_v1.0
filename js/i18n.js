@@ -10,11 +10,11 @@
   const D = {
     el: {
       // Home
-      tagline: 'Το παιχνίδι οικονομικού αλφαβητισμού — online με φίλους',
+      tagline: 'Ένα παιχνίδι οικονομικού αλφαβητισμού',
       yourName: 'Το όνομά σου', namePh: 'π.χ. Γιώργος',
       newGame: 'Νέο παιχνίδι', createRoom: '🎲 Δημιουργία δωματίου', creating: 'Δημιουργία…',
       joinRoom: 'Μπες σε δωμάτιο', codePh: 'ΚΩΔ.', joinBtn: 'Είσοδος →',
-      homeFoot: '2–6 παίκτες · οι κενές θέσεις γεμίζουν με 🤖 bots<br>Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!',
+      homeFoot: '1-5 παίκτες<br>Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!',
       rulesBtn: '📜 Κανόνες', resumeHost: '▶ Συνέχεια παιχνιδιού «{code}» (host)', resumeGuest: '▶ Επανασύνδεση στο δωμάτιο {code}',
       codeLen: 'Ο κωδικός δωματίου έχει 4 χαρακτήρες.',
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
@@ -214,11 +214,11 @@
       lg_offerDeclined: '✋ {o} {n} αρνήθηκε την προσφορά Χρηματοδότησης.',
     },
     en: {
-      tagline: 'The financial-literacy board game — online with friends',
+      tagline: 'A financial literacy game',
       yourName: 'Your name', namePh: 'e.g. George',
       newGame: 'New game', createRoom: '🎲 Create a room', creating: 'Creating…',
       joinRoom: 'Join a room', codePh: 'CODE', joinBtn: 'Join →',
-      homeFoot: '2–6 players · empty seats are filled with 🤖 bots<br>Win: passive income ≥ expenses before age 65!',
+      homeFoot: '1-5 players<br>Win: passive income ≥ expenses before age 65!',
       rulesBtn: '📜 Rules', resumeHost: '▶ Resume game “{code}” (host)', resumeGuest: '▶ Reconnect to room {code}',
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',

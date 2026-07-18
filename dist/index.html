@@ -334,7 +334,8 @@ body.game-over #myDash{z-index:auto;}
 .gc-inflation{border-color:var(--yellow); background:#332b14;} .gc-inflation .cat{color:var(--yellow);}
 
 /* ---------- BOT ROSTER (v0.5) ---------- */
-#botRoster{display:flex; flex-direction:column; gap:6px;}
+#botRoster{display:grid; grid-template-columns:1fr 1fr; gap:6px;} /* v1.18: 2 στήλες × 3 — χωράει το lobby σε μία οθόνη */
+#botRoster button{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:10px 8px; font-size:13px;}
 .botbtn{text-align:left; padding:10px 12px; font-size:14px; background:#0a1320;
   border:1px solid var(--line); border-radius:10px; color:var(--txt);}
 .botbtn .muted{font-size:11px;}
@@ -386,7 +387,7 @@ body.game-over #myDash{z-index:auto;}
 <div id="screen-home">
   <button class="tbtn" id="btnLangHome" style="position:fixed; top:14px; right:14px;">🇬🇧 EN</button>
   <div class="logo">I QUIT<em>!</em></div>
-  <div class="tagline" id="lblTagline">Το παιχνίδι οικονομικού αλφαβητισμού — online με φίλους</div>
+  <div class="tagline" id="lblTagline">Ένα παιχνίδι οικονομικού αλφαβητισμού</div>
 
   <div id="resumeBox"></div>
 
@@ -396,7 +397,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.3</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.4</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -413,7 +414,7 @@ body.game-over #myDash{z-index:auto;}
 
   <div class="err" id="homeErr"></div>
   <div class="muted" id="lblHomeFoot" style="text-align:center; margin-top:26px;">
-    2–6 παίκτες · οι κενές θέσεις γεμίζουν με 🤖 bots<br>
+    1-5 παίκτες<br>
     Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!
   </div>
 </div>
@@ -695,11 +696,11 @@ body.game-over #myDash{z-index:auto;}
   const D = {
     el: {
       // Home
-      tagline: 'Το παιχνίδι οικονομικού αλφαβητισμού — online με φίλους',
+      tagline: 'Ένα παιχνίδι οικονομικού αλφαβητισμού',
       yourName: 'Το όνομά σου', namePh: 'π.χ. Γιώργος',
       newGame: 'Νέο παιχνίδι', createRoom: '🎲 Δημιουργία δωματίου', creating: 'Δημιουργία…',
       joinRoom: 'Μπες σε δωμάτιο', codePh: 'ΚΩΔ.', joinBtn: 'Είσοδος →',
-      homeFoot: '2–6 παίκτες · οι κενές θέσεις γεμίζουν με 🤖 bots<br>Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!',
+      homeFoot: '1-5 παίκτες<br>Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!',
       rulesBtn: '📜 Κανόνες', resumeHost: '▶ Συνέχεια παιχνιδιού «{code}» (host)', resumeGuest: '▶ Επανασύνδεση στο δωμάτιο {code}',
       codeLen: 'Ο κωδικός δωματίου έχει 4 χαρακτήρες.',
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
@@ -899,11 +900,11 @@ body.game-over #myDash{z-index:auto;}
       lg_offerDeclined: '✋ {o} {n} αρνήθηκε την προσφορά Χρηματοδότησης.',
     },
     en: {
-      tagline: 'The financial-literacy board game — online with friends',
+      tagline: 'A financial literacy game',
       yourName: 'Your name', namePh: 'e.g. George',
       newGame: 'New game', createRoom: '🎲 Create a room', creating: 'Creating…',
       joinRoom: 'Join a room', codePh: 'CODE', joinBtn: 'Join →',
-      homeFoot: '2–6 players · empty seats are filled with 🤖 bots<br>Win: passive income ≥ expenses before age 65!',
+      homeFoot: '1-5 players<br>Win: passive income ≥ expenses before age 65!',
       rulesBtn: '📜 Rules', resumeHost: '▶ Resume game “{code}” (host)', resumeGuest: '▶ Reconnect to room {code}',
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',
@@ -3207,7 +3208,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     $('lobbyCode').textContent = App.lobby.code;
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
-    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/6)';
+    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)'; // v1.18: δείχνουμε 5 (χωράνε 6)
     $('lobbyPlayers').innerHTML = App.lobby.players.map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + '</span>' +
@@ -3239,7 +3240,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
     broadcastLobby();
   }
   function renderLobbyGuest(msg) {
-    $('lobbyCount').textContent = '(' + msg.players.length + '/6)';
+    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18
     $('lobbyPlayers').innerHTML = msg.players.map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
@@ -3751,8 +3752,7 @@ In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoe
           ? lostCardHtml(pend)
           : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
-        '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
-        '<div class="muted" style="text-align:center; margin-top:8px;">' + t('everyoneSees') + '</div>');
+        '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>'); // v1.18: χωρίς «όλοι βλέπουν την κάρτα»
       $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
       return;
     }

@@ -325,7 +325,8 @@ body.game-over #myDash{z-index:auto;}
 .gc-inflation{border-color:var(--yellow); background:#332b14;} .gc-inflation .cat{color:var(--yellow);}
 
 /* ---------- BOT ROSTER (v0.5) ---------- */
-#botRoster{display:flex; flex-direction:column; gap:6px;}
+#botRoster{display:grid; grid-template-columns:1fr 1fr; gap:6px;} /* v1.18: 2 στήλες × 3 — χωράει το lobby σε μία οθόνη */
+#botRoster button{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:10px 8px; font-size:13px;}
 .botbtn{text-align:left; padding:10px 12px; font-size:14px; background:#0a1320;
   border:1px solid var(--line); border-radius:10px; color:var(--txt);}
 .botbtn .muted{font-size:11px;}

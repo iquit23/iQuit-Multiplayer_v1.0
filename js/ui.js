@@ -739,7 +739,7 @@
     $('lobbyCode').textContent = App.lobby.code;
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
-    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/6)';
+    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)'; // v1.18: δείχνουμε 5 (χωράνε 6)
     $('lobbyPlayers').innerHTML = App.lobby.players.map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + '</span>' +
@@ -771,7 +771,7 @@
     broadcastLobby();
   }
   function renderLobbyGuest(msg) {
-    $('lobbyCount').textContent = '(' + msg.players.length + '/6)';
+    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18
     $('lobbyPlayers').innerHTML = msg.players.map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
@@ -1283,8 +1283,7 @@
           ? lostCardHtml(pend)
           : cardHtml(rc, pend.deck, 0, pend.deck === 'lifestyle' ? E.lifestyleDelta(g, rc) : (pend.deck === 'moments' ? E.momentAmount(g, rc) : null));
       overlay('<div data-ch="ok" style="cursor:pointer">' + body + '</div>' +
-        '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>' +
-        '<div class="muted" style="text-align:center; margin-top:8px;">' + t('everyoneSees') + '</div>');
+        '<div class="acts"><button class="buy" data-ch="ok">' + t('okRead') + '</button></div>'); // v1.18: χωρίς «όλοι βλέπουν την κάρτα»
       $('modalBody').querySelectorAll('[data-ch]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'ok' }));
       return;
     }
