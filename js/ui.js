@@ -825,6 +825,13 @@
       renderLog(g);
     }
     renderHint(g);
+    // v1.19: πανηγυρισμός τη στιγμή που Ο ΔΙΚΟΣ ΜΟΥ παίκτης πετυχαίνει I QUIT
+    const meP = me();
+    if (meP && meP.retiredAge === null) App.celebrated = false;
+    else if (meP && meP.retiredAge !== null && !App.celebrated && App.role !== 'tour') {
+      App.celebrated = true;
+      showCelebration(meP);
+    }
     renderModal(g, actorId);
   }
 
@@ -832,6 +839,7 @@
   // εξηγεί ΤΙ σημαίνει το κουτί/η κάρτα που είναι σε εξέλιξη, για όσο διαρκεί η απόφαση
   function hintKeyFor(pend) {
     if (!pend) return null;
+    if (pend.type === 'tax-pay') return 'tax'; // v1.19
     if (pend.type === 'savings') return 'savings';
     if (pend.type === 'forced-sale') return 'forced';
     if (pend.type === 'funding-offer') return 'offer';
@@ -1149,6 +1157,21 @@
       '<div style="margin-top:12px; font-size:14px; line-height:1.55;">' + t('inflBody', { r: r }) + '</div></div>';
   }
 
+  // v1.19: παράθυρο φόρου — ανάλυση ανά Big Business + σύνολο, πληρωμή με κουμπί
+  function taxCardHtml(g, p, pend) {
+    const bbs = p.inv.filter(i => i.kind === 'bb');
+    const rows = bbs.map(i =>
+      '<div class="exprow"><span>' + esc(invTitle(i)) + '</span><b>−' + fmt(0.5 * i.income) + '</b></div>').join('');
+    const savCovers = (p.savings || 0) >= pend.amount;
+    return '<div class="gamecard gc-inflation" style="border-color:var(--red); background:#2a1114;">' +
+      '<div class="cat" style="color:var(--red)">' + t('taxTitle') + '</div>' +
+      '<div style="margin-top:8px; font-size:14px; line-height:1.55;">' + t('taxBody', { v: fmt(pend.amount) }) + '</div>' +
+      '<div style="margin-top:10px; text-align:left;">' + rows +
+      '<div class="exprow" style="border-top:1px solid var(--line); margin-top:4px;"><span><b>' + t('taxTotal') + '</b></span><b style="color:var(--red)">−' + fmt(pend.amount) + '</b></div></div>' +
+      (savCovers ? '<div class="notice" style="margin-top:10px; text-align:left;">' + t('taxSavNote', { d: fmt(Math.round(pend.amount * 0.7)) }) + '</div>' : '') +
+      '</div>';
+  }
+
   // v1.8: κάρτα απώλειας επένδυσης (Crash / Funding Fails) — ο παίκτης βλέπει ΤΙ έχασε
   function lostCardHtml(pend) {
     const c = E.card(pend.lostId);
@@ -1262,6 +1285,10 @@
         // v1.8: οι άλλοι βλέπουν την απώλεια του παίκτη (view-only)
         overlay(lostCardHtml(pend) +
           '<div class="muted" style="text-align:center;">' + t('cardOf', { name: esc(actorP.name) }) + '</div>');
+      } else if (pend.type === 'tax-pay') {
+        // v1.19: οι άλλοι βλέπουν το παράθυρο φόρου του παίκτη (view-only)
+        overlay(taxCardHtml(g, actorP, pend) +
+          '<div class="muted" style="text-align:center;">' + t('cardOf', { name: esc(actorP.name) }) + '</div>');
       } else if (actorP && !actorP.isBot && (pend.type === 'card' || pend.type === 'reveal' || pend.type === 'lifestyle-partner')) {
         const c = E.card(pend.cardId);
         const deck = pend.deck || 'lifestyle';
@@ -1347,6 +1374,12 @@
         }).join('') + '</div>';
       overlay(html);
       $('modalBody').querySelectorAll('[data-fs]').forEach(b => b.onclick = () => act({ a: 'resolve', uid: b.dataset.fs }));
+      return;
+    } else if (pend.type === 'tax-pay') {
+      // v1.19: ο φόρος πληρώνεται ΜΟΝΟ με το κουμπί — ξέρεις πάντα τι θα χάσεις
+      overlay(taxCardHtml(g, p, pend) +
+        '<div class="acts"><button class="buy" style="background:linear-gradient(90deg,#c0392b,#e25b54);" data-tx="pay">' + t('taxPayBtn') + '</button></div>');
+      $('modalBody').querySelectorAll('[data-tx]').forEach(b => b.onclick = () => act({ a: 'resolve', choice: 'pay' }));
       return;
     } else if (pend.type === 'savings') {
       // v1.6: ΑΠΟΤΑΜΙΕΥΣΗ — προσφορά κατάθεσης ανά 5ετία (και ανάληψη στα 60)
@@ -1562,6 +1595,35 @@
     $('statsClose').onclick = () => showEnd();
   }
 
+  // v1.19: διάρκεια σε «Χ χρόνια και Υ μήνες» (κανόνες Γιώργου — όχι σκέτοι μήνες)
+  function fmtDur(months) {
+    const y = Math.floor(months / 12), m = months % 12;
+    if (I.lang === 'en') {
+      const ys = y > 0 ? y + (y === 1 ? ' year' : ' years') : '';
+      const ms = m > 0 ? m + (m === 1 ? ' month' : ' months') : '';
+      return ys && ms ? ys + ' and ' + ms : (ys || ms || '0 months');
+    }
+    const ys = y > 0 ? y + ' ' + (y === 1 ? 'χρόνο' : 'χρόνια') : '';
+    const ms = m > 0 ? m + ' ' + (m === 1 ? 'μήνα' : 'μήνες') : '';
+    return ys && ms ? ys + ' και ' + ms : (ys || ms || '0 μήνες');
+  }
+
+  // v1.19: πανηγυρισμός νίκης — εμφανίζεται ΜΙΑ φορά στον παίκτη που πετυχαίνει I QUIT
+  function showCelebration(p) {
+    App.localModal = true;
+    sound('win');
+    let conf = '';
+    const EMO = ['🎉', '✨', '💛', '🏆', '💙', '🎊'];
+    for (let i = 0; i < 18; i++) conf += '<span class="cf" style="left:' + (3 + i * 5.4) + '%; animation-delay:' + ((i % 6) * 0.35) + 's; animation-duration:' + (2.2 + (i % 4) * 0.4) + 's;">' + EMO[i % 6] + '</span>';
+    overlay('<div class="celebrate">' + conf +
+      '<div class="cel-cup">🏆</div>' +
+      '<div class="cel-t">' + t('celTitle') + '</div>' +
+      '<div class="cel-n">' + esc(p.name) + '</div>' +
+      '<div class="cel-b">' + t('celBody', { age: p.retiredAge }) + '</div>' +
+      '<button class="buy cel-btn" id="celOk">' + t('celBtn') + '</button></div>');
+    $('celOk').onclick = () => { closeOverlay(); render(); };
+  }
+
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
@@ -1570,7 +1632,7 @@
       g.rankings.map((r, i) => '<div class="rank"><span class="pos">' + medals[i] + '</span><div class="det"><b>' + esc(r.name) + '</b>' +
         '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
           (r.bankrupt ? '💥 ' + t('bankruptTag') :
-            (r.months !== null ? t('survive', { n: r.months }) : t('reached65')))) + '</div></div></div>').join('');
+            (r.months !== null ? t('survive', { poss: I.isFemale(r.name) ? 'της' : 'του', d: fmtDur(r.months) }) : t('reached65')))) + '</div></div></div>').join('');
     html += '<div class="acts" style="margin-top:14px;">' +
       '<button class="wildbtn" id="btnStats">' + t('analyticsBtn') + '</button>' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
@@ -1733,5 +1795,7 @@
   }
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
+  /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
+  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration };
   init();
 })();

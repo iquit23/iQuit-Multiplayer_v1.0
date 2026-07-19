@@ -217,19 +217,23 @@ section('v1.8 Tax μέσω αποταμίευσης & κάρτες απώλει�
 {
   const TAX_POS = CARDS.BOARD.findIndex(s => s.t === 'tax');
   const CRASH_POS = CARDS.BOARD.findIndex(s => s.t === 'crash');
-  // Tax που ΚΑΛΥΠΤΕΤΑΙ από την αποταμίευση → −30%, μετρητά ανέπαφα
+  // v1.19: ο φόρος ΔΕΝ αφαιρείται αμέσως — ανοίγει παράθυρο και πληρώνεται με το κουμπί
   let sT = E.newGame([{ id: 'a', name: 'A', isBot: true }, { id: 'b', name: 'B', isBot: true }], 111);
   const PT = sT.players[0];
   PT.inv.push({ uid: 't1', cardId: 'BB13', kind: 'bb', title: 'X', cost: 10000, income: 600 }); // φόρος 300
   PT.savings = 400; PT.cash = 5000; PT.pos = TAX_POS; sT.turn = 0;
   E._internals.resolveSquare(sT, PT);
-  assert(PT.savings === 400 - 210 && PT.cash === 5000, 'φόρος 300 με ταμείο 400: −210 από ΑΠΟΤΑΜΙΕΥΣΗ, μετρητά ανέπαφα');
-  // Tax που ΔΕΝ καλύπτεται → πλήρης από μετρητά
+  assert(sT.pending && sT.pending.type === 'tax-pay' && sT.pending.amount === 300, 'v1.19: πρώτα παράθυρο φόρου (300€), τίποτα δεν αφαιρέθηκε');
+  assert(PT.cash === 5000 && PT.savings === 400, 'πριν το κουμπί: μετρητά & ταμείο ανέπαφα');
+  let rT = E.applyAction(sT, 'a', { a: 'resolve', choice: 'pay' });
+  assert((!rT || !rT.error) && PT.savings === 400 - 210 && PT.cash === 5000, 'μετά το κουμπί: −210 από ΑΠΟΤΑΜΙΕΥΣΗ (−30%), μετρητά ανέπαφα');
+  // Tax που ΔΕΝ καλύπτεται → πλήρης από μετρητά (πάντα μέσω κουμπιού)
   const PT2 = sT.players[1];
   PT2.inv.push({ uid: 't2', cardId: 'BB19', kind: 'bb', title: 'Y', cost: 10000, income: 600 });
   PT2.savings = 200; PT2.cash = 5000; PT2.pos = TAX_POS; sT.turn = 1;
   E._internals.resolveSquare(sT, PT2);
-  assert(PT2.savings === 200 && PT2.cash === 4700, 'ταμείο 200 < φόρος 300: πλήρη 300 από μετρητά');
+  rT = E.applyAction(sT, 'b', { a: 'resolve', choice: 'pay' });
+  assert((!rT || !rT.error) && PT2.savings === 200 && PT2.cash === 4700, 'ταμείο 200 < φόρος 300: πλήρη 300 από μετρητά');
   // Crash σε ΑΝΘΡΩΠΟ → pending κάρτα απώλειας που κλείνει με κλικ
   let sC = E.newGame([{ id: 'h', name: 'H' }, { id: 'b', name: 'B', isBot: true }], 112);
   const PH = sC.players[0];
@@ -324,7 +328,8 @@ section('v1.6 Αποταμίευση');
   PR.cash = -150; PR.savings = 400;
   sR.pending = { type: 'reveal', playerId: 'a', cardId: 'M17', deck: 'moments' };
   E.applyAction(sR, 'a', { a: 'resolve', choice: 'ok' });
-  assert(PR.bankrupt === false && PR.cash === 250 && PR.savings === 0, 'η αποταμίευση σώζει από χρεοκοπία (−150+400=250)');
+  // v1.19 (κανόνες Γιώργου): αφαιρείται ΜΟΝΟ όσο χρειάζεται — το υπόλοιπο μένει στο ταμείο
+  assert(PR.bankrupt === false && PR.cash === 0 && PR.savings === 250, 'η αποταμίευση σώζει με ΜΕΡΙΚΗ χρήση (−150 από τα 400, μένουν 250)');
 }
 
 // ---------- 3ε6. v1.5: Player analytics

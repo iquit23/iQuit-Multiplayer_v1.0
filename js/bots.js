@@ -123,6 +123,7 @@
         const ok = pend.income / pend.price >= 0.08 && p.cash - pend.price >= prof.cushion * 2;
         return { a: 'resolve', choice: ok ? 'accept' : 'decline' };
       }
+      case 'tax-pay': return { a: 'resolve', choice: 'pay' }; // v1.19: ο φόρος πληρώνεται πάντα
       case 'savings': {
         // v1.6: ο αμυντικός αποταμιεύει γενναία, ο ισορροπημένος λίγο, ο επιθετικός καθόλου·
         // στα 60 όλοι ρευστοποιούν (τα κλειδωμένα χρήματα δεν βοηθούν πια στην κατάταξη κίνησης)

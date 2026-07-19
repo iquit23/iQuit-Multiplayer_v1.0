@@ -308,6 +308,24 @@ body.game-over #myDash{z-index:auto;}
   font-size:12px; padding:8px 0 2px; text-decoration:underline;}
 .tour-glow{animation:tourGlow 1.1s ease-in-out infinite;}
 @keyframes tourGlow{0%,100%{filter:drop-shadow(0 0 2px var(--accent));} 50%{filter:drop-shadow(0 0 12px var(--accent)) brightness(1.25);}}
+
+/* ---------- v1.19: ΠΑΝΗΓΥΡΙΣΜΟΣ I QUIT ---------- */
+.celebrate{position:relative; overflow:hidden; text-align:center; padding:28px 18px 20px; border-radius:18px;
+  background:linear-gradient(160deg,#1b2c4d 0%, #14233d 55%, #2b2410 100%);
+  border:2px solid var(--gold);
+  box-shadow:0 0 44px rgba(240,193,75,.28), inset 0 0 70px rgba(240,193,75,.07);}
+.cel-cup{font-size:64px; line-height:1; animation:celPop .7s cubic-bezier(.2,1.6,.4,1);}
+.cel-t{font-size:23px; font-weight:900; letter-spacing:.5px; margin-top:8px;
+  background:linear-gradient(90deg,#f0c14b,#fff3c4,#f0c14b); background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent; animation:celShine 2.2s linear infinite;}
+.cel-n{font-size:18px; font-weight:800; color:var(--accent); margin-top:4px;}
+.cel-b{font-size:14px; color:var(--txt); margin-top:10px; line-height:1.6;}
+.cel-btn{margin-top:16px; width:72%;}
+.cf{position:absolute; top:-34px; font-size:18px; pointer-events:none; opacity:.9;
+  animation:celFall 2.6s linear infinite;}
+@keyframes celFall{0%{transform:translateY(-10px) rotate(0deg);} 100%{transform:translateY(430px) rotate(340deg);}}
+@keyframes celPop{0%{transform:scale(.2); opacity:0;} 100%{transform:scale(1); opacity:1;}}
+@keyframes celShine{0%{background-position:0% center;} 100%{background-position:200% center;}}
 .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
   max-width:400px; width:100%; max-height:88vh; overflow:auto;}
 .gamecard{border-radius:14px; padding:16px; margin-bottom:14px; border:2px solid; text-align:center;}

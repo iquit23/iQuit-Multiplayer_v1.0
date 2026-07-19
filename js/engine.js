@@ -308,12 +308,14 @@
   // v1.4 (απόφαση Γιώργου): αρνητικά μετρητά ΧΩΡΙΣ περιουσία για πώληση = ΧΡΕΟΚΟΠΙΑ.
   // Ο παίκτης χάνει και βγαίνει από το παιχνίδι (κατατάσσεται τελευταίος).
   function bankruptIfBroke(state, p) {
-    // v1.6: έσχατη διάσωση — πριν τη χρεοκοπία, η ΑΠΟΤΑΜΙΕΥΣΗ ρευστοποιείται 1:1
-    // (αυτός είναι άλλωστε ο ρόλος ενός ταμείου έκτακτης ανάγκης)
+    // v1.6/v1.19 (κανόνες Γιώργου): έσχατη διάσωση — πριν τη χρεοκοπία χρησιμοποιείται η
+    // ΑΠΟΤΑΜΙΕΥΣΗ 1:1 (χωρίς την έκπτωση 30%), αλλά αφαιρείται ΜΟΝΟ όσο χρειάζεται για να
+    // καλυφθεί η υποχρέωση — το υπόλοιπο μένει στο ταμείο.
     if (p.cash < 0 && forcedSellable(p).length === 0 && (p.savings || 0) > 0 && isActive(p)) {
-      p.cash += p.savings;
-      log(state, 'lg_savRescue', { n: pname(p), a: fmt(p.savings) });
-      p.savings = 0;
+      const need = Math.min(p.savings, -p.cash);
+      p.cash += need;
+      p.savings -= need;
+      log(state, 'lg_savRescue', { n: pname(p), a: fmt(need) });
     }
     // v1.14: χρεοκοπία όταν δεν υπάρχει ΤΙΠΟΤΑ πωλήσιμο (BB/ομόλογο) — τα Projects
     // δεν σώζουν πλέον από τη χρεοκοπία (απόφαση Γιώργου)
@@ -372,20 +374,12 @@
       case 'tax': {
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
-          // v1.8 (απόφαση Γιώργου): η ΑΠΟΤΑΜΙΕΥΣΗ καλύπτει και τη φορολογία BB —
-          // αν καλύπτει ΟΛΟ τον φόρο, πληρώνεται από εκεί με έκπτωση 30%.
-          if ((p.savings || 0) >= t) {
-            const pay = Math.round(t * 0.7);
-            p.savings -= pay;
-            log(state, 'lg_savTax', { n: pname(p), v: fmt(t), d: fmt(pay), s: fmt(p.savings) });
-          } else {
-            p.cash -= t;
-            log(state, 'lg_tax', { n: pname(p), v: fmt(t) });
-            if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
-          }
-        } else {
-          log(state, 'lg_taxNone', { n: pname(p) });
+          // v1.19 (αίτημα Γιώργου): ο φόρος ΔΕΝ αφαιρείται αμέσως — πρώτα ενημερωτικό
+          // παράθυρο (όπως ο Πληθωρισμός) και η πληρωμή γίνεται με το κουμπί επιβεβαίωσης.
+          state.pending = { type: 'tax-pay', playerId: p.id, amount: t };
+          return;
         }
+        log(state, 'lg_taxNone', { n: pname(p) });
         return finishTurn(state);
       }
       case 'crash': {
@@ -803,6 +797,25 @@
         const owner = state.players.find(x => x.id === pend.playerId) || p;
         state.pending = null;
         if (queueForcedSaleIfNeeded(state, owner)) { state.pending.then = 'advance'; return null; }
+        return finishTurn(state), null;
+      }
+
+      case 'tax-pay': {
+        // v1.19: η πληρωμή του φόρου εκτελείται ΜΟΝΟ όταν πατηθεί το κουμπί
+        if (action.choice !== 'pay') return err('Ο φόρος πρέπει να πληρωθεί.');
+        const tAmt = pend.amount;
+        state.pending = null;
+        // v1.8: αν η ΑΠΟΤΑΜΙΕΥΣΗ καλύπτει ΟΛΟ τον φόρο → −30% από εκεί, μετρητά ανέπαφα
+        if ((p.savings || 0) >= tAmt) {
+          const pay = Math.round(tAmt * 0.7);
+          p.savings -= pay;
+          log(state, 'lg_savTax', { n: pname(p), v: fmt(tAmt), d: fmt(pay), s: fmt(p.savings) });
+        } else {
+          p.cash -= tAmt;
+          log(state, 'lg_tax', { n: pname(p), v: fmt(tAmt) });
+          if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return null; }
+          if (!isActive(p)) return finishTurn(state), null; // χρεοκόπησε από τον φόρο
+        }
         return finishTurn(state), null;
       }
 

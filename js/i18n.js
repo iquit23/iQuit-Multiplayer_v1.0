@@ -64,6 +64,8 @@
       lg_savWithdraw: '💶 {n}: ανάληψη όλης της αποταμίευσης (+{a})',
       lg_savPaid: '🐖 {n}: το «{title}» ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}). Η πρόνοια επιβραβεύεται!',
       lg_savRescue: '🆘 {n}: η αποταμίευση ({a}) ρευστοποιήθηκε in extremis για να αποφευχθεί η χρεοκοπία.',
+      taxTitle: '💸 ΦΟΡΟΣ', taxBody: 'Πρέπει να πληρώσεις φόρο <b>{v}</b> — το 50% του παθητικού εισοδήματος των Big Business σου:', taxTotal: 'Σύνολο φόρου', taxPayBtn: '💸 Πληρωμή Φόρου', taxSavNote: '🐖 Η ΑΠΟΤΑΜΙΕΥΣΗ σου καλύπτει ολόκληρο τον φόρο — θα πληρώσεις μόνο {d} (−30% επιβράβευση πρόνοιας)!',
+      celTitle: 'ΣΥΓΧΑΡΗΤΗΡΙΑ, ΤΑ ΚΑΤΑΦΕΡΕΣ!', celBody: 'Πέτυχες την οικονομική σου ελευθερία στα <b>{age}</b>! Το παθητικό σου εισόδημα καλύπτει πλέον όλα τα έξοδά σου. I QUIT!', celBtn: '🎉 Συνέχεια',
       lg_savTax: '🐖 {n}: ο φόρος BB ({v}) πληρώθηκε από την ΑΠΟΤΑΜΙΕΥΣΗ με −30% → μόνο {d} (υπόλοιπο {s}).',
       // v1.8: κάρτα απώλειας Crash/Funding Fails + host migration
       crashLostBody: 'Η επένδυση χάθηκε λόγω κακής αξιολόγησης ρίσκου. Οι υψηλές αποδόσεις κουβαλούν υψηλό ρίσκο!',
@@ -140,7 +142,7 @@
       loanX100: '⚠️ Το δάνειο δίνεται σε πολλαπλάσια του 100€ — δοκίμασε {v}.',
       // End
       finalRank: 'Τελική Κατάταξη', iquitFree: 'I QUIT στα {age} — οικονομική ελευθερία!',
-      survive: 'Έφτασε τα 65 · επιβίωση {n} μήνες με το κεφάλαιό του', reached65: 'Έφτασε τα 65',
+      survive: '🕒 Το κεφάλαιό {poss} άντεξε για {d} μετά τη συνταξιοδότηση', reached65: 'Έφτασε τα 65',
       playAgain: '🔁 Νέο παιχνίδι (ίδιοι παίκτες)', exit: 'Έξοδος', feedbackBtn: '📝 Πες μας τη γνώμη σου (1′)',
       // Feedback
       fbTitle: '📝 Η γνώμη σου μετράει!', fbIntro: 'Ανώνυμο, 14 σύντομες ερωτήσεις — βοηθάς το I QUIT! να γίνει καλύτερο.',
@@ -264,6 +266,8 @@
       lg_savWithdraw: '💶 {n}: withdrew all savings (+{a})',
       lg_savPaid: '🐖 {n}: “{title}” ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}). Foresight pays off!',
       lg_savRescue: '🆘 {n}: savings ({a}) were liquidated in extremis to avoid bankruptcy.',
+      taxTitle: '💸 TAX', taxBody: 'You must pay <b>{v}</b> in tax — 50% of your Big Business passive income:', taxTotal: 'Total tax', taxPayBtn: '💸 Pay Tax', taxSavNote: '🐖 Your SAVINGS cover the full tax — you will only pay {d} (−30% foresight reward)!',
+      celTitle: 'CONGRATULATIONS, YOU MADE IT!', celBody: 'You reached financial freedom at <b>{age}</b>! Your passive income now covers all your expenses. I QUIT!', celBtn: '🎉 Continue',
       lg_savTax: '🐖 {n}: BB tax ({v}) was paid from SAVINGS at −30% → only {d} (remaining {s}).',
       crashLostBody: 'The investment was lost to poor risk assessment. High returns carry high risk!',
       ffailLostBody: 'The funding failed.',
@@ -335,7 +339,7 @@
       loanYes: 'Yes, take it', loanNo: 'Cancel — let me think',
       loanX100: '⚠️ Loans come in multiples of €100 — try {v}.',
       finalRank: 'Final Ranking', iquitFree: 'I QUIT at {age} — financial freedom!',
-      survive: 'Reached 65 · could survive {n} months on their capital', reached65: 'Reached 65',
+      survive: '🕒 Capital lasted {d} after retirement', reached65: 'Reached 65',
       playAgain: '🔁 New game (same players)', exit: 'Exit', feedbackBtn: '📝 Give us your feedback (1′)',
       fbTitle: '📝 Your opinion matters!', fbIntro: 'Anonymous, 14 short questions — help make I QUIT! better.',
       fbSubmit: 'Send', fbThanks: '🙏 Thank you! Your answer was sent.', fbErr: 'Could not send — check your connection and try again.',
@@ -430,89 +434,123 @@
   // ---------------- ΚΑΝΟΝΕΣ (κείμενο εγκεκριμένο από τον Γιώργο) ----------------
   const RULES = {
     el: `
-<h2>🎲 Κανόνες I QUIT!</h2>
+<h2>📜 Κανόνες I QUIT!</h2>
 <h3>🌍 Η φιλοσοφία του παιχνιδιού</h3>
-<p>Καλωσόρισες στο I QUIT!</p>
-<p>Είσαι 25 ετών και ξεκινάς το ταξίδι σου προς την οικονομική ελευθερία. Ξεκινάς με έναν σταθερό μισθό, καθημερινά έξοδα και ένα μεγάλο ερώτημα:</p>
-<p><b>Θα δουλεύεις για τα χρήματα ή θα μάθεις να κάνεις τα χρήματα να δουλεύουν για εσένα;</b></p>
-<p>Σε κάθε γύρο θα παίρνεις αποφάσεις που θυμίζουν την πραγματική ζωή. Θα επιλέγεις αν θα επενδύσεις, αν θα δανειστείς, αν θα αναλάβεις μεγαλύτερο ρίσκο για υψηλότερες αποδόσεις ή αν θα κινηθείς πιο συντηρητικά. Παράλληλα, θα αντιμετωπίζεις οικονομικές κρίσεις, πληθωρισμό, φόρους, απρόβλεπτα γεγονότα και νέες ευκαιρίες.</p>
-<p>Δεν υπάρχει μία σωστή στρατηγική. Κάθε επιλογή έχει κόστος, όφελος και ρίσκο.<br>
-Στο I QUIT! δεν κερδίζει όποιος βγάζει τα περισσότερα χρήματα. <b>Κερδίζει όποιος αποκτά την οικονομική του ελευθερία νωρίτερα.</b></p>
+<p>Καλωσόρισες στο <b>I QUIT!</b></p>
+<p>Είσαι 25 ετών και ξεκινάς το ταξίδι σου προς την οικονομική ελευθερία. Έχεις έναν σταθερό μισθό, καθημερινά έξοδα και ένα μεγάλο ερώτημα:</p>
+<p><b>Θα συνεχίσεις να δουλεύεις για τα χρήματα ή θα μάθεις να κάνεις τα χρήματα να δουλεύουν για εσένα;</b></p>
+<p>Κατά τη διάρκεια του παιχνιδιού θα επενδύσεις, θα αποταμιεύσεις, θα διαχειριστείς δάνεια και θα αποφασίσεις πόσο ρίσκο είσαι διατεθειμένος να αναλάβεις. Παράλληλα, θα αντιμετωπίσεις πληθωρισμό, φόρους, οικονομικές κρίσεις, γεγονότα της καθημερινότητας και νέες οικονομικές ευκαιρίες.</p>
+<p>Δεν υπάρχει μία μοναδική σωστή στρατηγική. Κάθε απόφαση έχει κόστος, όφελος και ρίσκο. Στο <b>I QUIT!</b> δεν κερδίζει απλώς εκείνος που συγκεντρώνει τα περισσότερα χρήματα. <b>Κερδίζει εκείνος που αποκτά την οικονομική του ελευθερία νωρίτερα.</b></p>
 <h3>🎯 Ο στόχος</h3>
-<p>Ξεκινάς στα 25 σου χρόνια με: 💼 Μισθό 2.000€ · 🏠 Έξοδα 1.500€ ανά κύκλο.</p>
-<p>Στόχος σου είναι να δημιουργήσεις παθητικό εισόδημα μέσω επενδύσεων, μέχρι το σημείο που αυτό θα καλύπτει πλήρως τα έξοδά σου. Όταν το παθητικό σου εισόδημα γίνει ίσο ή μεγαλύτερο από τα έξοδά σου (και δεν έχεις ενεργά δάνεια), μπορείς να φωνάξεις: <b>I QUIT!</b></p>
-<p>Νικητής είναι όποιος φτάσει πρώτος στην οικονομική ελευθερία, δηλαδή στη μικρότερη ηλικία. Αν κανείς δεν τα καταφέρει μέχρι τα 65, νικητής αναδεικνύεται εκείνος που βρίσκεται πιο κοντά στον στόχο.</p>
+<p>Κάθε παίκτης ξεκινά στην ηλικία των <b>25 ετών</b> με: 💵 Μετρητά 2.000€ · 💼 Μισθό 2.000€ · 🏠 Έξοδα 1.500€.</p>
+<p>Στόχος σου είναι να αποκτήσεις επενδύσεις που δημιουργούν παθητικό εισόδημα. Όταν <b>ΠΑΘΗΤΙΚΟ ΕΙΣΟΔΗΜΑ ≥ ΕΞΟΔΑ</b> και δεν έχεις κανένα ενεργό δάνειο, αποκτάς οικονομική ελευθερία και κάνεις <b>I QUIT!</b></p>
+<p>Νικητής είναι ο παίκτης που πετυχαίνει το I QUIT! στη μικρότερη ηλικία.</p>
 <h3>🎲 Πώς παίζεις</h3>
-<p>Στη σειρά σου: <b>1.</b> Ρίχνεις δύο ζάρια. <b>2.</b> Μετακινείς το πιόνι σου. <b>3.</b> Αν περάσεις ή σταματήσεις στο Salary ή στο Starting Point: εισπράττεις Μισθό − Έξοδα + Παθητικό Εισόδημα, πληρώνεις τις δόσεις των δανείων σου και μεγαλώνεις κατά 1 έτος. <b>4.</b> Εκτελείς την ενέργεια του κουτιού στο οποίο προσγειώθηκες. Ο πρώτος παίκτης καθορίζεται με κλήρωση.</p>
-<h3>🟦 Τα κουτάκια</h3>
-<p><b>🔵 Project</b> — Τραβάς μία κάρτα επένδυσης: 🟢 Πράσινες → Αμοιβαία Κεφάλαια (~6%) • χαμηλό ρίσκο · 🟡 Κίτρινες → REITs / Ακίνητα (~13%) • μεσαίο ρίσκο · 🔴 Κόκκινες → Μετοχές (~20%) • υψηλό ρίσκο · ⚓ Χρηματοδοτήσεις (~8%) · 🏛️ Ομόλογα · 🎓 Μεταπτυχιακό (+μόνιμος μισθός) · 🧾 Προκαταβολή Φόρου (μείωση φόρων) · 🏦 Ευνοϊκότερο Δάνειο (−2 δόσεις).</p>
-<p><b>🟧 Big Business</b> — Μεγάλες και σταθερές επενδύσεις (5,5–7%). Δεν χάνονται ποτέ σε Crash. Επηρεάζονται μόνο από τη φορολογία. Αν δεν αγοράσεις μία επένδυση, ο επόμενος παίκτης μπορεί να την αποκτήσει με έκπτωση 10%. Μόλις αγοραστεί, αφαιρείται οριστικά από τη στοίβα.</p>
-<p><b>🟥 Lifestyle</b> — Κάρτες που αλλάζουν μόνιμα τον τρόπο ζωής σου. Αυξάνουν ή μειώνουν τα έξοδά σου. Οι κάρτες «Έκαστος» επηρεάζουν εσένα και έναν ακόμη παίκτη της επιλογής σου.</p>
-<p><b>🟩 Moments</b> — Γεγονότα της καθημερινότητας. Κερδίζεις ή χάνεις χρήματα μία φορά. Υπάρχουν επίσης δύο ειδικές κάρτες που μπορούν να αναιρέσουν αρνητικές συνήθειες Lifestyle.</p>
-<p><b>💥 Crash</b> — Χάνεις ολόκληρη την Project επένδυσή σου στο αντίστοιχο χρώμα με τη μεγαλύτερη απόδοση. Αν υπάρχει ισοπαλία, χάνεται εκείνη με τη μεγαλύτερη αξία. Υπενθύμιση: οι υψηλές αποδόσεις συνοδεύονται από υψηλότερο ρίσκο.</p>
-<p><b>⚓ Funding Fails</b> — Χάνεις τη Χρηματοδότηση με τη μεγαλύτερη απόδοση.</p>
-<p><b>🧾 Tax</b> — Πληρώνεις φόρο ίσο με το 50% του εισοδήματος που λαμβάνεις από τις Big Business επενδύσεις.</p>
-<p><b>📈 Inflation</b> — Όλοι οι παίκτες αυξάνουν τα μηνιαία έξοδά τους κατά 5%. Οι μελλοντικές κάρτες Lifestyle προσαρμόζονται επίσης στον πληθωρισμό. Οι επενδύσεις και τα μετρητά σου δεν επηρεάζονται.</p>
+<p>Όταν έρθει η σειρά σου: <b>1.</b> Ρίχνεις δύο ζάρια. <b>2.</b> Μετακινείς το πιόνι σου. <b>3.</b> Εκτελείς την ενέργεια του κουτιού στο οποίο σταμάτησες. Ο πρώτος παίκτης καθορίζεται με κλήρωση.</p>
+<h3>💰 Salary / Starting Point</h3>
+<p>Κάθε φορά που περνάς ή σταματάς στο Salary / Starting Point, εισπράττεις: <b>ΜΙΣΘΟΣ − ΕΞΟΔΑ + ΠΑΘΗΤΙΚΟ ΕΙΣΟΔΗΜΑ − ΔΟΣΕΙΣ ΔΑΝΕΙΩΝ</b>. Παράλληλα, η ηλικία σου αυξάνεται κατά 1 έτος.</p>
+<p>Σε συγκεκριμένες ηλικίες μπορεί επίσης να ενεργοποιηθεί: αύξηση μισθού μέσω του Career Bonus, νέα δυνατότητα κατάθεσης στο Ταμείο Έκτακτης Ανάγκης, και δυνατότητα ανάληψης της αποταμίευσης στην ηλικία των 60 ετών.</p>
+<h3>🟦 Τα κουτάκια του παιχνιδιού</h3>
+<p><b>📁 Project</b> — Κάρτες μικρότερου κόστους που περιλαμβάνουν επενδύσεις και οικονομικές ευκαιρίες: Αμοιβαία Κεφάλαια, REITs, Μετοχές, Χρηματοδοτήσεις, Ομόλογα, Ευκαιρία για Μεταπτυχιακό, Προκαταβολή Φόρου, Ευνοϊκότερο Δάνειο. Οι επενδυτικές κάρτες Project μπορεί να χαθούν στο αντίστοιχο Crash ή στο Funding Fails.</p>
+<p><b>🏆 Big Business</b> — Μεγάλες και σταθερές επενδύσεις με αξία από <b>4.000€ έως 10.000€</b>. Δημιουργούν παθητικό εισόδημα, δεν χάνονται σε Crash, επηρεάζονται από τη φορολογία και αφαιρούνται οριστικά από τη στοίβα όταν αγοραστούν. Αν δεν αγοράσεις μία Big Business, ο επόμενος παίκτης μπορεί να την αποκτήσει με έκπτωση 10%.</p>
+<p><b>🏠 Lifestyle</b> — Αλλάζουν μόνιμα τα μηνιαία έξοδά σου, προς τα πάνω ή προς τα κάτω. Οι κάρτες «Έκαστος» επηρεάζουν εσένα και έναν ακόμη παίκτη της επιλογής σου. Το κόστος των μελλοντικών καρτών Lifestyle αυξάνεται όταν ενεργοποιείται ο πληθωρισμός.</p>
+<p><b>🎁 Moments</b> — Γεγονότα της ζωής: κερδίζεις ή χάνεις χρήματα μία φορά. Τα θετικά ποσά προστίθενται στα Μετρητά σου. Τα αρνητικά Moments μπορούν να καλυφθούν από το Ταμείο Έκτακτης Ανάγκης, εφόσον η αποταμίευση επαρκεί για ολόκληρο το ποσό. Υπάρχουν και ειδικές κάρτες που αναιρούν αρνητικές συνήθειες Lifestyle.</p>
+<p><b>💥 Crash</b> — Χάνεις μία επένδυση Project του αντίστοιχου χρώματος. Αν έχεις περισσότερες, χάνεται εκείνη με τη μεγαλύτερη απόδοση· σε ισοπαλία, εκείνη με τη μεγαλύτερη αξία. Οι Big Business και τα Ομόλογα δεν χάνονται σε Crash.</p>
+<p><b>⚓ Funding Fails</b> — Αποτυχία χρηματοδότησης: χάνεις μία κάρτα Χρηματοδότησης. Αν έχεις περισσότερες, χάνεται εκείνη με τη μεγαλύτερη αξία.</p>
+<p><b>💸 Tax</b> — Πληρώνεις φόρο ίσο με <b>το 50% του παθητικού εισοδήματος των Big Business</b> που διαθέτεις. Πριν αφαιρεθεί ο φόρος, εμφανίζεται ενημερωτικό παράθυρο με τις Big Business που φορολογούνται, τον φόρο καθεμίας και το συνολικό ποσό — η πληρωμή γίνεται όταν πατήσεις το κουμπί επιβεβαίωσης. Αν το Ταμείο Έκτακτης Ανάγκης επαρκεί για ολόκληρο τον φόρο, ενεργοποιείται η έκπτωση πρόνοιας 30%.</p>
+<p><b>📈 Inflation</b> — Ο πληθωρισμός αυξάνει μόνιμα τα έξοδα όλων των παικτών και το κόστος των μελλοντικών καρτών Lifestyle. Το ποσοστό εξαρτάται από τον αριθμό των παικτών:</p>
+<p style="text-align:center;"><b>1 παίκτης: 8% · 2 παίκτες: 5% · 3 παίκτες: 4%<br>4 παίκτες: 3% · 5 παίκτες: 2% · 6 παίκτες: 1%</b></p>
+<p>Ο πληθωρισμός δεν επηρεάζει τα Μετρητά, την αξία των επενδύσεων και τα ποσά των καρτών Moments.</p>
+<h3>🐖 Ταμείο Έκτακτης Ανάγκης</h3>
+<p>Από την ηλικία των 25 ετών και κάθε 5 χρόνια, μπορείς να τοποθετήσεις χρήματα στο Ταμείο Έκτακτης Ανάγκης, σε πολλαπλάσια των 50€. Τα χρήματα αυτά αφαιρούνται από τα Μετρητά, παραμένουν κλειδωμένα, δεν χρησιμοποιούνται για αγορές ή επενδύσεις, και μπορούν να καλύψουν αρνητικά Moments και φόρους Big Business.</p>
+<p>Αν η αποταμίευσή σου επαρκεί για <b>ολόκληρο</b> το απαιτούμενο ποσό, πληρώνεις από την αποταμίευση μόνο το 70% — έκπτωση <b>30%</b>, ως επιβράβευση της οικονομικής πρόνοιας. Αν δεν επαρκεί, η πληρωμή γίνεται κανονικά από τα Μετρητά, χωρίς έκπτωση.</p>
+<p>Στην ηλικία των 60 ετών μπορείς να κάνεις ανάληψη ολόκληρου του ποσού. Η αποταμίευση προσμετράται στο συνολικό κεφάλαιό σου κατά την τελική κατάταξη.</p>
 <h3>🏛️ Ομόλογα</h3>
-<p>Αγοράζεις ένα ομόλογο (π.χ. 1.000€). Σε κάθε είσπραξη: λαμβάνεις τόκο 4% και κερδίζεις ένα Bond Token. Μετά από 10 Tokens το ομόλογο λήγει και επιστρέφεται το αρχικό κεφάλαιο. Μπορείς να το πουλήσεις οποιαδήποτε στιγμή και να πάρεις πίσω το κεφάλαιό σου. Τα ομόλογα δεν μετρούν στο I QUIT Meter και δεν αυξάνουν το όριο δανεισμού. Είναι εργαλείο ασφάλειας και ρευστότητας.</p>
+<p>Μπορείς να αγοράσεις Ομόλογα διαφορετικής αξίας (1.000€, 1.500€, 2.000€). Σε κάθε είσπραξη στο Salary / Starting Point λαμβάνεις τόκο 4% και κερδίζεις ένα Bond Token. Στα 10 Bond Tokens το Ομόλογο λήγει και επιστρέφεται το αρχικό κεφάλαιο. Μπορείς επίσης να το πουλήσεις οποιαδήποτε στιγμή στο αρχικό του κεφάλαιο.</p>
+<p>Τα Ομόλογα δεν χάνονται σε Crash, δεν προσμετρώνται στο I QUIT! Meter και δεν αυξάνουν το όριο δανεισμού. Αποτελούν εργαλείο ασφάλειας και ρευστότητας.</p>
 <h3>🏦 Δάνεια</h3>
-<p>Μπορείς να δανειστείς μέχρι το ύψος της αξίας των επενδύσεών σου (εκτός ομολόγων), αφαιρώντας όσα ήδη χρωστάς. Η αποπληρωμή γίνεται σε <b>20 δόσεις × 10% του ποσού</b> — συνολικά επιστρέφεις το διπλάσιο ποσό. Μπορείς να έχεις περισσότερα από ένα δάνεια και να αποπληρώσεις πρόωρα μέρος ή όλο το δάνειο. <b>Δεν μπορείς να κάνεις I QUIT! όσο έχεις ενεργά δάνεια.</b></p>
+<p>Μπορείς να δανειστείς μέχρι το ύψος της αξίας των επενδύσεών σου, εξαιρουμένων των Ομολόγων και αφαιρώντας όσα ήδη χρωστάς. Δεν μπορείς να έχεις περισσότερα από <b>3 δάνεια</b>. Κάθε δάνειο αποπληρώνεται σε <b>20 δόσεις × 10% του αρχικού ποσού</b> — συνολικά επιστρέφεις το διπλάσιο. Οι δόσεις αφαιρούνται σε κάθε πέρασμα από το Salary / Starting Point. Μπορείς να αποπληρώσεις πρόωρα μέρος ή ολόκληρο το υπόλοιπο. <b>Δεν μπορείς να κάνεις I QUIT! όσο έχεις ενεργό δάνειο.</b> Η κάρτα «Ευνοϊκότερο Δάνειο» αφαιρεί 3 δόσεις από ένα ενεργό δάνειο.</p>
 <h3>🎖️ Career Bonus</h3>
-<p>Στα 35, 45 και 55 ο μισθός σου αυξάνεται μόνιμα κατά 500€. Η καριέρα εξελίσσεται, αλλά από μόνη της δεν αρκεί για την οικονομική ελευθερία.</p>
+<p>Στα 35, 45 και 55 ο μισθός σου αυξάνεται μόνιμα κατά 500€. Η επαγγελματική εξέλιξη βοηθά, αλλά από μόνη της δεν εξασφαλίζει την οικονομική ελευθερία.</p>
 <h3>🃏 Wild Cards</h3>
-<p>Κάθε παίκτης ξεκινά με 5 Wild Cards. Όταν τραβάς Project → μπορείς να τραβήξεις Big Business. Όταν τραβάς Big Business → μπορείς να τραβήξεις Project. Η σωστή στιγμή χρήσης τους αποτελεί σημαντικό κομμάτι της στρατηγικής.</p>
-<h3>💶 Δεν φτάνουν τα μετρητά;</h3>
-<p>Αν χρειάζεσαι άμεσα χρήματα, μπορείς να πουλήσεις οποιαδήποτε επένδυσή σου στην τράπεζα στο 80% της αξίας της. Η ρευστότητα έχει αξία. Κράτα πάντα ένα οικονομικό «μαξιλάρι».</p>
+<p>Κάθε παίκτης ξεκινά με 5 Wild Cards. Όταν τραβάς Project μπορείς να τραβήξεις Big Business, και αντίστροφα. Κάθε Wild Card χρησιμοποιείται μία φορά — η σωστή στιγμή είναι μέρος της στρατηγικής.</p>
+<h3>💶 Δεν φτάνουν τα Μετρητά;</h3>
+<p>Μπορείς να πουλήσεις επένδυσή σου στην τράπεζα στο <b>80% της αξίας της</b>. Η ρευστότητα έχει αξία — μία κερδοφόρα επένδυση δεν αντικαθιστά πάντα τα διαθέσιμα Μετρητά.</p>
+<h3>⚠️ Χρεοκοπία</h3>
+<p>Αν δεν μπορείς να καλύψεις μία υποχρεωτική πληρωμή, πουλάς επενδύσεις στην τράπεζα στο 80% της αξίας τους. Αν κινδυνεύεις να χρεοκοπήσεις, το παιχνίδι χρησιμοποιεί αυτόματα την Αποταμίευσή σου ως έσχατη λύση — αφαιρείται μόνο το ποσό που απαιτείται (ή όλη, αν δεν επαρκεί), χωρίς την έκπτωση 30%.</p>
+<p>Αν, μετά τη χρήση των Μετρητών, της πωλήσιμης περιουσίας και της Αποταμίευσης, το υπόλοιπό σου παραμένει αρνητικό, χρεοκοπείς και τίθεσαι εκτός παιχνιδιού.</p>
 <h3>🏁 Τέλος παιχνιδιού</h3>
-<p>Μόλις το παθητικό σου εισόδημα γίνει ίσο ή μεγαλύτερο από τα έξοδά σου (χωρίς ενεργά δάνεια), πετυχαίνεις την οικονομική ανεξαρτησία και κάνεις I QUIT! Το παιχνίδι συνεχίζεται μέχρι να ολοκληρώσουν όλοι οι παίκτες ή μέχρι την ηλικία των 65 ετών. Η τελική κατάταξη: <b>1.</b> Όσοι πέτυχαν I QUIT! (νωρίτερη ηλικία = καλύτερη θέση). <b>2.</b> Οι υπόλοιποι, με βάση πόσους μήνες θα μπορούσαν να συντηρηθούν με το διαθέσιμο κεφάλαιό τους.</p>
+<p>Μόλις <b>ΠΑΘΗΤΙΚΟ ΕΙΣΟΔΗΜΑ ≥ ΕΞΟΔΑ</b> και δεν έχεις ενεργά δάνεια, πετυχαίνεις την οικονομική ανεξαρτησία και κάνεις I QUIT! Το παιχνίδι συνεχίζεται μέχρι να ολοκληρώσουν όλοι οι παίκτες ή μέχρι τα 65.</p>
+<p><b>Τελική κατάταξη:</b> <b>1.</b> Όσοι πέτυχαν I QUIT! — με βάση την ηλικία (μικρότερη = καλύτερη θέση). <b>2.</b> Όσοι έφτασαν στα 65 χωρίς I QUIT! — υπολογίζεται για πόσο θα κάλυπταν το έλλειμμά τους μετά τη συνταξιοδότηση:</p>
+<p><b>Διαθέσιμο κεφάλαιο</b> = Μετρητά + Αποταμίευση + Αξία επενδύσεων<br>
+<b>Μηνιαίο έλλειμμα</b> = Έξοδα − Παθητικό Εισόδημα<br>
+<b>Διάρκεια κεφαλαίου</b> = Διαθέσιμο κεφάλαιο ÷ Μηνιαίο έλλειμμα</p>
+<p>Το αποτέλεσμα εμφανίζεται σε χρόνια και μήνες, π.χ. «🕒 Το κεφάλαιό σου άντεξε για 12 χρόνια και 8 μήνες μετά τη συνταξιοδότηση».</p>
 <h3>💡 Πέντε μαθήματα ζωής</h3>
-<p>🌱 Επένδυσε όσο πιο νωρίς μπορείς — ο ανατοκισμός χρειάζεται χρόνο.<br>
-🎯 Διαφοροποίησε το χαρτοφυλάκιό σου — το μεγάλο κέρδος συνοδεύεται από μεγάλο ρίσκο.<br>
-💰 Διατήρησε πάντα ένα ταμειακό απόθεμα — οι αναγκαστικές πωλήσεις κοστίζουν.<br>
-🏦 Το δάνειο είναι εργαλείο, όχι λύση — μπορεί να επιταχύνει την πρόοδο, αλλά και να την ανατρέψει.<br>
-📈 Ο πληθωρισμός δεν σταματά ποτέ. Η οικονομική ελευθερία χτίζεται όταν το εισόδημά σου αυξάνεται γρηγορότερα από τα έξοδά σου.</p>`,
+<p>🌱 <b>Επένδυσε όσο πιο νωρίς μπορείς.</b> Ο χρόνος και ο ανατοκισμός μπορούν να ενισχύσουν σημαντικά το αποτέλεσμα.<br>
+🎯 <b>Διαφοροποίησε το χαρτοφυλάκιό σου.</b> Η υψηλότερη δυνητική απόδοση συνοδεύεται συνήθως από μεγαλύτερο κίνδυνο.<br>
+🐖 <b>Δημιούργησε ένα Ταμείο Έκτακτης Ανάγκης.</b> Τα απρόοπτα δεν προβλέπονται πάντα, αλλά μπορείς να είσαι προετοιμασμένος.<br>
+🏦 <b>Χρησιμοποίησε το δάνειο ως εργαλείο και όχι ως μόνιμη λύση.</b> Μπορεί να επιταχύνει την πρόοδό σου, αλλά δημιουργεί μακροχρόνιες υποχρεώσεις.<br>
+📈 <b>Μην υποτιμάς τον πληθωρισμό.</b> Η οικονομική ελευθερία χτίζεται όταν το εισόδημά σου αυξάνεται γρηγορότερα από τα έξοδά σου.</p>`,
     en: `
-<h2>🎲 I QUIT! Rules</h2>
+<h2>📜 I QUIT! Rules</h2>
 <h3>🌍 The philosophy</h3>
-<p>Welcome to I QUIT!</p>
-<p>You are 25 years old, starting your journey toward financial freedom. You begin with a steady salary, everyday expenses and one big question:</p>
-<p><b>Will you work for money, or will you learn to make money work for you?</b></p>
-<p>Every round you make decisions that mirror real life: invest or not, borrow or not, take bigger risks for bigger returns or play it safe — while facing crashes, inflation, taxes, surprises and new opportunities.</p>
-<p>There is no single correct strategy. Every choice has a cost, a benefit and a risk.<br>
-In I QUIT! the winner is not whoever makes the most money. <b>The winner is whoever reaches financial freedom first.</b></p>
+<p>Welcome to <b>I QUIT!</b></p>
+<p>You are 25 years old, starting your journey toward financial freedom. You have a steady salary, everyday expenses and one big question:</p>
+<p><b>Will you keep working for money, or will you learn to make money work for you?</b></p>
+<p>During the game you will invest, save, manage loans and decide how much risk you are willing to take — while facing inflation, taxes, financial crises, life events and new opportunities.</p>
+<p>There is no single correct strategy. Every decision has a cost, a benefit and a risk. In I QUIT! the winner is not simply whoever gathers the most money. <b>The winner is whoever reaches financial freedom first.</b></p>
 <h3>🎯 The goal</h3>
-<p>You start at age 25 with: 💼 a €2,000 salary · 🏠 €1,500 expenses per cycle.</p>
-<p>Your goal is to build passive income through investments until it fully covers your expenses. When your passive income is equal to or greater than your expenses (and you have no active loans), you can shout: <b>I QUIT!</b></p>
-<p>The winner is whoever reaches financial freedom first — at the youngest age. If nobody makes it by 65, the winner is whoever got closest.</p>
+<p>Every player starts at age <b>25</b> with: 💵 Cash €2,000 · 💼 Salary €2,000 · 🏠 Expenses €1,500.</p>
+<p>Your goal is to build investments that generate passive income. When <b>PASSIVE INCOME ≥ EXPENSES</b> and you have no active loan, you reach financial freedom and shout <b>I QUIT!</b></p>
+<p>The winner is the player who achieves I QUIT! at the youngest age.</p>
 <h3>🎲 How to play</h3>
-<p>On your turn: <b>1.</b> Roll two dice. <b>2.</b> Move your pawn. <b>3.</b> If you pass or land on Salary or Starting Point: collect Salary − Expenses + Passive Income, pay your loan installments, and age by 1 year. <b>4.</b> Resolve the square you landed on. The first player is chosen by lottery.</p>
+<p>On your turn: <b>1.</b> Roll two dice. <b>2.</b> Move your pawn. <b>3.</b> Resolve the square you land on. The first player is chosen by lottery.</p>
+<h3>💰 Salary / Starting Point</h3>
+<p>Every time you pass or land here you collect: <b>SALARY − EXPENSES + PASSIVE INCOME − LOAN INSTALLMENTS</b>. Your age also increases by 1 year.</p>
+<p>At specific ages you may also trigger: a Career Bonus salary raise, a new Emergency Fund deposit window, and the option to withdraw your savings at age 60.</p>
 <h3>🟦 The squares</h3>
-<p><b>🔵 Project</b> — Draw an investment card: 🟢 Green → Mutual Funds (~6%) • low risk · 🟡 Yellow → REITs / Real estate (~13%) • medium risk · 🔴 Red → Stocks (~20%) • high risk · ⚓ Funding (~8%) · 🏛️ Bonds · 🎓 Master’s degree (+permanent salary) · 🧾 Tax prepayment (lower taxes) · 🏦 Better loan (−2 payments).</p>
-<p><b>🟧 Big Business</b> — Large, stable investments (5.5–7%). Never lost in a Crash; only taxed. If you pass, the next player may buy it at a 10% discount. Once bought, it is removed from the deck for good.</p>
-<p><b>🟥 Lifestyle</b> — Cards that permanently change your way of life, raising or lowering your expenses. “Each” cards affect you AND one player of your choice.</p>
-<p><b>🟩 Moments</b> — Everyday events: win or lose money once. Two special cards can cancel bad Lifestyle habits.</p>
-<p><b>💥 Crash</b> — You lose your entire Project investment of the matching colour with the highest return. On a tie, the one with the greater value is lost. Reminder: high returns come with high risk.</p>
-<p><b>⚓ Funding Fails</b> — You lose the Funding card with the highest return.</p>
-<p><b>🧾 Tax</b> — You pay 50% of the income you receive from Big Business investments.</p>
-<p><b>📈 Inflation</b> — All players’ monthly expenses rise by 5%. Future Lifestyle cards also adjust for inflation. Your investments and cash are not affected.</p>
+<p><b>📁 Project</b> — Lower-cost cards with investments and opportunities: Mutual Funds, REITs, Stocks, Funding, Bonds, a Master’s Degree, Tax Prepayment, Better Loan Terms. Investment Project cards can be lost to the matching Crash or Funding Fails.</p>
+<p><b>🏆 Big Business</b> — Large, stable investments valued from <b>€4,000 to €10,000</b>. They generate passive income, never crash, are affected by tax, and are permanently removed from the stack once bought. If you pass, the next player can buy at a 10% discount.</p>
+<p><b>🏠 Lifestyle</b> — Permanently changes your monthly expenses, up or down. “Each” cards affect you and one player of your choice. Future Lifestyle cards get more expensive when inflation hits.</p>
+<p><b>🎁 Moments</b> — Life events: you gain or lose money once. Positive amounts go to your Cash. Negative Moments can be covered by the Emergency Fund if your savings cover the full amount. Special cards can cancel bad Lifestyle habits.</p>
+<p><b>💥 Crash</b> — You lose one Project investment of the matching colour. With several, the one with the highest yield is lost; on a tie, the one with the highest value. Big Business and Bonds never crash.</p>
+<p><b>⚓ Funding Fails</b> — A funding failure: you lose one Funding card. With several, the one with the highest value is lost.</p>
+<p><b>💸 Tax</b> — You pay <b>50% of the passive income of your Big Business</b>. Before the tax is deducted, a window shows which Big Business are taxed, the tax for each, and the total — payment happens when you press the confirmation button. If your Emergency Fund covers the full tax, the 30% foresight discount applies.</p>
+<p><b>📈 Inflation</b> — Permanently raises everyone’s expenses and the cost of future Lifestyle cards. The rate depends on player count:</p>
+<p style="text-align:center;"><b>1 player: 8% · 2 players: 5% · 3 players: 4%<br>4 players: 3% · 5 players: 2% · 6 players: 1%</b></p>
+<p>Inflation does not affect Cash, investment values, or Moments amounts.</p>
+<h3>🐖 Emergency Fund</h3>
+<p>From age 25 and every 5 years, you may deposit money into the Emergency Fund, in multiples of €50. This money is deducted from Cash, stays locked, cannot be used for purchases or investments, and can cover negative Moments and Big Business taxes.</p>
+<p>If your savings cover the <b>full</b> required amount, you pay only 70% from savings — a <b>30%</b> discount rewarding financial foresight. If not, you pay normally from Cash with no discount.</p>
+<p>At age 60 you may withdraw the full amount. Savings count toward your total capital in the final ranking.</p>
 <h3>🏛️ Bonds</h3>
-<p>You buy a bond (e.g. €1,000). Every payday you receive 4% interest and one Bond Token. After 10 tokens the bond matures and the principal is returned. You can sell it any time and get your principal back. Bonds do not count toward the I QUIT Meter and do not raise your loan limit. They are a tool for safety and liquidity.</p>
+<p>Bonds come in different values (€1,000, €1,500, €2,000). On every payday you receive 4% interest and earn a Bond Token. At 10 Tokens the bond matures and returns its principal. You can also sell it at principal at any time.</p>
+<p>Bonds never crash, don’t count toward the I QUIT! Meter and don’t raise your borrowing limit. They are a safety and liquidity tool.</p>
 <h3>🏦 Loans</h3>
-<p>You can borrow up to the value of your investments (excluding bonds), minus what you already owe. Repayment: <b>20 payments × 10% of the amount</b> — you repay double in total. You may hold several loans and repay part or all of them early. <b>You cannot I QUIT! while you have active loans.</b></p>
+<p>You can borrow up to the value of your investments, excluding Bonds and minus what you already owe. You cannot have more than <b>3 loans</b>. Each loan is repaid in <b>20 installments × 10% of the amount</b> — you repay double in total. Installments are deducted on every payday. You can repay early, partly or fully. <b>You cannot I QUIT! with an active loan.</b> The “Better Loan Terms” card removes 3 installments from an active loan.</p>
 <h3>🎖️ Career Bonus</h3>
-<p>At 35, 45 and 55 your salary permanently rises by €500. Careers progress — but a career alone won’t set you free.</p>
+<p>At 35, 45 and 55 your salary permanently rises by €500. Career progress helps, but by itself does not secure financial freedom.</p>
 <h3>🃏 Wild Cards</h3>
-<p>Each player starts with 5 Wild Cards. Drawing a Project → you may draw a Big Business instead, and vice versa. Timing them well is a key part of the strategy.</p>
-<h3>💶 Out of cash?</h3>
-<p>If you urgently need money, you may sell any of your investments to the bank at 80% of its value. Liquidity matters — always keep a cash cushion.</p>
+<p>Each player starts with 5 Wild Cards. When drawing Project you may draw Big Business instead, and vice versa. Each Wild Card is used once — timing is part of the strategy.</p>
+<h3>💶 Short on Cash?</h3>
+<p>You can sell an investment to the bank at <b>80% of its value</b>. Liquidity matters — a profitable investment doesn’t always replace available Cash.</p>
+<h3>⚠️ Bankruptcy</h3>
+<p>If you cannot cover a mandatory payment, you sell investments to the bank at 80%. If bankruptcy looms, the game automatically uses your Savings as a last resort — only the amount needed is taken (or all of it, if insufficient), with no 30% discount.</p>
+<p>If, after using Cash, sellable assets and Savings, your balance is still negative, you go bankrupt and leave the game.</p>
 <h3>🏁 End of the game</h3>
-<p>The moment your passive income is equal to or greater than your expenses (with no active loans), you achieve financial independence and shout I QUIT! The game continues until everyone finishes or reaches 65. Final ranking: <b>1.</b> Those who achieved I QUIT! (younger age = better rank). <b>2.</b> Everyone else, by how many months they could survive on their available capital.</p>
+<p>Once <b>PASSIVE INCOME ≥ EXPENSES</b> with no active loans, you reach financial independence — I QUIT! The game continues until everyone finishes or reaches 65.</p>
+<p><b>Final ranking:</b> <b>1.</b> Players who achieved I QUIT! — by age (younger = better). <b>2.</b> Players who reached 65 without I QUIT! — ranked by how long their capital would cover their shortfall after retirement:</p>
+<p><b>Available capital</b> = Cash + Savings + Investment value<br>
+<b>Monthly shortfall</b> = Expenses − Passive income<br>
+<b>Capital duration</b> = Available capital ÷ Monthly shortfall</p>
+<p>The result is shown in years and months, e.g. “🕒 Your capital lasted 12 years and 8 months after retirement”.</p>
 <h3>💡 Five life lessons</h3>
-<p>🌱 Invest as early as you can — compounding needs time.<br>
-🎯 Diversify your portfolio — big gains come with big risk.<br>
-💰 Always keep a cash reserve — forced sales are costly.<br>
-🏦 A loan is a tool, not a solution — it can speed up your progress or wreck it.<br>
-📈 Inflation never stops. Financial freedom is built when your income grows faster than your expenses.</p>`,
+<p>🌱 <b>Invest as early as you can.</b> Time and compounding can amplify the result.<br>
+🎯 <b>Diversify your portfolio.</b> Higher potential returns usually come with higher risk.<br>
+🐖 <b>Build an Emergency Fund.</b> Surprises can’t always be predicted — but you can be prepared.<br>
+🏦 <b>Use loans as a tool, not a permanent fix.</b> They can speed up progress but create long-term obligations.<br>
+📈 <b>Never underestimate inflation.</b> Financial freedom is built when your income grows faster than your expenses.</p>`,
   };
 
   let lang = 'el';
