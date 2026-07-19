@@ -415,7 +415,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.6</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.7</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -884,6 +884,7 @@ body.game-over #myDash{z-index:auto;}
       lg_emptyProject: 'ℹ️ Η στοίβα Project είναι άδεια.', lg_emptyBB: 'ℹ️ Δεν έχουν μείνει κάρτες Big Business.',
       lg_emptyLifestyle: 'ℹ️ Η στοίβα Lifestyle είναι άδεια.', lg_emptyMoments: 'ℹ️ Η στοίβα Moments είναι άδεια.',
       lg_tax: '🧾 Tax: {n} πληρώνει 50% του εισοδήματος BB = −{v}',
+      lg_taxBot: '🤖 {o} {n} πλήρωσε φόρο {v}.',
       lg_taxNone: '🧾 Tax: {ol} {n} δεν έχει εισόδημα από Big Business.',
       lg_crashMiss: '💥 Crash ({colors}): {ol} {n} δεν έχει Project σε αυτά τα χρώματα — τη γλίτωσε!',
       lg_crashHit: '💥 Crash! {o} {n} χάνει: {title} ({v}, −{inc}/είσπραξη)',
@@ -1079,6 +1080,7 @@ body.game-over #myDash{z-index:auto;}
       lg_emptyProject: 'ℹ️ The Project deck is empty.', lg_emptyBB: 'ℹ️ No Big Business cards remain.',
       lg_emptyLifestyle: 'ℹ️ The Lifestyle deck is empty.', lg_emptyMoments: 'ℹ️ The Moments deck is empty.',
       lg_tax: '🧾 Tax: {n} pays 50% of BB income = −{v}',
+      lg_taxBot: '🤖 {n} paid {v} in tax.',
       lg_taxNone: '🧾 Tax: {n} has no Big Business income.',
       lg_crashMiss: '💥 Crash ({colors}): {n} holds no Projects in these colours — lucky escape!',
       lg_crashHit: '💥 Crash! {n} loses: {title} ({v}, −{inc}/payday)',
@@ -1659,7 +1661,23 @@ body.game-over #myDash{z-index:auto;}
       case 'tax': {
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
-          // v1.19 (αίτημα Γιώργου): ο φόρος ΔΕΝ αφαιρείται αμέσως — πρώτα ενημερωτικό
+          // v1.21 (αίτημα Γιώργου): το ενημερωτικό παράθυρο εμφανίζεται ΜΟΝΟ όταν
+          // φορολογείται άνθρωπος. Τα bots πληρώνουν αυτόματα, αμέσως, με μήνυμα
+          // στο ιστορικό — κανένα πάτημα δεν απαιτείται για να συνεχιστεί η σειρά τους.
+          if (p.isBot) {
+            if ((p.savings || 0) >= t) {
+              const pay = Math.round(t * 0.7);
+              p.savings -= pay;
+              log(state, 'lg_savTax', { n: pname(p), v: fmt(t), d: fmt(pay), s: fmt(p.savings) });
+            } else {
+              p.cash -= t;
+              log(state, 'lg_taxBot', { n: pname(p), v: fmt(t) });
+              if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+              if (!isActive(p)) return finishTurn(state); // χρεοκόπησε από τον φόρο
+            }
+            return finishTurn(state);
+          }
+          // v1.19: για ανθρώπους ο φόρος ΔΕΝ αφαιρείται αμέσως — πρώτα ενημερωτικό
           // παράθυρο (όπως ο Πληθωρισμός) και η πληρωμή γίνεται με το κουμπί επιβεβαίωσης.
           state.pending = { type: 'tax-pay', playerId: p.id, amount: t };
           return;
@@ -2287,7 +2305,9 @@ body.game-over #myDash{z-index:auto;}
         const ok = pend.income / pend.price >= 0.08 && p.cash - pend.price >= prof.cushion * 2;
         return { a: 'resolve', choice: ok ? 'accept' : 'decline' };
       }
-      case 'tax-pay': return { a: 'resolve', choice: 'pay' }; // v1.19: ο φόρος πληρώνεται πάντα
+      // v1.21: τα bots δεν φτάνουν πλέον εδώ (ο engine πληρώνει τον φόρο τους αυτόματα)·
+      // το κρατάμε για ΑΠΟΣΥΝΔΕΔΕΜΕΝΟΥΣ ανθρώπους που παίζονται αυτόματα από τον host.
+      case 'tax-pay': return { a: 'resolve', choice: 'pay' };
       case 'savings': {
         // v1.6: ο αμυντικός αποταμιεύει γενναία, ο ισορροπημένος λίγο, ο επιθετικός καθόλου·
         // στα 60 όλοι ρευστοποιούν (τα κλειδωμένα χρήματα δεν βοηθούν πια στην κατάταξη κίνησης)

@@ -217,23 +217,39 @@ section('v1.8 Tax μέσω αποταμίευσης & κάρτες απώλει�
 {
   const TAX_POS = CARDS.BOARD.findIndex(s => s.t === 'tax');
   const CRASH_POS = CARDS.BOARD.findIndex(s => s.t === 'crash');
-  // v1.19: ο φόρος ΔΕΝ αφαιρείται αμέσως — ανοίγει παράθυρο και πληρώνεται με το κουμπί
-  let sT = E.newGame([{ id: 'a', name: 'A', isBot: true }, { id: 'b', name: 'B', isBot: true }], 111);
+  // v1.19/v1.21: για ΑΝΘΡΩΠΟ ο φόρος ΔΕΝ αφαιρείται αμέσως — ανοίγει παράθυρο και πληρώνεται με το κουμπί
+  let sT = E.newGame([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 111);
   const PT = sT.players[0];
   PT.inv.push({ uid: 't1', cardId: 'BB13', kind: 'bb', title: 'X', cost: 10000, income: 600 }); // φόρος 300
   PT.savings = 400; PT.cash = 5000; PT.pos = TAX_POS; sT.turn = 0;
   E._internals.resolveSquare(sT, PT);
-  assert(sT.pending && sT.pending.type === 'tax-pay' && sT.pending.amount === 300, 'v1.19: πρώτα παράθυρο φόρου (300€), τίποτα δεν αφαιρέθηκε');
+  assert(sT.pending && sT.pending.type === 'tax-pay' && sT.pending.amount === 300, 'v1.19: άνθρωπος → πρώτα παράθυρο φόρου (300€), τίποτα δεν αφαιρέθηκε');
   assert(PT.cash === 5000 && PT.savings === 400, 'πριν το κουμπί: μετρητά & ταμείο ανέπαφα');
   let rT = E.applyAction(sT, 'a', { a: 'resolve', choice: 'pay' });
   assert((!rT || !rT.error) && PT.savings === 400 - 210 && PT.cash === 5000, 'μετά το κουμπί: −210 από ΑΠΟΤΑΜΙΕΥΣΗ (−30%), μετρητά ανέπαφα');
-  // Tax που ΔΕΝ καλύπτεται → πλήρης από μετρητά (πάντα μέσω κουμπιού)
+  // Tax που ΔΕΝ καλύπτεται → πλήρης από μετρητά (πάντα μέσω κουμπιού για ανθρώπους)
   const PT2 = sT.players[1];
   PT2.inv.push({ uid: 't2', cardId: 'BB19', kind: 'bb', title: 'Y', cost: 10000, income: 600 });
   PT2.savings = 200; PT2.cash = 5000; PT2.pos = TAX_POS; sT.turn = 1;
   E._internals.resolveSquare(sT, PT2);
   rT = E.applyAction(sT, 'b', { a: 'resolve', choice: 'pay' });
   assert((!rT || !rT.error) && PT2.savings === 200 && PT2.cash === 4700, 'ταμείο 200 < φόρος 300: πλήρη 300 από μετρητά');
+  // v1.21: για BOT ΚΑΝΕΝΑ παράθυρο — αυτόματη πληρωμή αμέσως + μήνυμα lg_taxBot στο ιστορικό
+  let sTB = E.newGame([{ id: 'bt', name: 'Κροίσος', isBot: true }, { id: 'h', name: 'H' }], 113);
+  const PTB = sTB.players.find(x => x.id === 'bt');
+  PTB.inv.push({ uid: 't3', cardId: 'BB13', kind: 'bb', title: 'X', cost: 10000, income: 800 }); // φόρος 400
+  PTB.savings = 0; PTB.cash = 5000; PTB.pos = TAX_POS; sTB.turn = sTB.players.indexOf(PTB);
+  E._internals.resolveSquare(sTB, PTB);
+  assert(!sTB.pending || sTB.pending.type !== 'tax-pay', 'v1.21: bot → ΚΑΝΕΝΑ tax-pay pending');
+  assert(PTB.cash === 4600, 'v1.21: bot πλήρωσε 400€ αυτόματα από μετρητά');
+  assert(sTB.log.some(e => e.k === 'lg_taxBot'), 'v1.21: μήνυμα «🤖 πλήρωσε φόρο» στο ιστορικό');
+  // bot με ΑΠΟΤΑΜΙΕΥΣΗ που καλύπτει → −30% από εκεί, αυτόματα, χωρίς pending
+  let sTB2 = E.newGame([{ id: 'bt2', name: 'Αθηνά', isBot: true }, { id: 'h2', name: 'H' }], 114);
+  const PTB2 = sTB2.players.find(x => x.id === 'bt2');
+  PTB2.inv.push({ uid: 't4', cardId: 'BB19', kind: 'bb', title: 'Y', cost: 10000, income: 600 }); // φόρος 300
+  PTB2.savings = 400; PTB2.cash = 5000; PTB2.pos = TAX_POS; sTB2.turn = sTB2.players.indexOf(PTB2);
+  E._internals.resolveSquare(sTB2, PTB2);
+  assert((!sTB2.pending || sTB2.pending.type !== 'tax-pay') && PTB2.savings === 190 && PTB2.cash === 5000, 'v1.21: bot με ταμείο 400 → −210 από ΑΠΟΤΑΜΙΕΥΣΗ αυτόματα, μετρητά ανέπαφα');
   // Crash σε ΑΝΘΡΩΠΟ → pending κάρτα απώλειας που κλείνει με κλικ
   let sC = E.newGame([{ id: 'h', name: 'H' }, { id: 'b', name: 'B', isBot: true }], 112);
   const PH = sC.players[0];

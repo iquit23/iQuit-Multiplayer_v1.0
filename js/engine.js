@@ -374,7 +374,23 @@
       case 'tax': {
         const t = 0.5 * bbPassive(p);
         if (t > 0) {
-          // v1.19 (αίτημα Γιώργου): ο φόρος ΔΕΝ αφαιρείται αμέσως — πρώτα ενημερωτικό
+          // v1.21 (αίτημα Γιώργου): το ενημερωτικό παράθυρο εμφανίζεται ΜΟΝΟ όταν
+          // φορολογείται άνθρωπος. Τα bots πληρώνουν αυτόματα, αμέσως, με μήνυμα
+          // στο ιστορικό — κανένα πάτημα δεν απαιτείται για να συνεχιστεί η σειρά τους.
+          if (p.isBot) {
+            if ((p.savings || 0) >= t) {
+              const pay = Math.round(t * 0.7);
+              p.savings -= pay;
+              log(state, 'lg_savTax', { n: pname(p), v: fmt(t), d: fmt(pay), s: fmt(p.savings) });
+            } else {
+              p.cash -= t;
+              log(state, 'lg_taxBot', { n: pname(p), v: fmt(t) });
+              if (queueForcedSaleIfNeeded(state, p)) { state.pending.then = 'advance'; return; }
+              if (!isActive(p)) return finishTurn(state); // χρεοκόπησε από τον φόρο
+            }
+            return finishTurn(state);
+          }
+          // v1.19: για ανθρώπους ο φόρος ΔΕΝ αφαιρείται αμέσως — πρώτα ενημερωτικό
           // παράθυρο (όπως ο Πληθωρισμός) και η πληρωμή γίνεται με το κουμπί επιβεβαίωσης.
           state.pending = { type: 'tax-pay', playerId: p.id, amount: t };
           return;
