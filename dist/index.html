@@ -2408,6 +2408,9 @@ body.game-over #myDash{z-index:auto;}
   // v1.8: fast mode (?fast=1) — μικρότερα timeouts, ΜΟΝΟ για automated tests
   const FAST = typeof location !== 'undefined' && /[?&]fast=1/.test(location.search);
   const FAIL_MS = FAST ? 4000 : 25000;
+  // v1.14: ?turnonly=1 → ΜΟΝΟ relay διαδρομές. Αποδεικνύει ότι το TURN όντως δουλεύει:
+  // αν συνδεθείτε με αυτό ενεργό, το relay είναι εντάξει. ΜΟΝΟ για δοκιμές.
+  const TURNONLY = typeof location !== 'undefined' && /[?&]turnonly=1/.test(location.search);
 
   function makeCode() {
     let c = '';
@@ -2419,15 +2422,14 @@ body.game-over #myDash{z-index:auto;}
   // v1.13: ΡΥΘΜΙΖΟΜΕΝΟΣ TURN relay. Χωρίς αξιόπιστο TURN, παίκτες σε ΔΙΑΦΟΡΕΤΙΚΑ δίκτυα
   // (π.χ. WiFi ↔ κινητά δεδομένα, πίσω από CGNAT) συχνά ΔΕΝ μπορούν να συνδεθούν — γι' αυτό
   // «μόνο στο ίδιο WiFi». Οι δωρεάν TURN του Open Relay Project έχουν πρακτικά πεθάνει.
-  // ΛΥΣΗ: βάλε δικά σου credentials (δωρεάν λογαριασμός στο metered.ca ή expressturn.com)
-  // ΕΔΩ στο TURN_SERVERS — ή προσωρινά στο localStorage κλειδί 'iquit_turn' ως JSON:
-  //   [{"urls":"turn:x.metered.ca:80","username":"...","credential":"..."}]
-  const TURN_SERVERS = [
-    // ⬇️ Συμπλήρωσε εδώ πραγματικά TURN credentials όταν υπάρξουν (βλ. σχόλιο πάνω)
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-  ];
+  // ΛΥΣΗ: δικά σου TURN credentials (π.χ. δωρεάν expressturn.com) — ΜΟΝΟ τοπικά, στο
+  // localStorage κλειδί 'iquit_turn' ως JSON array:
+  //   [{"urls":"turn:free.expressturn.com:3478","username":"...","credential":"..."}]
+  // v1.14: ΚΑΝΕΝΑ hardcoded TURN credential στο repo. Τα παλιά Open Relay entries ήταν
+  // ΚΑΙ νεκρά ΚΑΙ δημόσια — αφαιρέθηκαν (καθυστερούσαν το ICE gathering χωρίς όφελος).
+  // Τα TURN δίνονται ΜΟΝΟ τοπικά, μέσω localStorage['iquit_turn'] (βλ. customTurn()),
+  // ώστε να μη διαρρέουν credentials σε στατικό αρχείο ή σε commit.
+  const TURN_SERVERS = [];
   function customTurn() {
     try {
       const raw = localStorage.getItem('iquit_turn');
@@ -2437,23 +2439,77 @@ body.game-over #myDash{z-index:auto;}
     } catch (e) { return []; }
   }
 
+  // ---------------- v1.14: ICE ΔΙΑΓΝΩΣΤΙΚΑ ----------------
+  // Καθαρά παρατηρητικά (listeners) — δεν αλλάζουν καμία ροή σύνδεσης.
+  const _iceLog = [];
+  function ilog() {
+    const msg = '[ICE] ' + Array.prototype.join.call(arguments, ' ');
+    _iceLog.push(msg); if (_iceLog.length > 200) _iceLog.shift();
+    try { console.info(msg); } catch (e) {}
+  }
+  // 'host' = ίδιο δίκτυο, 'srflx' = μέσω STUN (δημόσια IP), 'relay' = μέσω TURN
+  function candType(c) {
+    if (!c) return '?';
+    if (c.type) return c.type;
+    const m = /(?:^| )typ ([a-z]+)/.exec(c.candidate || '');
+    return m ? m[1] : '?';
+  }
+  function logPair(pc, label) {
+    if (!pc.getStats) return;
+    pc.getStats(null).then(function (stats) {
+      const byId = {}; let pair = null;
+      stats.forEach(function (r) { byId[r.id] = r; });
+      stats.forEach(function (r) {
+        if (r.type === 'candidate-pair' && (r.selected || r.nominated || r.state === 'succeeded')) pair = pair || r;
+      });
+      if (!pair) return;
+      const L = byId[pair.localCandidateId], R = byId[pair.remoteCandidateId];
+      ilog(label, 'SELECTED PAIR → local=' + (L ? L.candidateType : '?') +
+        ' remote=' + (R ? R.candidateType : '?') +
+        (L && L.relayProtocol ? ' relayProto=' + L.relayProtocol : ''));
+    }).catch(function () {});
+  }
+  function attachIceLogs(conn, label) {
+    let tries = 0;
+    const timer = setInterval(function () {
+      const pc = conn && conn.peerConnection;
+      if (!pc) { if (++tries > 40) clearInterval(timer); return; }
+      clearInterval(timer);
+      ilog(label, 'peerConnection ready · turnonly=' + TURNONLY);
+      pc.addEventListener('iceconnectionstatechange', function () {
+        ilog(label, 'iceConnectionState =', pc.iceConnectionState);
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') logPair(pc, label);
+      });
+      pc.addEventListener('icegatheringstatechange', function () {
+        ilog(label, 'iceGatheringState =', pc.iceGatheringState);
+      });
+      pc.addEventListener('icecandidate', function (e) {
+        if (!e.candidate) { ilog(label, 'candidate gathering finished'); return; }
+        ilog(label, 'candidate', candType(e.candidate), (e.candidate.protocol || ''), (e.candidate.address || ''));
+      });
+      pc.addEventListener('icecandidateerror', function (e) {
+        ilog(label, 'CANDIDATE ERROR code=' + e.errorCode, 'text=' + (e.errorText || ''), 'url=' + (e.url || ''));
+      });
+    }, 250);
+  }
+
   function newPeer(id) {
-    return new Peer(id || undefined, {
-      debug: 1,
-      config: {
-        // v1.13: περισσότερα STUN (η ανακάλυψη δημόσιας IP πετυχαίνει συχνότερα σε
-        // «μέτρια» NAT) + TURN ως δίχτυ ασφαλείας για τα αυστηρά (CGNAT κινητής)
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun.cloudflare.com:3478' },
-          { urls: 'stun:global.stun.twilio.com:3478' },
-          { urls: 'stun:stun.relay.metered.ca:80' },
-        ].concat(customTurn()).concat(TURN_SERVERS),
-        iceCandidatePoolSize: 6,
-      },
-    });
+    const cfg = {
+      // v1.13: περισσότερα STUN (η ανακάλυψη δημόσιας IP πετυχαίνει συχνότερα σε
+      // «μέτρια» NAT) + TURN ως δίχτυ ασφαλείας για τα αυστηρά (CGNAT κινητής)
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+        { urls: 'stun:stun.relay.metered.ca:80' },
+      ].concat(customTurn()).concat(TURN_SERVERS),
+      iceCandidatePoolSize: 6,
+    };
+    if (TURNONLY) cfg.iceTransportPolicy = 'relay';
+    ilog('config · turnonly=' + TURNONLY + ' · turnEntries=' + (customTurn().length + TURN_SERVERS.length));
+    return new Peer(id || undefined, { debug: 1, config: cfg });
   }
 
   // ---------------- HOST ----------------
@@ -2488,6 +2544,7 @@ body.game-over #myDash{z-index:auto;}
     });
     peer.on('connection', (conn) => {
       const clientId = 'c' + (++seq) + '-' + makeToken().slice(0, 4);
+      attachIceLogs(conn, 'host'); // v1.14: διαγνωστικά μόνο
       conn.on('open', () => { conns.set(clientId, conn); });
       conn.on('data', (msg) => {
         if (!msg || typeof msg !== 'object') return;
@@ -2520,6 +2577,7 @@ body.game-over #myDash{z-index:auto;}
     peer.on('open', () => {
       status('Αναζήτηση δωματίου «' + code + '»…');
       conn = peer.connect(PREFIX + code.toLowerCase(), { reliable: true });
+      attachIceLogs(conn, 'guest'); // v1.14: διαγνωστικά μόνο
       // v0.8: παρακολούθηση ICE για διαγνωστικά — να ξέρουμε ΑΝ βρέθηκε το δωμάτιο
       conn.on('iceStateChanged', (st) => {
         if (st === 'checking') { foundPeer = true; status('Το δωμάτιο βρέθηκε — γίνεται σύζευξη των συσκευών…'); }
@@ -2552,7 +2610,8 @@ body.game-over #myDash{z-index:auto;}
     return guest;
   }
 
-  root.IQ_NET = { createHost, createGuest, makeToken, makeCode };
+  // v1.14: iceLog() → επιστρέφει το ιστορικό ICE για εύκολη ανάγνωση/αντιγραφή στο console
+  root.IQ_NET = { createHost, createGuest, makeToken, makeCode, iceLog: function () { return _iceLog.slice(); } };
 })(typeof self !== 'undefined' ? self : this);
 
 </script>
