@@ -1648,7 +1648,100 @@
   }
 
   // ============================================================ HOME WIRING
+  // ===== v1.22: ΠΡΟΣΩΡΙΝΟ ΚΡΥΦΟ TURN SETUP PANEL (?turnsetup=1) =====
+  // Για δοκιμές ExpressTURN σε πραγματικές συσκευές (iPhone: δεν υπάρχει console).
+  // ΔΕΝ εμφανίζεται σε κανονικούς επισκέπτες, ΔΕΝ αγγίζει App/game/multiplayer flow,
+  // ΔΕΝ περιέχει/στέλνει credentials πουθενά — γράφει ΜΟΝΟ στο localStorage['iquit_turn']
+  // (το ίδιο κλειδί που διαβάζει ήδη το net.js customTurn()). Αφαιρείται όταν τελειώσουν οι δοκιμές.
+  function initTurnSetupPanel() {
+    if (!/[?&]turnsetup=1/.test(location.search)) return;
+    const KEY = 'iquit_turn';
+    const read = () => {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return null;
+        const a = JSON.parse(raw);
+        return Array.isArray(a) ? a : [a];
+      } catch (e) { return null; }
+    };
+    const mask = (s) => { s = String(s || ''); return s.length <= 4 ? '••••' : '••••' + s.slice(-4); };
+
+    const wrap = document.createElement('div');
+    wrap.id = 'turnSetup';
+    wrap.style.cssText = 'position:fixed; left:50%; bottom:10px; transform:translateX(-50%); z-index:9000;' +
+      'width:min(430px, calc(100vw - 16px)); max-height:74vh; overflow:auto; -webkit-overflow-scrolling:touch;' +
+      'background:#101b30; border:1px solid #334a72; border-radius:14px; padding:14px 14px 16px;' +
+      'box-shadow:0 14px 44px rgba(0,0,0,.65); color:#dfe8f6; font-size:14px; text-align:left;';
+    const inp = 'width:100%; box-sizing:border-box; margin:4px 0 10px; padding:11px 12px; font-size:16px;' +
+      'background:#0b1424; color:#eaf1fb; border:1px solid #31466e; border-radius:9px;';
+    const btn = 'padding:11px 12px; font-size:14px; font-weight:700; border:0; border-radius:9px; cursor:pointer; width:100%; margin-top:8px;';
+    wrap.innerHTML =
+      '<div style="display:flex; align-items:center; margin-bottom:8px;">' +
+        '<b style="font-size:15px;">🛠️ TURN Setup (προσωρινό)</b><span style="flex:1"></span>' +
+        '<button id="tsClose" style="' + btn + ' width:auto; margin:0; padding:6px 12px; background:#243352; color:#cfe0f5;">✕</button></div>' +
+      '<div id="tsStatus" style="background:#0b1424; border:1px solid #263a5e; border-radius:9px; padding:9px 11px; margin-bottom:10px; font-size:13px; line-height:1.5; word-break:break-all;"></div>' +
+      '<label style="font-size:12px; color:#9fb4d4;">TURN server URL (turn:… ή turns:…)</label>' +
+      '<input id="tsUrl" style="' + inp + '" placeholder="turn:free.expressturn.com:3478" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<label style="font-size:12px; color:#9fb4d4;">Username</label>' +
+      '<input id="tsUser" style="' + inp + '" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<label style="font-size:12px; color:#9fb4d4;">Credential</label>' +
+      '<input id="tsCred" type="password" style="' + inp + '" autocomplete="off">' +
+      '<button id="tsSave" style="' + btn + ' background:#2f68d8; color:#fff;">💾 Αποθήκευση & έλεγχος</button>' +
+      '<button id="tsDel" style="' + btn + ' background:#5c2733; color:#ffd9de;">🗑️ Διαγραφή credentials</button>' +
+      '<button id="tsGo" style="' + btn + ' background:#1f7a4d; color:#eafff2;">🚀 Άνοιγμα Forced TURN Test (?turnonly=1)</button>' +
+      '<button id="tsIce" style="' + btn + ' background:#243352; color:#cfe0f5;">📡 Εμφάνιση ICE log</button>' +
+      '<pre id="tsIceOut" style="display:none; background:#0b1424; border:1px solid #263a5e; border-radius:9px; padding:9px; font-size:11px; line-height:1.45; white-space:pre-wrap; word-break:break-all; max-height:180px; overflow:auto; margin:8px 0 0;"></pre>' +
+      '<div id="tsMsg" style="margin-top:9px; font-size:13px; min-height:18px;"></div>';
+    document.body.appendChild(wrap);
+
+    const el = (id) => document.getElementById(id);
+    const msg = (txt, ok) => { const m = el('tsMsg'); m.textContent = txt; m.style.color = ok ? '#7fe3a8' : '#ff9aa5'; };
+    const renderStatus = () => {
+      const a = read(), st = el('tsStatus');
+      if (!a || !a.length) { st.textContent = 'Κατάσταση: κανένα αποθηκευμένο TURN credential σε αυτή τη συσκευή.'; return; }
+      const e0 = a[0];
+      st.textContent = 'Κατάσταση: ' + a.length + ' αποθηκευμένο(α) ✓\nURL: ' + (e0.urls || '—') +
+        '\nUsername: ' + (e0.username || '—') + '\nCredential: ' + mask(e0.credential);
+    };
+    // προσυμπλήρωση για εύκολη διόρθωση (μόνο τοπικά — τίποτα δεν φεύγει από τη συσκευή)
+    const cur = read();
+    if (cur && cur[0]) { el('tsUrl').value = cur[0].urls || ''; el('tsUser').value = cur[0].username || ''; el('tsCred').value = cur[0].credential || ''; }
+    renderStatus();
+
+    el('tsClose').onclick = () => wrap.remove();
+    el('tsSave').onclick = () => {
+      const u = el('tsUrl').value.trim(), n = el('tsUser').value.trim(), c = el('tsCred').value;
+      if (!/^turns?:/.test(u)) { msg('❌ Το URL πρέπει να ξεκινά με turn: ή turns:', false); return; }
+      if (!n || !c) { msg('❌ Συμπλήρωσε username και credential.', false); return; }
+      try {
+        localStorage.setItem(KEY, JSON.stringify([{ urls: u, username: n, credential: c }]));
+        const back = read();
+        const ok = back && back.length === 1 && back[0].urls === u && back[0].username === n && back[0].credential === c;
+        if (ok) { msg('✅ Αποθηκεύτηκαν και επαληθεύτηκαν. Ισχύουν από την επόμενη σύνδεση/δωμάτιο.', true); }
+        else msg('❌ Η επαλήθευση απέτυχε — δεν γράφτηκαν σωστά.', false);
+      } catch (e) { msg('❌ Αποτυχία αποθήκευσης: ' + e.message, false); }
+      renderStatus();
+    };
+    el('tsDel').onclick = () => {
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      msg(read() ? '❌ Η διαγραφή απέτυχε.' : '✅ Διαγράφηκαν από αυτή τη συσκευή.', !read());
+      renderStatus();
+    };
+    el('tsGo').onclick = () => {
+      // κρατάμε και το turnsetup=1 ώστε το panel να είναι διαθέσιμο και στη δοκιμή
+      location.href = location.pathname + '?turnonly=1&turnsetup=1';
+    };
+    el('tsIce').onclick = () => {
+      const out = el('tsIceOut');
+      const lines = (NET && NET.iceLog) ? NET.iceLog() : [];
+      out.textContent = lines.length ? lines.join('\n') : '(κενό — δεν έχει γίνει ακόμα απόπειρα σύνδεσης)';
+      out.style.display = 'block';
+      out.scrollTop = out.scrollHeight;
+    };
+  }
+
   function init() {
+    initTurnSetupPanel(); // v1.22: ενεργό ΜΟΝΟ με ?turnsetup=1 — αλλιώς no-op
     $('playerName').value = localStorage.getItem(NAME_KEY) || '';
     $('playerName').addEventListener('input', () => localStorage.setItem(NAME_KEY, $('playerName').value));
     $('joinCode').addEventListener('input', () => { $('joinCode').value = $('joinCode').value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
