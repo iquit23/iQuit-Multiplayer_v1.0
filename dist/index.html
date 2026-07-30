@@ -415,7 +415,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 2.9</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Ιούλιος 3.0</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -2648,7 +2648,8 @@ body.game-over #myDash{z-index:auto;}
   const SDK_FILES = ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-database-compat.js'];
 
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const SLOTS = ['s1', 's2', 's3', 's4', 's5'];
+  // v1.24: 4 θέσεις guests + 1 host = ΜΕΓΙΣΤΟ 5 ΑΤΟΜΑ ΣΥΝΟΛΙΚΑ (όπως το «1-5 παίκτες» του UI)
+  const SLOTS = ['s1', 's2', 's3', 's4'];
   const FAST = typeof location !== 'undefined' && /[?&]fast=1/.test(location.search); // ΜΟΝΟ automated tests
   const BCAST_TTL = 60000;      // κλάδεμα broadcasts
   const STALE_TAKEOVER = FAST ? 3000 : 12000; // σιωπή host πριν επιτραπεί διαδοχή (12s και στα rules)
@@ -2741,41 +2742,102 @@ body.game-over #myDash{z-index:auto;}
       if (state.closed) return;
       state.ctx = ctx;
       // Διεκδίκηση κωδικού με transaction (μοναδικότητα χωρίς race):
-      // - κενό → δικό μας
+      // - κενό → δικό μας (νέο δωμάτιο, server timestamps)
       // - δικό μας uid → resume
-      // - hostBeat μπαγιάτικο → διαδοχή (host migration) / νεκρό δωμάτιο
+      // - hostBeat μπαγιάτικο → διαδοχή ΜΟΝΟ αν είμαστε ήδη ΜΕΛΟΣ του δωματίου (v1.24 —
+      //   τα rules το επιβάλλουν server-side· τυχαίος γνώστης του κωδικού ΔΕΝ γίνεται host)
       // - αλλιώς → 'unavailable-id' (αν ζητήθηκε συγκεκριμένος κωδικός) ή νέος τυχαίος
       let tries = 0;
       function claim(code) {
         tries++;
-        const metaRef = roomRef(ctx.db, code).child('meta');
-        metaRef.transaction(function (cur) {
-          if (cur === null) return { hostUid: ctx.uid, hostBeat: Date.now(), createdAt: Date.now(), hostSeq: 1 };
-          if (cur.hostUid === ctx.uid) { cur.hostBeat = Date.now(); cur.hostSeq = (cur.hostSeq || 1) + 1; return cur; }
-          if ((cur.hostBeat || 0) < Date.now() - STALE_TAKEOVER) {
-            return { hostUid: ctx.uid, hostBeat: Date.now(), createdAt: cur.createdAt || Date.now(), hostSeq: (cur.hostSeq || 1) + 1 };
-          }
-          return; // abort — κατειλημμένο από ενεργό host
-        }, function (err, committed) {
+        const rr0 = roomRef(ctx.db, code);
+        function doMeta(iAmMember, tempSlotRef) {
+          const metaRef = rr0.child('meta');
+          metaRef.transaction(function (cur) {
+            if (cur === null) return { hostUid: ctx.uid, hostBeat: TS(ctx.fb), createdAt: TS(ctx.fb), hostSeq: 1 };
+            if (cur.hostUid === ctx.uid) { cur.hostBeat = TS(ctx.fb); cur.hostSeq = (cur.hostSeq || 1) + 1; return cur; }
+            if (iAmMember && (cur.hostBeat || 0) < Date.now() - STALE_TAKEOVER) {
+              return { hostUid: ctx.uid, hostBeat: TS(ctx.fb), createdAt: cur.createdAt || TS(ctx.fb), hostSeq: (cur.hostSeq || 1) + 1 };
+            }
+            return; // abort — κατειλημμένο από ενεργό host (ή δεν είμαστε μέλος)
+          }, function (err, committed) {
+            if (state.closed) return;
+            if (err) { flog('claim error', err.code || err.message); return cb.onError('Πρόβλημα σύνδεσης με τη βάση. Έλεγξε το internet σου.', 'network'); }
+            if (!committed) {
+              // μη αφήσεις πίσω «θέση-φάντασμα» αν πήραμε προσωρινό slot για τη διεκδίκηση
+              if (tempSlotRef) { try { tempSlotRef.remove(); } catch (e) {} }
+              if (desiredCode) { flog('claim aborted — ενεργός host στο', code); return cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.', 'unavailable-id'); }
+              // νεκρό >24h δωμάτιο σε τυχαίο κωδικό: προσπάθησε GC (τα rules το επιτρέπουν) και συνέχισε αλλού
+              try { rr0.remove(); } catch (e) {}
+              if (tries < 8) return claim(makeCode());
+              return cb.onError('Δεν βρέθηκε ελεύθερος κωδικός δωματίου — προσπάθησε ξανά.', 'unavailable-id');
+            }
+            afterClaim(code);
+          });
+        }
+        rr0.child('slots').once('value').then(function (ss) {
           if (state.closed) return;
-          if (err) { flog('claim error', err.code || err.message); return cb.onError('Πρόβλημα σύνδεσης με τη βάση. Έλεγξε το internet σου.', 'network'); }
-          if (!committed) {
-            if (desiredCode) { flog('claim aborted — ενεργός host στο', code); return cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.', 'unavailable-id'); }
-            if (tries < 8) return claim(makeCode());
-            return cb.onError('Δεν βρέθηκε ελεύθερος κωδικός δωματίου — προσπάθησε ξανά.', 'unavailable-id');
-          }
+          const sl = ss.val() || {};
+          const iAmMember = SLOTS.some(function (s) { return sl[s] && sl[s].uid === ctx.uid; });
+          if (iAmMember || !desiredCode) return doMeta(iAmMember, null);
+          // v1.24: Διαδοχή/resume ΧΩΡΙΣ θέση μέλους (το ui κλείνει τη σύνδεση guest πριν το takeover
+          // και το close ελευθερώνει το slot): αν δεν είμαστε ο καταγεγραμμένος host, πρέπει πρώτα
+          // να ΞΑΝΑΠΑΡΟΥΜΕ θέση μέλους — τα rules επιτρέπουν διαδοχή ΜΟΝΟ σε μέλη του δωματίου.
+          rr0.child('meta').once('value').then(function (ms) {
+            if (state.closed) return;
+            const meta = ms.val();
+            if (!meta || meta.hostUid === ctx.uid) return doMeta(false, null); // κενό δωμάτιο ή δικό μας resume
+            (function claimTempSlot(i) {
+              if (state.closed) return;
+              if (i >= SLOTS.length) return cb.onError('Ο κωδικός χρησιμοποιείται ήδη — προσπάθησε ξανά.', 'unavailable-id');
+              const sRef = rr0.child('slots/' + SLOTS[i]);
+              sRef.transaction(function (cur) {
+                if (cur === null || cur.uid === ctx.uid) return { uid: ctx.uid, ts: Date.now() };
+                return;
+              }, function (err, committed) {
+                if (state.closed) return;
+                if (err) return cb.onError('Πρόβλημα σύνδεσης με τη βάση. Έλεγξε το internet σου.', 'network');
+                if (!committed) return claimTempSlot(i + 1);
+                flog('takeover: προσωρινή θέση ' + SLOTS[i]);
+                doMeta(true, sRef);
+              });
+            })(0);
+          });
+        });
+      }
+      function afterClaim(code) {
           state.code = code.toUpperCase(); host.code = state.code;
           flog('host claim ok · room=' + state.code + ' · tries=' + tries);
           const rr = roomRef(ctx.db, state.code);
           // καθαρή αρχή: μπαγιάτικες ουρές από προηγούμενη ζωή του δωματίου
           rr.child('toHost').remove(); rr.child('bcast').remove();
+          // v1.24: ΠΡΟΑΓΩΓΗ guest→host: ελευθέρωσε τη θέση guest που τυχόν κατέχουμε —
+          // το uid μας δεν επιτρέπεται να «μετράει» δύο φορές, ούτε να μειωθεί η χωρητικότητα
+          rr.child('slots').once('value').then(function (ss2) {
+            const sl2 = ss2.val() || {};
+            SLOTS.forEach(function (s) { if (sl2[s] && sl2[s].uid === ctx.uid) rr.child('slots/' + s).remove(); });
+          });
+          // v1.24: αν άλλος διεκδικήσει νόμιμα το δωμάτιο (διαδοχή), σταματάμε ΑΜΕΣΩΣ να
+          // εκπέμπουμε ως host — κανένας «δεύτερος host» δεν μολύνει τους guests
+          const huRef = rr.child('meta/hostUid');
+          const onHu = huRef.on('value', function (snap) {
+            const v = snap && snap.val ? snap.val() : null;
+            if (v && v !== ctx.uid && !state.closed) { flog('deposed — νέος host ανέλαβε το δωμάτιο'); host.close(); }
+          });
+          state.listeners.push(function () { huRef.off('value', onHu); });
           // εισερχόμενα από guests
           const inRef = rr.child('toHost');
+          const lastHello = {}; // v1.24: τα retries του hello (βλ. guest) δεν δημιουργούν διπλό παίκτη
           const onMsg = inRef.on('child_added', function (snap) {
             const v = snap.val(); snap.ref.remove();
             if (!v || typeof v.m !== 'string') return;
             const msg = unpack(v.m); if (!msg || !v.uid) return;
-            if (msg.t === 'hello') cb.onHello(v.uid, msg, function (m) { host.sendTo(v.uid, m); });
+            if (msg.t === 'hello') {
+              const hk = v.uid + (msg.token ? ':t' : ':n');
+              if (lastHello[hk] && Date.now() - lastHello[hk] < 6000) return; // duplicate retry
+              lastHello[hk] = Date.now();
+              return cb.onHello(v.uid, msg, function (m) { host.sendTo(v.uid, m); });
+            }
             else if (msg.t === 'act') cb.onAction(v.uid, msg.action);
             else if (msg.t === 'chat') cb.onChat && cb.onChat(v.uid, msg.text);
             else if (msg.t === 'pawn') cb.onPawn && cb.onPawn(v.uid, msg.pawn);
@@ -2790,9 +2852,7 @@ body.game-over #myDash{z-index:auto;}
           });
           state.listeners.push(function () { slotsRef.off('child_removed', onGone); });
           cb.onReady(state.code);
-        });
       }
-      // GC ευκαιρίας: αν ο τυχαίος κωδικός πέσει σε 24ωρο-νεκρό δωμάτιο, το transaction το παίρνει ούτως ή άλλως (stale clause)
       claim(desiredCode || makeCode());
     }).catch(function (e) {
       if (!state.closed) cb.onError('Firebase: ' + e.message, 'network');
@@ -2869,7 +2929,7 @@ body.game-over #myDash{z-index:auto;}
               const v = snap.val(); snap.ref.remove();
               if (!v || typeof v.m !== 'string') return;
               const msg = unpack(v.m);
-              if (msg) cb.onMessage(msg);
+              if (msg) { state.gotAny = true; cb.onMessage(msg); }
             });
             state.listeners.push(function () { inbox.off('child_added', onIn); });
             // broadcasts: αγνόησε ό,τι προϋπήρχε (θα πάρουμε φρέσκο state με το welcome)
@@ -2881,14 +2941,24 @@ body.game-over #myDash{z-index:auto;}
               const onB = bRef.on('child_added', function (snap) {
                 if (seen[snap.key]) return;
                 const v = snap.val();
-                if (!v || typeof v.m !== 'string') return;
+                if (!v || typeof v.m !== 'string') { flog('bcast: άκυρο payload ' + snap.key); return; }
                 const msg = unpack(v.m);
                 if (msg) cb.onMessage(msg);
               });
+              flog('bcast listener on · preexisting=' + Object.keys(seen).length);
               state.listeners.push(function () { bRef.off('child_added', onB); });
               // σύνδεση έτοιμη → hello (όπως ο conn.on('open') του PeerJS)
               guest.send(Object.assign({ t: 'hello' }, hello));
               cb.onOpen();
+              // v1.24: αυτο-ίαση — αν σε 2.5s δεν έχει έρθει ΤΙΠΟΤΑ (χαμένο hello/λούκι δικτύου),
+              // ξαναστέλνουμε το hello (έως 4 φορές)· ο host κάνει dedupe ώστε να μη διπλοεγγραφούμε
+              let retries = 0;
+              const rt = setInterval(function () {
+                if (state.closed || state.gotAny || retries >= 4) { clearInterval(rt); return; }
+                retries++; flog('hello retry #' + retries);
+                guest.send(Object.assign({ t: 'hello' }, hello));
+              }, 2500);
+              state.listeners.push(function () { clearInterval(rt); });
             });
           }
         }
