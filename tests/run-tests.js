@@ -625,6 +625,25 @@ for (let i = 0; i < 50 && s.phase === 'playing'; i++) {
 }
 assert(true, 'Το state επιβιώνει σε JSON round-trips');
 
+// ---------- 7. v1.23: Transport interface parity (net.js ↔ net-fb.js) ----------
+section('v1.23 Firebase transport — συμβατότητα συμβολαίου');
+{
+  // Τα δύο transports φορτώνουν σε node χωρίς DOM/SDK (root = module.exports, guards σε location/document)
+  const N1 = require('../js/net.js').IQ_NET;
+  const N2 = require('../js/net-fb.js').IQ_NET_FB;
+  assert(!!N1 && !!N2, 'IQ_NET & IQ_NET_FB φορτώνουν χωρίς browser');
+  const api = ['createHost', 'createGuest', 'makeToken', 'makeCode', 'iceLog'];
+  api.forEach(k => assert(typeof N1[k] === 'function' && typeof N2[k] === 'function', 'κοινό API: ' + k + '()'));
+  assert(Object.keys(N2).sort().join() === Object.keys(N1).sort().join(), 'ΙΔΙΑ ακριβώς exported keys (το ui.js δουλεύει αναλλοίωτο)');
+  let codesOk = true;
+  for (let i = 0; i < 200; i++) if (!/^[A-Z2-9]{4}$/.test(N2.makeCode())) codesOk = false;
+  assert(codesOk, 'fb makeCode: πάντα 4 χαρ. A-Z/2-9 (χωρίς I/O/0/1) — ίδια μορφή κωδικών με PeerJS');
+  assert(N2.makeToken().length >= 12 && N2.makeToken() !== N2.makeToken(), 'fb makeToken: μοναδικά tokens');
+  assert(Array.isArray(N2.iceLog()), 'fb iceLog(): επιστρέφει array (συμβατό με το διαγνωστικό panel)');
+  // Το net-fb ΔΕΝ κάνει καμία ενέργεια δικτύου στο load (lazy SDK) — δεν υπάρχει global firebase στο node
+  assert(typeof global.firebase === 'undefined', 'κανένα side-effect/SDK load κατά το require');
+}
+
 console.log('\n══════════════════════════');
 console.log((failed === 0 ? '✅' : '❌') + ' Tests: ' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed === 0 ? 0 : 1);

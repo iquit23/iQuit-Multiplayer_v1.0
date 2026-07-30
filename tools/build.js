@@ -11,7 +11,7 @@ const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 // (π.χ. το πιόνι '$') ερμηνεύονται ως ειδικά patterns του String.replace και καταστρέφουν το output.
 html = html.replace('<link rel="stylesheet" href="css/style.css">', () => '<style>\n' + css + '\n</style>');
 
-for (const f of ['cards.js', 'i18n.js', 'engine.js', 'bots.js', 'net.js', 'ui.js']) {
+for (const f of ['cards.js', 'i18n.js', 'engine.js', 'bots.js', 'net.js', 'net-fb.js', 'ui.js']) {
   const js = fs.readFileSync(path.join(root, 'js', f), 'utf8');
   html = html.replace('<script src="js/' + f + '"></script>', () => '<script>\n' + js + '\n</script>');
 }

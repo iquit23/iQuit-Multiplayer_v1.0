@@ -2,7 +2,9 @@
    Host: τρέχει engine + bots, κάνει broadcast state. Guest: στέλνει actions, κάνει render το snapshot. */
 (function () {
   'use strict';
-  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
+  // v1.23: πειραματικό Firebase transport ΜΟΝΟ με ?transport=firebase — αλλιώς PeerJS (default, αμετάβλητο)
+  const FB_TRANSPORT = /[?&]transport=firebase/.test(location.search) && !!window.IQ_NET_FB;
+  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
   const $ = (id) => document.getElementById(id);
   const fmt = E.fmt;
   const t = I.t;
@@ -1797,7 +1799,7 @@
     };
 
     $('btnCreate').onclick = () => {
-      if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }
+      if (typeof Peer === 'undefined' && !FB_TRANSPORT) { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }
       localStorage.removeItem(HOST_KEY);
       $('btnCreate').disabled = true; $('btnCreate').textContent = t('creating');
       hostCreate(false);
@@ -1814,14 +1816,15 @@
     $('btnJoin').onclick = () => {
       const code = $('joinCode').value.trim();
       if (code.length !== 4) { homeErr(t('codeLen')); return; }
-      if (typeof Peer === 'undefined') { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου.'); return; }
+      if (typeof Peer === 'undefined' && !FB_TRANSPORT) { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου.'); return; }
       localStorage.removeItem(GUEST_KEY);
       guestJoin(code, undefined);
     };
     $('btnShare').onclick = async () => {
       const code = App.lobby ? App.lobby.code : $('lobbyCode').textContent;
       // Link πρόσκλησης: ανοίγει το παιχνίδι με προσυμπληρωμένο δωμάτιο (?room=ΚΩΔΙΚΟΣ)
-      const url = location.origin + location.pathname + '?room=' + code;
+      // v1.23: το link πρόσκλησης κουβαλάει και το transport — αλλιώς ο guest θα έψαχνε το δωμάτιο στο «λάθος δίκτυο»
+      const url = location.origin + location.pathname + '?room=' + code + (FB_TRANSPORT ? '&transport=firebase' : '');
       const text = t('shareText', { url });
       if (navigator.share) { try { await navigator.share({ text, url }); } catch (e) {} }
       else { try { await navigator.clipboard.writeText(text); toast(t('copied')); } catch (e) {} }
@@ -1865,7 +1868,8 @@
     const roomParam = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z2-9]/g, '');
     if (roomParam.length === 4) {
       $('joinCode').value = roomParam;
-      history.replaceState(null, '', location.pathname); // καθάρισε το URL για να μην ξανα-μπει σε refresh
+      // v1.23: καθάρισε το ?room ΑΛΛΑ κράτα το transport — αλλιώς σε refresh/resume ο guest θα γύριζε σε PeerJS
+      history.replaceState(null, '', location.pathname + (FB_TRANSPORT ? '?transport=firebase' : ''));
       if (($('playerName').value || '').trim()) {
         guestJoin(roomParam, undefined);
         return;
