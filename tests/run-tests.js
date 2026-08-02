@@ -4,6 +4,7 @@
 const CARDS = require('../js/cards.js');
 const E = require('../js/engine.js');
 const BOTS = require('../js/bots.js');
+const fs = require('fs');
 
 let passed = 0, failed = 0;
 function assert(cond, msg) {
@@ -642,6 +643,33 @@ section('v1.23 Firebase transport — συμβατότητα συμβολαίο�
   assert(Array.isArray(N2.iceLog()), 'fb iceLog(): επιστρέφει array (συμβατό με το διαγνωστικό panel)');
   // Το net-fb ΔΕΝ κάνει καμία ενέργεια δικτύου στο load (lazy SDK) — δεν υπάρχει global firebase στο node
   assert(typeof global.firebase === 'undefined', 'κανένα side-effect/SDK load κατά το require');
+}
+
+// ---------- 8. Αύγουστος 1.2: Firebase default + PeerJS fallback ----------
+section('Αύγουστος 1.2 Transport routing & invitation links');
+{
+  const T = require('../js/transport.js');
+  assert(T.select('').mode === 'firebase', 'χωρίς parameter → Firebase');
+  assert(T.select('?room=ABCD').mode === 'firebase', 'room link χωρίς transport → Firebase');
+  assert(T.select('?transport=peer').mode === 'peer', '?transport=peer → PeerJS');
+  assert(T.select('?transport=firebase').mode === 'firebase', '?transport=firebase → Firebase');
+  assert(T.select('?transport=unknown').mode === 'firebase' && T.select('?transport=unknown').explicit === '', 'άγνωστη τιμή → ασφαλές Firebase default χωρίς διατήρηση');
+
+  const origin = 'https://iquitgame.com', path = '/', code = 'ABCD';
+  assert(T.inviteUrl(origin, path, code, '') === 'https://iquitgame.com/?room=ABCD', 'default invitation link → καθαρό Firebase URL');
+  assert(T.inviteUrl(origin, path, code, '?transport=peer') === 'https://iquitgame.com/?room=ABCD&transport=peer', 'Peer invitation link διατηρεί ?transport=peer');
+  assert(T.inviteUrl(origin, path, code, '?transport=firebase') === 'https://iquitgame.com/?room=ABCD&transport=firebase', 'ρητό Firebase invitation link παραμένει συμβατό');
+  assert(T.cleanPath(path, '?room=ABCD') === '/', 'καθάρισμα ?room στο default → παραμένει Firebase');
+  assert(T.cleanPath(path, '?room=ABCD&transport=peer') === '/?transport=peer', 'καθάρισμα ?room διατηρεί PeerJS');
+  assert(T.cleanPath(path, '?room=ABCD&transport=firebase') === '/?transport=firebase', 'καθάρισμα ?room διατηρεί ρητό Firebase');
+
+  const uiSrc = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  const indexSrc = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  assert(uiSrc.includes('TPORT.select(location.search)') && uiSrc.includes('TPORT.inviteUrl(') && uiSrc.includes('TPORT.cleanPath('), 'ui.js χρησιμοποιεί τον ελεγμένο transport helper για επιλογή/links/refresh');
+  assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
+  assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
+  assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.2'), 'εμφανιζόμενη έκδοση Αύγουστος 1.2');
 }
 
 console.log('\n══════════════════════════');

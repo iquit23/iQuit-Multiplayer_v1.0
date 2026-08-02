@@ -415,7 +415,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.1</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.2</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -2616,14 +2616,15 @@ body.game-over #myDash{z-index:auto;}
 
 </script>
 <script>
-/* I QUIT! — Firebase Realtime Database transport (v1.23, ΠΕΙΡΑΜΑΤΙΚΟ).
-   Ενεργοποιείται ΜΟΝΟ με ?transport=firebase — αλλιώς δεν φορτώνει τίποτα (ούτε το SDK).
+/* I QUIT! — Firebase Realtime Database transport.
+   Είναι το προεπιλεγμένο transport. Το ?transport=firebase παραμένει συμβατό,
+   ενώ το PeerJS επιλέγεται αποκλειστικά με ?transport=peer.
    Υλοποιεί ΑΚΡΙΒΩΣ το ίδιο συμβόλαιο με το IQ_NET (net.js): createHost/createGuest/makeToken/makeCode,
    ώστε το ui.js να δουλεύει αναλλοίωτο. Ο engine/gameplay δεν αγγίζεται.
 
    Μοντέλο δεδομένων (rooms/<ΚΩΔΙΚΑΣ>):
      meta:            { hostUid, hostBeat, createdAt, hostSeq }   ← ιδιοκτησία δωματίου
-     slots/s1..s5:    { uid, ts }                                 ← μέλη-guests (δομικό όριο 5 + host = 6 θέσεις παιχνιδιού)
+     slots/s1..s4:    { uid, ts }                                 ← 4 guests + 1 host = 5 παίκτες συνολικά
      toHost/<id>:     { uid, m }                                  ← μηνύματα guest → host (m = JSON string)
      toGuest/<uid>/<id>: { m }                                    ← μηνύματα host → συγκεκριμένο guest
      bcast/<id>:      { m, ts }                                   ← broadcasts host → όλους
@@ -2982,12 +2983,53 @@ body.game-over #myDash{z-index:auto;}
 
 </script>
 <script>
+/* I QUIT! — επιλογή multiplayer transport και διατήρηση transport στα URLs.
+   Firebase είναι το default. Το PeerJS ενεργοποιείται μόνο με ?transport=peer.
+   Το ?transport=firebase παραμένει έγκυρο για συμβατότητα με παλιότερα links. */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.IQ_TRANSPORT = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  function select(search) {
+    const params = new URLSearchParams(String(search || '').replace(/^\?/, ''));
+    const raw = params.get('transport');
+    const explicit = raw === 'peer' || raw === 'firebase' ? raw : '';
+    return { mode: explicit === 'peer' ? 'peer' : 'firebase', explicit: explicit };
+  }
+
+  function query(search) {
+    const explicit = select(search).explicit;
+    return explicit ? 'transport=' + explicit : '';
+  }
+
+  function inviteUrl(origin, pathname, code, search) {
+    const tq = query(search);
+    return origin + pathname + '?room=' + encodeURIComponent(String(code || '')) + (tq ? '&' + tq : '');
+  }
+
+  function cleanPath(pathname, search) {
+    const tq = query(search);
+    return pathname + (tq ? '?' + tq : '');
+  }
+
+  return { select, query, inviteUrl, cleanPath };
+});
+
+</script>
+<script>
 /* I QUIT! Online — UI controller.
    Host: τρέχει engine + bots, κάνει broadcast state. Guest: στέλνει actions, κάνει render το snapshot. */
 (function () {
   'use strict';
-  // v1.23: πειραματικό Firebase transport ΜΟΝΟ με ?transport=firebase — αλλιώς PeerJS (default, αμετάβλητο)
-  const FB_TRANSPORT = /[?&]transport=firebase/.test(location.search) && !!window.IQ_NET_FB;
+  // Αύγουστος 1.2: Firebase default· PeerJS μόνο με ?transport=peer.
+  // Το ρητό ?transport=firebase διατηρείται για συμβατότητα με ήδη μοιρασμένα links.
+  const TPORT = window.IQ_TRANSPORT;
+  const TRANSPORT_INFO = TPORT.select(location.search);
+  const FB_TRANSPORT = TRANSPORT_INFO.mode === 'firebase';
+  document.documentElement.dataset.transport = TRANSPORT_INFO.mode; // διαγνωστικό/e2e, χωρίς αλλαγή ροής
   const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
   const $ = (id) => document.getElementById(id);
   const fmt = E.fmt;
@@ -4715,7 +4757,7 @@ body.game-over #myDash{z-index:auto;}
     };
     el('tsGo').onclick = () => {
       // κρατάμε και το turnsetup=1 ώστε το panel να είναι διαθέσιμο και στη δοκιμή
-      location.href = location.pathname + '?turnonly=1&turnsetup=1';
+      location.href = location.pathname + '?turnonly=1&turnsetup=1&transport=peer';
     };
     el('tsIce').onclick = () => {
       const out = el('tsIceOut');
@@ -4777,13 +4819,16 @@ body.game-over #myDash{z-index:auto;}
         '<button class="ghost" id="leaveNo">' + t('cancel') + '</button></div>');
       $('leaveYes').onclick = () => {
         localStorage.removeItem(HOST_KEY); localStorage.removeItem(GUEST_KEY);
-        location.href = location.pathname; // καθαρή αρχική (χωρίς ?room=)
+        location.href = TPORT.cleanPath(location.pathname, location.search); // καθαρή αρχική, ίδιο transport
       };
       $('leaveNo').onclick = () => { closeOverlay(); if (App.game) render(); };
     };
 
     $('btnCreate').onclick = () => {
-      if (typeof Peer === 'undefined' && !FB_TRANSPORT) { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.'); return; }
+      if (!NET || (!FB_TRANSPORT && typeof Peer === 'undefined')) {
+        homeErr(FB_TRANSPORT ? 'Δεν φορτώθηκε το Firebase transport — κάνε ανανέωση.' : 'Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου και κάνε ανανέωση.');
+        return;
+      }
       localStorage.removeItem(HOST_KEY);
       $('btnCreate').disabled = true; $('btnCreate').textContent = t('creating');
       hostCreate(false);
@@ -4800,15 +4845,18 @@ body.game-over #myDash{z-index:auto;}
     $('btnJoin').onclick = () => {
       const code = $('joinCode').value.trim();
       if (code.length !== 4) { homeErr(t('codeLen')); return; }
-      if (typeof Peer === 'undefined' && !FB_TRANSPORT) { homeErr('Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου.'); return; }
+      if (!NET || (!FB_TRANSPORT && typeof Peer === 'undefined')) {
+        homeErr(FB_TRANSPORT ? 'Δεν φορτώθηκε το Firebase transport — κάνε ανανέωση.' : 'Δεν φορτώθηκε το PeerJS — έλεγξε τη σύνδεσή σου.');
+        return;
+      }
       localStorage.removeItem(GUEST_KEY);
       guestJoin(code, undefined);
     };
     $('btnShare').onclick = async () => {
       const code = App.lobby ? App.lobby.code : $('lobbyCode').textContent;
       // Link πρόσκλησης: ανοίγει το παιχνίδι με προσυμπληρωμένο δωμάτιο (?room=ΚΩΔΙΚΟΣ)
-      // v1.23: το link πρόσκλησης κουβαλάει και το transport — αλλιώς ο guest θα έψαχνε το δωμάτιο στο «λάθος δίκτυο»
-      const url = location.origin + location.pathname + '?room=' + code + (FB_TRANSPORT ? '&transport=firebase' : '');
+      // Default Firebase links μένουν καθαρά· ρητό peer/firebase διατηρείται για συμβατότητα.
+      const url = TPORT.inviteUrl(location.origin, location.pathname, code, location.search);
       const text = t('shareText', { url });
       if (navigator.share) { try { await navigator.share({ text, url }); } catch (e) {} }
       else { try { await navigator.clipboard.writeText(text); toast(t('copied')); } catch (e) {} }
@@ -4852,8 +4900,8 @@ body.game-over #myDash{z-index:auto;}
     const roomParam = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z2-9]/g, '');
     if (roomParam.length === 4) {
       $('joinCode').value = roomParam;
-      // v1.23: καθάρισε το ?room ΑΛΛΑ κράτα το transport — αλλιώς σε refresh/resume ο guest θα γύριζε σε PeerJS
-      history.replaceState(null, '', location.pathname + (FB_TRANSPORT ? '?transport=firebase' : ''));
+      // Καθάρισε το ?room αλλά κράτα τυχόν ρητό peer/firebase για refresh και resume.
+      history.replaceState(null, '', TPORT.cleanPath(location.pathname, location.search));
       if (($('playerName').value || '').trim()) {
         guestJoin(roomParam, undefined);
         return;

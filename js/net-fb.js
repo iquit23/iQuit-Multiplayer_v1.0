@@ -1,11 +1,12 @@
-/* I QUIT! — Firebase Realtime Database transport (v1.23, ΠΕΙΡΑΜΑΤΙΚΟ).
-   Ενεργοποιείται ΜΟΝΟ με ?transport=firebase — αλλιώς δεν φορτώνει τίποτα (ούτε το SDK).
+/* I QUIT! — Firebase Realtime Database transport.
+   Είναι το προεπιλεγμένο transport. Το ?transport=firebase παραμένει συμβατό,
+   ενώ το PeerJS επιλέγεται αποκλειστικά με ?transport=peer.
    Υλοποιεί ΑΚΡΙΒΩΣ το ίδιο συμβόλαιο με το IQ_NET (net.js): createHost/createGuest/makeToken/makeCode,
    ώστε το ui.js να δουλεύει αναλλοίωτο. Ο engine/gameplay δεν αγγίζεται.
 
    Μοντέλο δεδομένων (rooms/<ΚΩΔΙΚΑΣ>):
      meta:            { hostUid, hostBeat, createdAt, hostSeq }   ← ιδιοκτησία δωματίου
-     slots/s1..s5:    { uid, ts }                                 ← μέλη-guests (δομικό όριο 5 + host = 6 θέσεις παιχνιδιού)
+     slots/s1..s4:    { uid, ts }                                 ← 4 guests + 1 host = 5 παίκτες συνολικά
      toHost/<id>:     { uid, m }                                  ← μηνύματα guest → host (m = JSON string)
      toGuest/<uid>/<id>: { m }                                    ← μηνύματα host → συγκεκριμένο guest
      bcast/<id>:      { m, ts }                                   ← broadcasts host → όλους
