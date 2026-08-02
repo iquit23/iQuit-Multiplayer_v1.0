@@ -16,13 +16,13 @@
   'use strict';
 
   const FB_CONFIG = {
-    apiKey: 'AIzaSyDcGs-bkWgj9v-Iy04zFcn7v1Uy708zFKs',
-    authDomain: 'iquit-online.firebaseapp.com',
-    projectId: 'iquit-online',
-    storageBucket: 'iquit-online.firebasestorage.app',
-    messagingSenderId: '265134372235',
-    appId: '1:265134372235:web:04c41000a4faae8ec06b8e',
-    databaseURL: 'https://iquit-online-default-rtdb.europe-west1.firebasedatabase.app',
+    apiKey: 'AIzaSyDe2rqOlWo_PG86poIAiBjWfJewOB-8DnE',
+    authDomain: 'iquit-online-8d69b.firebaseapp.com',
+    projectId: 'iquit-online-8d69b',
+    storageBucket: 'iquit-online-8d69b.firebasestorage.app',
+    messagingSenderId: '701017418584',
+    appId: '1:701017418584:web:79b5ab48cb4b87816e932d',
+    databaseURL: 'https://iquit-online-8d69b-default-rtdb.europe-west1.firebasedatabase.app',
   };
   // Pinned έκδοση SDK — ΟΧΙ latest (σταθερότητα + έλεγχος αλλαγών)
   const SDK_VERSION = '10.14.1';

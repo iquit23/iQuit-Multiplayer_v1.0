@@ -4,7 +4,7 @@
      1) Χρειάζεται Java 11+ και Node στον υπολογιστή.
      2) cd 06_online && npm install --no-save firebase-tools @firebase/rules-unit-testing
      3) npx firebase setup:emulators:database
-     4) npx firebase emulators:exec --only database --project iquit-online \
+     4) npx firebase emulators:exec --only database --project iquit-online-8d69b \
           "node tests/rules-emulator.test.js"
 
    Περιμένεις στο τέλος: «RULES TESTS: XX passed, 0 failed». */
@@ -17,7 +17,7 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
 
 (async () => {
   const env = await initializeTestEnvironment({
-    projectId: 'iquit-online',
+    projectId: 'iquit-online-8d69b',
     database: { rules: fs.readFileSync(__dirname + '/../database.rules.json', 'utf8') },
   });
   const db = (uid) => (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).database();
