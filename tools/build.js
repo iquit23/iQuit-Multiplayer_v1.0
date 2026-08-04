@@ -17,8 +17,8 @@ for (const f of ['cards.js', 'i18n.js', 'engine.js', 'bots.js', 'net.js', 'net-f
 }
 
 // v0.7: το board art γίνεται inline data-URI ώστε το dist να παραμένει ΕΝΑ αρχείο
-const img = fs.readFileSync(path.join(root, 'board-web.jpg'));
-html = html.replace('src="board-web.jpg"', () => 'src="data:image/jpeg;base64,' + img.toString('base64') + '"');
+const img = fs.readFileSync(path.join(root, 'iquit-game-board-v2.png'));
+html = html.replace('src="iquit-game-board-v2.png"', () => 'src="data:image/png;base64,' + img.toString('base64') + '"');
 // v1.0: και η πίσω όψη των καρτών (εμφανίζεται σε στοίβες & τράβηγμα — παράγεται από JS)
 const back = fs.readFileSync(path.join(root, 'cardback.png'));
 const backUri = 'data:image/png;base64,' + back.toString('base64');
