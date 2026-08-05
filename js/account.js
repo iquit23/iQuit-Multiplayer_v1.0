@@ -1,0 +1,375 @@
+/* I QUIT! — ΠΡΟΑΙΡΕΤΙΚΟΙ ΛΟΓΑΡΙΑΣΜΟΙ (BETA). Ενεργό ΜΟΝΟ με ?accountbeta=1.
+   Πλήρως απομονωμένο: χωρίς το flag δεν δημιουργείται κανένα DOM, δεν φορτώνεται SDK,
+   δεν αγγίζεται το auth και το παιχνίδι λειτουργεί ακριβώς όπως σήμερα (guest, χωρίς εγγραφή).
+
+   ΣΧΕΔΙΑΣΗ
+   • Ταυτότητα: το ΙΔΙΟ Firebase uid που ήδη χρησιμοποιεί το multiplayer (net-fb.js). Η εγγραφή
+     γίνεται με linkWithCredential πάνω στον ΥΠΑΡΧΟΝΤΑ ανώνυμο χρήστη → το uid ΔΕΝ αλλάζει,
+     δεν δημιουργείται δεύτερος λογαριασμός, δεν χάνονται δεδομένα.
+   • Email: μένει ΜΟΝΟ στο Firebase Authentication. Δεν γράφεται ποτέ στη Realtime Database
+     και δεν μεταδίδεται ποτέ στο δωμάτιο (το multiplayer στέλνει μόνο ονόματα παικτών).
+   • emailVerified: ΔΕΝ αποθηκεύεται. Πηγή αλήθειας είναι το auth token (auth.token.email_verified),
+     το οποίο ελέγχεται server-side από τα database rules.
+   • Username: κατοχυρώνεται με ατομικό write στο usernames/<normalized> που τα rules επιτρέπουν
+     ΜΟΝΟ αν το κλειδί δεν υπάρχει ήδη — δύο ταυτόχρονοι χρήστες δεν μπορούν να πάρουν το ίδιο. */
+(function (root, factory) {
+  const api = factory(root);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.IQ_ACCOUNT = api;
+})(typeof self !== 'undefined' ? self : this, function (root) {
+  'use strict';
+  root = root || (typeof globalThis !== 'undefined' ? globalThis : {});
+
+  const MIN_LEN = 3, MAX_LEN = 20;
+
+  /* ---------------- Username: κανόνες, normalization, έλεγχος (καθαρές συναρτήσεις, testable) ----------------
+     Επιτρέπονται: ελληνικά & λατινικά γράμματα, αριθμοί, underscore. Χωρίς κενά/ειδικούς χαρακτήρες. */
+  const ALLOWED = /^[A-Za-z0-9_ΆΈ-ΊΌΎ-ΡΣ-ώ]+$/;
+
+  // Μοναδικότητα ΧΩΡΙΣ διάκριση πεζών/κεφαλαίων. Για τα ελληνικά αφαιρούνται και οι τόνοι και
+  // ενοποιείται το τελικό «ς» → «σ», ώστε «Γιώργος», «ΓΙΩΡΓΟΣ» και «γιωργοσ» να είναι ΤΟ ΙΔΙΟ
+  // username (το uppercase των ελληνικών χάνει τους τόνους — χωρίς αυτό θα δημιουργούνταν
+  // σχεδόν πανομοιότυπα, παραπλανητικά ονόματα).
+  function normalizeUsername(name) {
+    let s = String(name == null ? '' : name).trim().toLowerCase();
+    if (typeof s.normalize === 'function') {
+      s = s.normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC');
+    }
+    return s.replace(/ς/g, 'σ'); // ς → σ
+  }
+
+  // Επιστρέφει { ok: true, username, normalized } ή { ok: false, error: '<i18n key>' }
+  function validateUsername(name) {
+    const raw = String(name == null ? '' : name).trim();
+    if (!raw) return { ok: false, error: 'accErrUserEmpty' };
+    if (/\s/.test(raw)) return { ok: false, error: 'accErrUserSpace' };
+    if (raw.length < MIN_LEN || raw.length > MAX_LEN) return { ok: false, error: 'accErrUserLen' };
+    if (!ALLOWED.test(raw)) return { ok: false, error: 'accErrUserChars' };
+    const normalized = normalizeUsername(raw);
+    if (normalized.length < MIN_LEN || normalized.length > MAX_LEN) return { ok: false, error: 'accErrUserLen' };
+    return { ok: true, username: raw, normalized: normalized };
+  }
+  function sameUsername(a, b) { return normalizeUsername(a) === normalizeUsername(b); }
+
+  // Χαρτογράφηση κωδικών σφάλματος Firebase → i18n κλειδιά (καθαρά μηνύματα, χωρίς τεχνικούς κωδικούς)
+  function authErrorKey(code) {
+    switch (String(code || '')) {
+      case 'auth/email-already-in-use': return 'accErrEmailUsed';
+      case 'auth/credential-already-in-use': return 'accErrEmailUsed';
+      case 'auth/invalid-email': return 'accErrEmailBad';
+      case 'auth/weak-password': return 'accErrWeakPass';
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+      case 'auth/invalid-login-credentials': return 'accErrWrongPass';
+      case 'auth/user-not-found': return 'accErrNoUser';
+      case 'auth/too-many-requests': return 'accErrTooMany';
+      case 'auth/network-request-failed': return 'accErrNetwork';
+      case 'auth/expired-action-code':
+      case 'auth/invalid-action-code': return 'accErrBadLink';
+      case 'auth/provider-already-linked':
+      case 'auth/operation-not-allowed': return 'accErrLinkFailed';
+      default: return 'accErrGeneric';
+    }
+  }
+
+  const api = {
+    normalizeUsername: normalizeUsername,
+    validateUsername: validateUsername,
+    sameUsername: sameUsername,
+    authErrorKey: authErrorKey,
+    MIN_LEN: MIN_LEN, MAX_LEN: MAX_LEN,
+    enabled: function (search) { return /[?&]accountbeta=1/.test(String(search || '')); },
+  };
+
+  // ================= UI (browser only, ΜΟΝΟ με ?accountbeta=1) =================
+  if (typeof document === 'undefined' || typeof location === 'undefined') return api;
+  if (!api.enabled(location.search)) return api;
+
+  const I = root.IQ_I18N;
+  const t = function (k, p) { return I ? I.t(k, p) : k; };
+  const esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+  const $ = function (id) { return document.getElementById(id); };
+
+  const st = { user: null, profile: null, busy: false, mode: 'guest', msg: '', msgOk: false };
+
+  // Πού επιστρέφει ο χρήστης μετά το «Continue» στη σελίδα επιβεβαίωσης/επαναφοράς της Google.
+  // ΠΑΡΑΓΩΓΗ: πάντα το canonical https://iquitgame.com/ (ΠΟΤΕ .gr — αυτό κάνει 301 — ούτε localhost).
+  // Εκτός παραγωγής (τοπικές δοκιμές/e2e) χρησιμοποιείται το τρέχον origin ώστε να μη σπάει η ροή.
+  const PROD_URL = 'https://iquitgame.com/?accountbeta=1';
+  function actionSettings() {
+    const host = (location.hostname || '').toLowerCase();
+    const isProd = host === 'iquitgame.com' || host === 'www.iquitgame.com' || host === 'iquitgame.gr' || host === 'www.iquitgame.gr';
+    return { url: isProd ? PROD_URL : (location.origin + location.pathname + '?accountbeta=1'), handleCodeInApp: false };
+  }
+
+  function fb() { return root.firebase; }
+  function ready() {
+    // Χρησιμοποιεί ΤΟΝ ΙΔΙΟ μηχανισμό με το multiplayer (φόρτωση SDK + auth) ώστε να μην
+    // δημιουργηθεί ποτέ δεύτερος χρήστης/δεύτερο uid.
+    if (!root.IQ_NET_FB || !root.IQ_NET_FB.authReady) {
+      return Promise.reject(new Error('accErrNetwork'));
+    }
+    return root.IQ_NET_FB.authReady();
+  }
+
+  function setMsg(key, ok, params) { st.msg = key ? t(key, params) : ''; st.msgOk = !!ok; render(); }
+
+  function render() {
+    const box = $('accBox');
+    if (!box) return;
+    const u = st.user;
+    const verified = !!(u && !u.isAnonymous && u.emailVerified);
+    let body = '';
+
+    if (!u || u.isAnonymous) {
+      // Ανώνυμος/επισκέπτης — προαιρετική εγγραφή ή σύνδεση
+      body =
+        '<div class="acc-tabs">' +
+          '<button class="acc-tab' + (st.mode !== 'login' ? ' on' : '') + '" data-acc="tab-signup">' + esc(t('accSignup')) + '</button>' +
+          '<button class="acc-tab' + (st.mode === 'login' ? ' on' : '') + '" data-acc="tab-login">' + esc(t('accLogin')) + '</button>' +
+        '</div>' +
+        '<input id="accEmail" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="' + esc(t('accEmailPh')) + '">' +
+        '<input id="accPass" type="password" autocomplete="' + (st.mode === 'login' ? 'current-password' : 'new-password') + '" placeholder="' + esc(t('accPassPh')) + '">' +
+        '<button class="primary acc-main" data-acc="' + (st.mode === 'login' ? 'do-login' : 'do-signup') + '">' +
+          esc(st.mode === 'login' ? t('accLoginBtn') : t('accSignupBtn')) + '</button>' +
+        (st.mode === 'login' ? '<button class="ghost acc-mini" data-acc="reset">' + esc(t('accForgot')) + '</button>' : '') +
+        '<div class="acc-note">' + esc(t('accGuestNote')) + '</div>';
+    } else if (!verified) {
+      // Συνδεδεμένος αλλά ΜΗ επιβεβαιωμένος — δεν επιτρέπεται δημόσιο username
+      body =
+        '<div class="acc-row"><span class="acc-badge warn">' + esc(t('accUnverified')) + '</span></div>' +
+        '<div class="acc-note">' + esc(t('accVerifyBody', { email: u.email || '' })) + '</div>' +
+        '<button class="primary acc-main" data-acc="resend">' + esc(t('accResend')) + '</button>' +
+        '<button class="ghost acc-mini" data-acc="recheck">' + esc(t('accRecheck')) + '</button>' +
+        '<button class="ghost acc-mini" data-acc="logout">' + esc(t('accLogout')) + '</button>';
+    } else if (!st.profile || !st.profile.username) {
+      // Επιβεβαιωμένος — επιλογή μοναδικού username
+      body =
+        '<div class="acc-row"><span class="acc-badge ok">' + esc(t('accVerified')) + '</span></div>' +
+        '<div class="acc-note">' + esc(t('accPickUserBody')) + '</div>' +
+        '<input id="accUser" maxlength="' + MAX_LEN + '" autocapitalize="off" spellcheck="false" placeholder="' + esc(t('accUserPh')) + '">' +
+        '<button class="primary acc-main" data-acc="claim">' + esc(t('accClaimBtn')) + '</button>' +
+        '<button class="ghost acc-mini" data-acc="logout">' + esc(t('accLogout')) + '</button>';
+    } else {
+      // Πλήρης λογαριασμός — ΜΟΝΟ το username εμφανίζεται, ποτέ το email
+      body =
+        '<div class="acc-row"><span class="acc-badge ok">' + esc(t('accSignedIn')) + '</span></div>' +
+        '<div class="acc-user" id="accUserShown">' + esc(st.profile.username) + '</div>' +
+        '<div class="acc-note">' + esc(t('accUseNote')) + '</div>' +
+        '<button class="ghost acc-mini" data-acc="logout">' + esc(t('accLogout')) + '</button>';
+    }
+
+    box.innerHTML =
+      '<div class="acc-head"><b>' + esc(t('accTitle')) + '</b><span class="acc-beta">BETA</span></div>' +
+      body +
+      (st.msg ? '<div class="acc-msg' + (st.msgOk ? ' ok' : '') + '" id="accMsg">' + esc(st.msg) + '</div>' : '');
+
+    box.querySelectorAll('[data-acc]').forEach(function (b) {
+      b.disabled = st.busy;
+      b.onclick = function () { onAction(b.getAttribute('data-acc')); };
+    });
+  }
+
+  function busy(on) { st.busy = on; render(); }
+
+  function onAction(a) {
+    if (st.busy && a.indexOf('tab-') !== 0) return;
+    if (a === 'tab-signup') { st.mode = 'signup'; st.msg = ''; return render(); }
+    if (a === 'tab-login') { st.mode = 'login'; st.msg = ''; return render(); }
+    // Ασφάλεια: καμία αλλαγή ταυτότητας όσο υπάρχει ενεργό δωμάτιο/παρτίδα
+    if (['do-signup', 'do-login', 'logout'].indexOf(a) > -1 && inRoom()) return setMsg('accErrInRoom', false);
+    if (a === 'do-signup') return doSignup();
+    if (a === 'do-login') return doLogin();
+    if (a === 'reset') return doReset();
+    if (a === 'resend') return doResend();
+    if (a === 'recheck') return doRecheck();
+    if (a === 'claim') return doClaim();
+    if (a === 'logout') return doLogout();
+  }
+
+  function inRoom() {
+    const g = $('screen-game'), l = $('screen-lobby');
+    return !!((g && !g.classList.contains('hidden')) || (l && !l.classList.contains('hidden')));
+  }
+  function creds() {
+    return { email: (($('accEmail') || {}).value || '').trim(), pass: (($('accPass') || {}).value || '') };
+  }
+
+  function doSignup() {
+    const c = creds();
+    if (!c.email || c.pass.length < 6) return setMsg('accErrWeakPass', false);
+    busy(true);
+    ready().then(function (ctx) {
+      const cur = ctx.fb.auth().currentUser;
+      const cred = ctx.fb.auth.EmailAuthProvider.credential(c.email, c.pass);
+      // ΣΥΝΔΕΣΗ (link) πάνω στον ΥΠΑΡΧΟΝΤΑ ανώνυμο → ΙΔΙΟ uid, κανένας δεύτερος λογαριασμός
+      const p = (cur && cur.isAnonymous) ? cur.linkWithCredential(cred)
+        : ctx.fb.auth().createUserWithEmailAndPassword(c.email, c.pass);
+      return p.then(function (res) {
+        const user = (res && res.user) || ctx.fb.auth().currentUser;
+        return user.sendEmailVerification(actionSettings()).then(function () {
+          st.user = ctx.fb.auth().currentUser;
+          busy(false); setMsg('accVerifySent', true, { email: c.email });
+        });
+      });
+    }).catch(function (e) {
+      busy(false);
+      setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false);
+    });
+  }
+
+  function doLogin() {
+    const c = creds();
+    if (!c.email || !c.pass) return setMsg('accErrFields', false);
+    busy(true);
+    ready().then(function (ctx) {
+      return ctx.fb.auth().signInWithEmailAndPassword(c.email, c.pass).then(function () {
+        return afterAuthChange(ctx);
+      });
+    }).catch(function (e) {
+      busy(false);
+      setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false);
+    });
+  }
+
+  function doReset() {
+    const c = creds();
+    if (!c.email) return setMsg('accErrEmailBad', false);
+    busy(true);
+    ready().then(function (ctx) { return ctx.fb.auth().sendPasswordResetEmail(c.email, actionSettings()); })
+      .then(function () { busy(false); setMsg('accResetSent', true, { email: c.email }); })
+      .catch(function (e) { busy(false); setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false); });
+  }
+
+  function doResend() {
+    busy(true);
+    ready().then(function (ctx) {
+      const u = ctx.fb.auth().currentUser;
+      if (!u) throw new Error('no-user');
+      return u.sendEmailVerification(actionSettings());
+    }).then(function () { busy(false); setMsg('accVerifySent', true, { email: (st.user && st.user.email) || '' }); })
+      .catch(function (e) { busy(false); setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false); });
+  }
+
+  function doRecheck() {
+    busy(true);
+    ready().then(function (ctx) {
+      const u = ctx.fb.auth().currentUser;
+      if (!u) throw new Error('no-user');
+      // reload + ανανέωση token ώστε το email_verified να φτάσει και στα database rules
+      return u.reload().then(function () { return u.getIdToken(true); }).then(function () {
+        st.user = ctx.fb.auth().currentUser;
+        busy(false);
+        if (st.user && st.user.emailVerified) setMsg('accVerifiedNow', true);
+        else setMsg('accStillUnverified', false);
+        return loadProfile(ctx);
+      });
+    }).catch(function (e) { busy(false); setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false); });
+  }
+
+  function doClaim() {
+    const v = validateUsername((($('accUser') || {}).value || ''));
+    if (!v.ok) return setMsg(v.error, false);
+    busy(true);
+    ready().then(function (ctx) {
+      const u = ctx.fb.auth().currentUser;
+      if (!u || !u.emailVerified) { busy(false); return setMsg('accStillUnverified', false); }
+      // ΠΡΑΓΜΑΤΙΚΑ ΑΤΟΜΙΚΗ κατοχύρωση: ΕΝΑ multi-location update γράφει ΜΑΖΙ το mapping και το
+      // προφίλ — ή κανένα από τα δύο. Καμία περίπτωση για ορφανό mapping / μισό προφίλ, καμία
+      // ανάγκη rollback. Η μοναδικότητα επιβάλλεται SERVER-SIDE από τα rules:
+      // usernames/<norm> γράφεται ΜΟΝΟ αν το κλειδί είναι ελεύθερο (ή ήδη δικό μας) και ΜΟΝΟ με
+      // το δικό μας uid. Δύο ταυτόχρονοι διεκδικητές → ο δεύτερος παίρνει PERMISSION_DENIED και
+      // ΤΙΠΟΤΑ δεν γράφεται γι' αυτόν (το RTDB σειριοποιεί τις γραφές).
+      const now = Date.now();
+      // Επαναληπτική εγγραφή από τον ΙΔΙΟ ιδιοκτήτη δεν πρέπει να χάνει το createdAt
+      return ctx.db.ref('users/' + u.uid).once('value').then(function (snap) {
+        const prev = snap.val();
+        const updates = {};
+        updates['usernames/' + v.normalized] = u.uid;
+        updates['users/' + u.uid] = {
+          username: v.username,
+          usernameNormalized: v.normalized,
+          createdAt: (prev && prev.createdAt) || now,
+          updatedAt: now,
+        };
+        return ctx.db.ref().update(updates).then(function () {
+          st.profile = { username: v.username, usernameNormalized: v.normalized };
+          applyUsernameToGame(v.username);
+          busy(false); setMsg('accUserSet', true, { name: v.username });
+        });
+      });
+    }).catch(function (e) {
+      busy(false);
+      setMsg(e && e.code === 'PERMISSION_DENIED' ? 'accErrUserTaken' : (e && e.code ? authErrorKey(e.code) : 'accErrNetwork'), false);
+    });
+  }
+
+  function doLogout() {
+    busy(true);
+    ready().then(function (ctx) {
+      return ctx.fb.auth().signOut().then(function () {
+        st.user = null; st.profile = null; st.mode = 'login';
+        // Νέα ανώνυμη ταυτότητα ώστε το multiplayer να συνεχίσει κανονικά ως επισκέπτης
+        return ctx.fb.auth().signInAnonymously().then(function () {
+          st.user = ctx.fb.auth().currentUser;
+          busy(false); setMsg('accLoggedOut', true);
+        });
+      });
+    }).catch(function (e) { busy(false); setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false); });
+  }
+
+  function loadProfile(ctx) {
+    const u = ctx.fb.auth().currentUser;
+    if (!u || u.isAnonymous || !u.emailVerified) { st.profile = null; render(); return Promise.resolve(); }
+    return ctx.db.ref('users/' + u.uid).once('value').then(function (s) {
+      const v = s.val();
+      st.profile = v && v.username ? v : null;
+      if (st.profile) applyUsernameToGame(st.profile.username);
+      render();
+    }).catch(function () { st.profile = null; render(); });
+  }
+
+  function afterAuthChange(ctx) {
+    st.user = ctx.fb.auth().currentUser;
+    return loadProfile(ctx).then(function () { busy(false); });
+  }
+
+  // Το username προσυμπληρώνει το πεδίο ονόματος του παιχνιδιού. ΔΕΝ αλλάζει καμία ροή:
+  // το multiplayer συνεχίζει να στέλνει απλώς ένα όνομα παίκτη (ποτέ email).
+  function applyUsernameToGame(name) {
+    const el = $('playerName');
+    if (!el) return;
+    el.value = String(name).slice(0, 14);
+    try { localStorage.setItem('iquit_name', el.value); } catch (e) {}
+  }
+
+  function mount() {
+    if ($('accBox')) return;
+    const home = $('screen-home'), foot = $('lblHomeFoot');
+    if (!home) return;
+    const box = document.createElement('div');
+    box.id = 'accBox';
+    box.className = 'accbox';
+    if (foot && foot.parentNode === home) home.insertBefore(box, foot);
+    else home.appendChild(box);
+    // Αλλαγή γλώσσας: ξαναχτίζουμε το panel. addEventListener (ΟΧΙ onclick) ώστε να μην
+    // αντικατασταθεί ο handler του ui.js — καμία παρέμβαση στην υπάρχουσα λογική.
+    ['btnLang', 'btnLangHome'].forEach(function (id) {
+      const b = $(id);
+      if (b) b.addEventListener('click', function () { setTimeout(function () { st.msg = ''; render(); }, 0); });
+    });
+    render();
+    ready().then(function (ctx) {
+      st.user = ctx.fb.auth().currentUser;
+      st.mode = 'signup';
+      return loadProfile(ctx);
+    }).catch(function () { setMsg('accErrNetwork', false); });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
+  else mount();
+
+  api._state = st;         // μόνο για e2e διαγνωστικά (δεν περιέχει ποτέ password)
+  api._render = render;
+  return api;
+});

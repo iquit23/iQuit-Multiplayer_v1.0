@@ -635,7 +635,11 @@ section('v1.23 Firebase transport — συμβατότητα συμβολαίο�
   assert(!!N1 && !!N2, 'IQ_NET & IQ_NET_FB φορτώνουν χωρίς browser');
   const api = ['createHost', 'createGuest', 'makeToken', 'makeCode', 'iceLog'];
   api.forEach(k => assert(typeof N1[k] === 'function' && typeof N2[k] === 'function', 'κοινό API: ' + k + '()'));
-  assert(Object.keys(N2).sort().join() === Object.keys(N1).sort().join(), 'ΙΔΙΑ ακριβώς exported keys (το ui.js δουλεύει αναλλοίωτο)');
+  // Το fb transport πρέπει να καλύπτει ΟΛΟ το API του PeerJS transport (το ui.js δουλεύει αναλλοίωτο).
+  // Επιπλέον επιτρέπεται ΜΟΝΟ το authReady (κοινό auth bootstrap για τη beta λογαριασμών).
+  Object.keys(N1).forEach(k => assert(Object.keys(N2).indexOf(k) > -1, 'το fb transport έχει το ' + k + ' του IQ_NET'));
+  const extra = Object.keys(N2).filter(k => Object.keys(N1).indexOf(k) === -1);
+  assert(extra.length === 0 || (extra.length === 1 && extra[0] === 'authReady'), 'καμία απρόβλεπτη επέκταση API (extra: ' + extra.join(',') + ')');
   let codesOk = true;
   for (let i = 0; i < 200; i++) if (!/^[A-Z2-9]{4}$/.test(N2.makeCode())) codesOk = false;
   assert(codesOk, 'fb makeCode: πάντα 4 χαρ. A-Z/2-9 (χωρίς I/O/0/1) — ίδια μορφή κωδικών με PeerJS');
@@ -669,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.3'), 'εμφανιζόμενη έκδοση Αύγουστος 1.3');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.4'), 'εμφανιζόμενη έκδοση Αύγουστος 1.4');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -746,6 +750,179 @@ section('Αύγουστος 1.3 SEO metadata');
   // Το UI ενημερώνει τίτλο/description/lang σε αλλαγή γλώσσας
   assert(uiSrc2.includes("document.title = t('pageTitle')") && uiSrc2.includes("document.documentElement.lang = I.lang"), 'applyStatic ενημερώνει title & lang attribute');
   assert(uiSrc2.includes("meta[name=\"description\"]"), 'applyStatic ενημερώνει τη meta description');
+}
+
+// ---------- 10. Αύγουστος 1.4: Beta λογαριασμών (usernames) ----------
+section('Αύγουστος 1.4 Account beta — username & απομόνωση');
+{
+  const A = require('../js/account.js');
+  const I18N2 = require('../js/i18n.js');
+  const idx2 = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  const acc = fs.readFileSync(__dirname + '/../js/account.js', 'utf8');
+  const rules = JSON.parse(fs.readFileSync(__dirname + '/../database.rules.json', 'utf8')).rules;
+
+  // --- flag isolation ---
+  assert(A.enabled('?accountbeta=1') && A.enabled('?fast=1&accountbeta=1'), 'το panel ενεργοποιείται με ?accountbeta=1');
+  ['', '?room=ABCD', '?transport=peer', '?accountbeta=0', '?accountbeta=2'].forEach(q =>
+    assert(!A.enabled(q), 'ΧΩΡΙΣ flag δεν ενεργοποιείται (' + (q || 'κενό') + ')'));
+  assert(acc.indexOf("if (!api.enabled(location.search)) return api;") > -1, 'το account.js βγαίνει νωρίς χωρίς το flag (κανένα DOM/SDK)');
+  assert(!/accountbeta/.test(idx2.replace(/js\/account\.js/g, '')), 'το index.html δεν εμφανίζει τίποτα σχετικό χωρίς το flag');
+
+  // --- normalization: case-insensitive, ελληνικά με τόνους, τελικό ς ---
+  assert(A.normalizeUsername('George') === 'george' && A.normalizeUsername('GEORGE') === 'george' && A.normalizeUsername('george') === 'george', 'George/GEORGE/george → ίδιο');
+  assert(A.sameUsername('George', 'GEORGE') && A.sameUsername('gEoRgE', 'George'), 'case-insensitive σύγκρουση (λατινικά)');
+  assert(A.normalizeUsername('Γιώργος') === A.normalizeUsername('ΓΙΩΡΓΟΣ'), 'Γιώργος/ΓΙΩΡΓΟΣ → ίδιο (τόνοι + τελικό ς)');
+  assert(A.normalizeUsername('Γιωργος') === A.normalizeUsername('γιωργοσ'), 'ελληνικά case-insensitive');
+  assert(A.normalizeUsername('  George  ') === 'george', 'trim');
+  assert(A.normalizeUsername(null) === '' && A.normalizeUsername(undefined) === '', 'ασφαλές σε null/undefined');
+  assert(A.normalizeUsername('Ελένη') === A.normalizeUsername('ΕΛΕΝΗ'), 'Ελένη/ΕΛΕΝΗ → ίδιο');
+  assert(!A.sameUsername('george', 'george2'), 'διαφορετικά usernames ΔΕΝ συγκρούονται');
+
+  // --- validation ---
+  ['abc', 'Giorgos_95', 'Γιώργος', 'ΕΛΕΝΗ_7', 'a_1', 'x'.repeat(20)].forEach(u =>
+    assert(A.validateUsername(u).ok, 'έγκυρο: ' + u));
+  assert(A.validateUsername('ab').error === 'accErrUserLen', '2 χαρακτήρες → λάθος μήκους');
+  assert(A.validateUsername('x'.repeat(21)).error === 'accErrUserLen', '21 χαρακτήρες → λάθος μήκους');
+  assert(A.validateUsername('a b').error === 'accErrUserSpace', 'κενό → σφάλμα');
+  assert(A.validateUsername('').error === 'accErrUserEmpty', 'κενό username → σφάλμα');
+  ['a@b', 'geo.rge', 'geo-rge', 'geo!', 'geo/rge', 'ge#o', 'ge$o', 'ge[o]'].forEach(u =>
+    assert(A.validateUsername(u).error === 'accErrUserChars', 'ειδικοί χαρακτήρες απορρίπτονται: ' + u));
+  assert(A.validateUsername('Giorgos_95').normalized === 'giorgos_95', 'το validate επιστρέφει normalized');
+  // τα normalized δεν περιέχουν χαρακτήρες απαγορευμένους ως RTDB keys
+  ['Giorgos_95', 'Γιώργος', 'ΕΛΕΝΗ_7'].forEach(u =>
+    assert(!/[.$#[\]/]/.test(A.validateUsername(u).normalized), 'normalized ασφαλές ως RTDB key: ' + u));
+
+  // --- μηνύματα σφαλμάτων EL+EN ---
+  const errKeys = ['accErrUserEmpty', 'accErrUserSpace', 'accErrUserLen', 'accErrUserChars', 'accErrUserTaken',
+    'accErrEmailUsed', 'accErrEmailBad', 'accErrWeakPass', 'accErrWrongPass', 'accErrNoUser', 'accErrTooMany',
+    'accErrNetwork', 'accErrBadLink', 'accErrLinkFailed', 'accErrInRoom', 'accErrGeneric'];
+  const uiKeys = ['accTitle', 'accSignup', 'accLogin', 'accSignupBtn', 'accLoginBtn', 'accForgot', 'accLogout',
+    'accGuestNote', 'accVerifySent', 'accResetSent', 'accUnverified', 'accVerified', 'accSignedIn', 'accVerifyBody',
+    'accResend', 'accRecheck', 'accVerifiedNow', 'accStillUnverified', 'accPickUserBody', 'accUserPh',
+    'accClaimBtn', 'accUserSet', 'accUseNote', 'accLoggedOut'];
+  ['el', 'en'].forEach(L => {
+    I18N2.setLang(L);
+    errKeys.concat(uiKeys).forEach(k => assert(I18N2.t(k) !== k && I18N2.t(k).length > 1, L.toUpperCase() + ' μετάφραση: ' + k));
+  });
+  I18N2.setLang('el');
+  assert(I18N2.t('accErrUserTaken').indexOf('χρησιμοποιείται') > -1, 'EL μήνυμα «username πιασμένο»');
+  I18N2.setLang('en');
+  assert(I18N2.t('accErrUserTaken').toLowerCase().indexOf('taken') > -1, 'EN μήνυμα «username taken»');
+  I18N2.setLang('el');
+  // χαρτογράφηση κωδικών Firebase → καθαρά μηνύματα
+  assert(A.authErrorKey('auth/email-already-in-use') === 'accErrEmailUsed', 'email σε χρήση');
+  assert(A.authErrorKey('auth/wrong-password') === 'accErrWrongPass', 'λάθος κωδικός');
+  assert(A.authErrorKey('auth/expired-action-code') === 'accErrBadLink', 'ληγμένο verification link');
+  assert(A.authErrorKey('auth/provider-already-linked') === 'accErrLinkFailed', 'αποτυχία linking');
+  assert(A.authErrorKey('κάτι άγνωστο') === 'accErrGeneric', 'άγνωστο σφάλμα → γενικό μήνυμα');
+
+  // --- ΤΟ EMAIL ΔΕΝ ΔΙΑΡΡΕΕΙ: ούτε στη βάση, ούτε στο δωμάτιο ---
+  assert(!/db\.ref\([^)]*users[^)]*\)\.set\([^)]*email/.test(acc.replace(/\s+/g, ' ')), 'το email δεν γράφεται στο users/');
+  assert(acc.indexOf("username: v.username, usernameNormalized: v.normalized") > -1, 'στη βάση γράφονται μόνο username/normalized/timestamps');
+  assert(!rules.users.$uid.email && !rules.users.$uid.emailVerified, 'τα rules δεν προβλέπουν καν πεδία email/emailVerified');
+  assert(rules.users.$uid.$other['.validate'] === false, 'αυθαίρετα πεδία στο users/{uid} απορρίπτονται');
+  const netfb = fs.readFileSync(__dirname + '/../js/net-fb.js', 'utf8');
+  assert(!/email/i.test(netfb), 'το transport δεν αγγίζει ΠΟΤΕ email');
+  const uiSrc3 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  assert(!/\.email\b/.test(uiSrc3), 'το ui.js δεν διαβάζει/στέλνει email');
+
+  // --- database rules: ιδιοκτησία, επιβεβαίωση email, μοναδικότητα ---
+  const uw = rules.users.$uid['.write'], ur = rules.users.$uid['.read'], nw = rules.usernames.$name['.write'], nv = rules.usernames.$name['.validate'];
+  assert(/\$uid === auth\.uid/.test(uw) && /\$uid === auth\.uid/.test(ur), 'κάθε χρήστης γράφει/διαβάζει ΜΟΝΟ το δικό του users/{uid}');
+  assert(/auth\.token\.email_verified === true/.test(uw), 'χωρίς επιβεβαιωμένο email δεν γράφεται προφίλ');
+  assert(/auth\.token\.email_verified === true/.test(nw), 'χωρίς επιβεβαιωμένο email δεν κατοχυρώνεται username');
+  assert(/!data\.exists\(\)/.test(nw), 'username mapping ΜΟΝΟ σε ελεύθερο κλειδί (αποτροπή κατάληψης/race)');
+  assert(/data\.val\(\) === auth\.uid/.test(nw), 'μόνο ο κάτοχος μπορεί να απελευθερώσει το δικό του username');
+  assert(/newData\.val\(\) === auth\.uid/.test(nv), 'το mapping δείχνει ΠΑΝΤΑ στον authenticated uid — κανείς δεν το αλλάζει σε ξένο');
+  assert(/child\('usernames'\)/.test(uw), 'το προφίλ δένεται με κατοχυρωμένο username');
+  assert(rules['.read'] === false && rules['.write'] === false, 'deny-by-default παραμένει (καμία γενική άδεια)');
+  assert(JSON.stringify(rules).indexOf('".read": true') === -1 && JSON.stringify(rules).indexOf('".write": true') === -1, 'πουθενά read/write = true');
+
+  // --- το κανονικό multiplayer δεν άλλαξε ---
+  assert(netfb.indexOf("const SLOTS = ['s1', 's2', 's3', 's4']") > -1, 'δομή δωματίου (4 slots) αμετάβλητη');
+  assert(netfb.indexOf('authReady: fbReady') > -1, 'το account beta ΜΟΙΡΑΖΕΤΑΙ το ίδιο auth bootstrap (κανένα δεύτερο uid)');
+  assert(/onAuthStateChanged/.test(netfb) && /υπάρχει ΗΔΗ συνδεδεμένος χρήστης/.test(netfb), 'το transport κρατά υπάρχοντα χρήστη αντί για τυφλό signInAnonymously');
+  assert(acc.indexOf('linkWithCredential') > -1, 'η εγγραφή γίνεται με link πάνω στον ανώνυμο (ίδιο uid)');
+  assert(acc.indexOf('IQ_NET_FB.authReady') > -1, 'το panel δεν αρχικοποιεί δικό του Firebase app');
+
+  // --- ΑΤΟΜΙΚΗ κατοχύρωση (ένα multi-location update, χωρίς rollback) ---
+  assert(/ref\(\)\.update\(updates\)/.test(acc), 'το claim γίνεται με ΕΝΑ atomic multi-location update');
+  assert(acc.indexOf("updates['usernames/' + v.normalized]") > -1 && acc.indexOf("updates['users/' + u.uid]") > -1, 'το update περιέχει ΚΑΙ mapping ΚΑΙ profile');
+  // ΠΡΟΣΟΧΗ: οι έλεγχοι «απουσίας» πρέπει να αγνοούν σχόλια — αλλιώς πιάνουν την τεκμηρίωση
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const accCode = strip(acc), netfbCode = strip(netfb);
+  assert(!/uref\.transaction|rollback\(/.test(accCode), 'δεν απαιτείται πλέον rollback/transaction (δεν υπάρχει ενδιάμεση κατάσταση)');
+  assert(/createdAt: \(prev && prev\.createdAt\) \|\| now/.test(acc), 'επαναληπτική εγγραφή διατηρεί το createdAt');
+  // τα rules πρέπει να βλέπουν το mapping ΤΟΥ ΙΔΙΟΥ update (newData), όχι την προ-γραφής κατάσταση
+  assert(/newData\.parent\(\)\.parent\(\)\.child\('usernames'\)/.test(rules.users.$uid['.write']),
+    'το users rule ελέγχει το mapping μέσω newData (ώστε να δουλεύει το atomic update)');
+  assert(!/root\.child\('usernames'\)/.test(rules.users.$uid['.write']), 'δεν χρησιμοποιείται πια το προ-γραφής root (θα απέρριπτε το atomic update)');
+
+  // --- auth bootstrap: μία πηγή αλήθειας ---
+  assert((netfbCode.match(/signInAnonymously/g) || []).length === 1, 'ΕΝΑ μόνο signInAnonymously στο transport');
+  assert((accCode.match(/signInAnonymously/g) || []).length === 1, 'στο account μόνο η επαναφορά guest μετά το logout');
+  assert(/signOut\(\)\.then\(/.test(acc), 'ο νέος guest δημιουργείται ΜΟΝΟ αφού ολοκληρωθεί το sign-out');
+  assert((netfb.match(/initializeApp/g) || []).length === 1 && acc.indexOf('initializeApp') === -1, 'ΕΝΑ μόνο Firebase app (μία πηγή αλήθειας)');
+  assert(/let _ready = null;[\s\S]*if \(_ready\) return _ready;/.test(netfb), 'το authReady είναι memoized — κανένα παράλληλο bootstrap');
+  assert(/Object\.defineProperty\(ctx, 'uid'/.test(netfb), 'το uid εκτίθεται ως getter (ακολουθεί login/logout, δεν παγώνει)');
+  assert(/if \(\['do-signup', 'do-login', 'logout'\]\.indexOf\(a\) > -1 && inRoom\(\)\)/.test(acc), 'login/logout/linking μπλοκαρισμένα μέσα σε δωμάτιο');
+  // κανένα ευαίσθητο δεδομένο σε localStorage/logs
+  assert((acc.match(/localStorage/g) || []).length === 1 && /localStorage\.setItem\('iquit_name'/.test(acc), 'στο localStorage γράφεται ΜΟΝΟ το όνομα παίκτη');
+  assert(!/console\.(log|info|warn|error)/.test(acc), 'κανένα log από το account (μηδέν διαρροή credentials)');
+  assert(!/password/i.test(acc.replace(/auth\/[a-z-]*password[a-z-]*/gi, '').replace(/accPass|Password|κωδικ/gi, '')), 'το password δεν αποθηκεύεται/μεταφέρεται πουθενά');
+
+  // --- ΛΟΓΙΚΗ των rules, αξιολογημένη τοπικά ---
+  // ΔΕΝ αντικαθιστά τον επίσημο emulator (tests/rules-emulator.test.js)· πιάνει όμως λάθη
+  // boolean λογικής ΠΡΙΝ τρέξει ο emulator. Η σύνταξη των RTDB rules είναι υποσύνολο JS:
+  // αντικαθιστούμε auth/data/newData με mock αντικείμενα και αξιολογούμε την έκφραση.
+  {
+    const snapOf = (v) => ({
+      exists: () => v !== null && v !== undefined,
+      val: () => (v === undefined ? null : v),
+      child: (k) => snapOf(v && typeof v === 'object' ? v[k] : null),
+      isString: () => typeof v === 'string',
+      isNumber: () => typeof v === 'number',
+      contains: (s) => String(v).indexOf(s) > -1,
+      toLowerCase: () => String(v).toLowerCase(),
+      parent: () => { throw new Error('parent() δεν χρησιμοποιείται σε αυτόν τον έλεγχο'); },
+    });
+    const evalRule = (expr, ctx) => {
+      const auth = ctx.auth, data = snapOf(ctx.data), newData = snapOf(ctx.newData);
+      const now = Date.now();
+      const $name = ctx.$name, $uid = ctx.$uid;
+      // eslint-disable-next-line no-new-func
+      return !!(new Function('auth', 'data', 'newData', 'now', '$name', '$uid', 'return (' + expr + ');'))(auth, data, newData, now, $name, $uid);
+    };
+    const W = rules.usernames.$name['.write'];
+    const VER = { uid: 'alice', token: { email_verified: true } };
+    const UNVER = { uid: 'bob', token: { email_verified: false } };
+    const ANON = { uid: 'anon', token: {} };
+    // δημιουργία σε ελεύθερο
+    assert(evalRule(W, { auth: VER, data: null, newData: 'alice' }), 'rule: verified παίρνει ΕΛΕΥΘΕΡΟ username');
+    assert(!evalRule(W, { auth: UNVER, data: null, newData: 'bob' }), 'rule: unverified ΔΕΝ παίρνει username');
+    assert(!evalRule(W, { auth: ANON, data: null, newData: 'anon' }), 'rule: anonymous ΔΕΝ παίρνει username');
+    assert(!evalRule(W, { auth: VER, data: null, newData: 'mallory' }), 'rule: ΔΕΝ γράφεται ΞΕΝΟ uid σε ελεύθερο κλειδί');
+    // κατειλημμένο από άλλον
+    assert(!evalRule(W, { auth: { uid: 'mallory', token: { email_verified: true } }, data: 'alice', newData: 'mallory' }), 'rule: ΔΕΝ γίνεται κατάληψη ξένου username');
+    assert(!evalRule(W, { auth: { uid: 'mallory', token: { email_verified: true } }, data: 'alice', newData: 'alice' }), 'rule: τρίτος ΔΕΝ «ξαναγράφει» ξένο mapping ούτε με την ίδια τιμή');
+    assert(!evalRule(W, { auth: { uid: 'mallory', token: { email_verified: true } }, data: 'alice', newData: null }), 'rule: ΔΕΝ διαγράφεται ξένο mapping');
+    // IDEMPOTENT επανεγγραφή από τον κάτοχο (το κενό που έδειξε ο emulator)
+    assert(evalRule(W, { auth: VER, data: 'alice', newData: 'alice' }), 'rule: ο ΚΑΤΟΧΟΣ ξαναγράφει το ΔΙΚΟ του mapping (idempotent)');
+    assert(evalRule(W, { auth: VER, data: 'alice', newData: null }), 'rule: ο κάτοχος ελευθερώνει το δικό του mapping');
+    assert(!evalRule(W, { auth: VER, data: 'alice', newData: 'mallory' }), 'rule: ο κάτοχος ΔΕΝ βάζει ξένο uid στο δικό του mapping');
+    assert(!evalRule(W, { auth: UNVER, data: 'bob', newData: 'bob' }), 'rule: unverified ΔΕΝ ξαναγράφει ούτε δικό του mapping');
+    // users/{uid}: ιδιοκτησία + επιβεβαίωση
+    const UW = rules.users.$uid['.write'];
+    assert(/\$uid === auth\.uid/.test(UW) && /email_verified === true/.test(UW), 'rule users: ιδιοκτησία + επιβεβαιωμένο email');
+  }
+
+  // --- email links → canonical domain ---
+  assert(acc.indexOf("const PROD_URL = 'https://iquitgame.com/?accountbeta=1'") > -1, 'τα email links επιστρέφουν στο canonical .com');
+  assert(!/localhost/.test(accCode), 'κανένα localhost στο production flow');
+  assert((acc.match(/sendEmailVerification\(actionSettings\(\)\)/g) || []).length === 2 &&
+    /sendPasswordResetEmail\(c\.email, actionSettings\(\)\)/.test(acc), 'όλα τα email links περνούν actionCodeSettings');
+  assert(idx2.indexOf('js/account.js') < idx2.indexOf('js/ui.js'), 'το account.js φορτώνεται πριν το ui.js');
+  assert(fs.readFileSync(__dirname + '/../tools/build.js', 'utf8').indexOf("'account.js'") > -1, 'το build ενσωματώνει το account.js');
 }
 
 console.log('\n══════════════════════════');

@@ -72,12 +72,40 @@
           const fb = root.firebase;
           if (!fb) return reject(new Error('Το Firebase SDK δεν φορτώθηκε.'));
           if (!fb.apps || !fb.apps.length) fb.initializeApp(FB_CONFIG);
-          fb.auth().signInAnonymously().then(function (cred) {
-            const uid = (cred && cred.user && cred.user.uid) || (fb.auth().currentUser && fb.auth().currentUser.uid);
-            if (!uid) return reject(new Error('Ανώνυμη σύνδεση χωρίς uid.'));
-            flog('auth ok · uid=' + uid.slice(0, 6) + '…');
-            resolve({ fb: fb, db: fb.database(), uid: uid });
-          }).catch(function (e) { reject(new Error('Ανώνυμη σύνδεση απέτυχε: ' + (e && e.code || e))); });
+          const auth = fb.auth();
+          function useUser(user, how) {
+            const uid0 = user && user.uid;
+            if (!uid0) return reject(new Error('Σύνδεση χωρίς uid.'));
+            flog('auth ok (' + how + ') · uid=' + uid0.slice(0, 6) + '…');
+            // Το uid εκτίθεται ως GETTER, όχι ως στιγμιότυπο: μετά από login/logout (beta
+            // λογαριασμών) το τρέχον uid αλλάζει και ΟΛΟΙ οι καταναλωτές πρέπει να δουν το νέο
+            // — αλλιώς θα γράφαμε με ξεπερασμένο uid και τα rules θα απέρριπταν τις γραφές.
+            const ctx = { fb: fb, db: fb.database() };
+            Object.defineProperty(ctx, 'uid', {
+              enumerable: true,
+              get: function () { const c = fb.auth().currentUser; return (c && c.uid) || uid0; },
+            });
+            resolve(ctx);
+          }
+          function anon() {
+            auth.signInAnonymously()
+              .then(function (cred) { useUser((cred && cred.user) || auth.currentUser, 'anonymous'); })
+              .catch(function (e) { reject(new Error('Ανώνυμη σύνδεση απέτυχε: ' + (e && e.code || e))); });
+          }
+          // ΣΗΜΑΝΤΙΚΟ (beta λογαριασμών): αν υπάρχει ΗΔΗ συνδεδεμένος χρήστης (ανώνυμος ή με
+          // λογαριασμό, π.χ. αποκατεστημένη συνεδρία), τον κρατάμε. Τυφλό signInAnonymously θα
+          // αποσύνδεε έναν συνδεδεμένο παίκτη και θα δημιουργούσε ΔΕΥΤΕΡΟ uid.
+          if (typeof auth.onAuthStateChanged === 'function') {
+            let done = false;
+            const off = auth.onAuthStateChanged(function (user) {
+              if (done) return; done = true;
+              try { if (typeof off === 'function') off(); } catch (e) {}
+              if (user) useUser(user, user.isAnonymous ? 'anonymous' : 'account');
+              else anon();
+            }, function () { if (!done) { done = true; anon(); } });
+          } else if (auth.currentUser) {
+            useUser(auth.currentUser, 'existing');
+          } else anon();
         } catch (e) { reject(e); }
       }
       loadNext(0);
@@ -360,5 +388,7 @@
     makeToken: makeToken,
     makeCode: makeCode,
     iceLog: function () { return _fbLog.slice(); }, // ίδιο όνομα με IQ_NET → το διαγνωστικό panel δουλεύει αυτούσιο
+    // beta λογαριασμών: κοινόχρηστο auth/SDK bootstrap ώστε να ΜΗΝ υπάρξει ποτέ δεύτερο uid
+    authReady: fbReady,
   };
 })(typeof self !== 'undefined' ? self : this);
