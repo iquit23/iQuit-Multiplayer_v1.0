@@ -4,10 +4,40 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0e1726">
-<title>I QUIT! — Online</title>
-<meta name="description" content="I QUIT! — το online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Παίξε με φίλους από κινητό ή υπολογιστή.">
+
+<!-- ===== SEO / discoverability (v1.27) — μόνο metadata, καμία επίδραση σε gameplay/multiplayer.
+     Canonical domain: https://iquitgame.com/ (το .gr κάνει 301 μέσω Cloudflare — καμία λογική εδώ).
+     Ο τίτλος & η περιγραφή ενημερώνονται και δυναμικά σε αλλαγή γλώσσας (applyStatic στο UI). -->
+<title>I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού</title>
+<meta name="description" content="Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.">
+<link rel="canonical" href="https://iquitgame.com/">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph / social preview — χρησιμοποιείται το ΥΠΑΡΧΟΝ artwork του ταμπλό -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="I QUIT!">
+<meta property="og:locale" content="el_GR">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:url" content="https://iquitgame.com/">
+<meta property="og:title" content="I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού">
+<meta property="og:description" content="Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.">
+<meta property="og:image" content="https://iquitgame.com/iquit-game-board-v2.png">
+<meta property="og:image:width" content="1300">
+<meta property="og:image:height" content="1300">
+<meta property="og:image:alt" content="Το ταμπλό του επιτραπέζιου παιχνιδιού I QUIT!">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού">
+<meta name="twitter:description" content="Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.">
+<meta name="twitter:image" content="https://iquitgame.com/iquit-game-board-v2.png">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"I QUIT!","alternateName":"IQuitGame","url":"https://iquitgame.com/","inLanguage":["el","en"],"description":"Online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού: αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία, παίζοντας με φίλους."}
+</script>
+
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
 
@@ -25,7 +55,7 @@
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.2</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.3</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -41,6 +71,19 @@
   </div>
 
   <div class="err" id="homeErr"></div>
+
+  <!-- v1.27 SEO: διακριτική εισαγωγή «Τι είναι το I QUIT!» — ΚΑΤΩ από τα κουμπιά ώστε να μη
+       σπρώχνει τη δημιουργία/είσοδο δωματίου· κλειστή by default, το κείμενο όμως υπάρχει
+       στο HTML και το διαβάζουν οι crawlers. Ενημερώνεται από το i18n (EL/EN). -->
+  <details class="about" id="aboutBox">
+    <summary id="aboutTitle">Τι είναι το I QUIT!</summary>
+    <div id="aboutBody">
+      <p>Το <b>I QUIT!</b> είναι ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.</p>
+      <p>Ξεκινάς στα 25 με μισθό και έξοδα, και σε κάθε γύρο αποφασίζεις πού θα βάλεις τα χρήματά σου: επενδύσεις που φέρνουν παθητικό εισόδημα, Ταμείο Έκτακτης Ανάγκης ή αποπληρωμή δανείων — αντιμετωπίζοντας πληθωρισμό, φόρους και απρόοπτα.</p>
+      <p>Νικητής είναι όποιος φτάσει πρώτος στην οικονομική του ελευθερία: όταν το παθητικό εισόδημα καλύψει όλα τα έξοδα, φωνάζεις «I QUIT!»</p>
+    </div>
+  </details>
+
   <div class="muted" id="lblHomeFoot" style="text-align:center; margin-top:26px;">
     1-5 παίκτες<br>
     Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!

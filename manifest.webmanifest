@@ -1,0 +1,19 @@
+{
+  "name": "I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού",
+  "short_name": "I QUIT!",
+  "description": "Online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού: αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία, παίζοντας με φίλους.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e1726",
+  "theme_color": "#0e1726",
+  "lang": "el",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

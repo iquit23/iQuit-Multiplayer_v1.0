@@ -15,6 +15,13 @@
       newGame: 'Νέο παιχνίδι', createRoom: '🎲 Δημιουργία δωματίου', creating: 'Δημιουργία…',
       joinRoom: 'Μπες σε δωμάτιο', codePh: 'ΚΩΔ.', joinBtn: 'Είσοδος →',
       homeFoot: '1-5 παίκτες<br>Νίκη: παθητικό εισόδημα ≥ έξοδα πριν τα 65!',
+      // v1.27 SEO: τίτλος σελίδας + εισαγωγική ενότητα «Τι είναι το I QUIT!»
+      pageTitle: 'I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού',
+      metaDesc: 'Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.',
+      aboutTitle: 'Τι είναι το I QUIT!',
+      aboutBody: '<p>Το <b>I QUIT!</b> είναι ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.</p>' +
+        '<p>Ξεκινάς στα 25 με μισθό και έξοδα, και σε κάθε γύρο αποφασίζεις πού θα βάλεις τα χρήματά σου: επενδύσεις που φέρνουν παθητικό εισόδημα, Ταμείο Έκτακτης Ανάγκης ή αποπληρωμή δανείων — αντιμετωπίζοντας πληθωρισμό, φόρους και απρόοπτα.</p>' +
+        '<p>Νικητής είναι όποιος φτάσει πρώτος στην οικονομική του ελευθερία: όταν το παθητικό εισόδημα καλύψει όλα τα έξοδα, φωνάζεις «I QUIT!»</p>',
       rulesBtn: '📜 Κανόνες', resumeHost: '▶ Συνέχεια παιχνιδιού «{code}» (host)', resumeGuest: '▶ Επανασύνδεση στο δωμάτιο {code}',
       codeLen: 'Ο κωδικός δωματίου έχει 4 χαρακτήρες.',
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
@@ -222,6 +229,13 @@
       newGame: 'New game', createRoom: '🎲 Create a room', creating: 'Creating…',
       joinRoom: 'Join a room', codePh: 'CODE', joinBtn: 'Join →',
       homeFoot: '1-5 players<br>Win: passive income ≥ expenses before age 65!',
+      // v1.27 SEO
+      pageTitle: 'I QUIT! — Online Financial Literacy Board Game',
+      metaDesc: 'Play I QUIT!, an online financial literacy board game. Learn about saving, investing, loans and financial independence while playing with friends.',
+      aboutTitle: 'What is I QUIT!?',
+      aboutBody: '<p><b>I QUIT!</b> is an online financial literacy board game. Learn about saving, investing, loans and financial independence while playing with friends.</p>' +
+        '<p>You start at 25 with a salary and expenses, and every round you decide where your money goes: investments that generate passive income, an Emergency Fund, or paying off loans — all while facing inflation, taxes and life events.</p>' +
+        '<p>The winner is whoever reaches financial freedom first: when your passive income covers all your expenses, you shout “I QUIT!”</p>',
       rulesBtn: '📜 Rules', resumeHost: '▶ Resume game “{code}” (host)', resumeGuest: '▶ Reconnect to room {code}',
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',

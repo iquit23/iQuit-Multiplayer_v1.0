@@ -642,6 +642,12 @@
     const flag = I.lang === 'el' ? '🇬🇧' : '🇬🇷';
     if ($('btnLang')) $('btnLang').textContent = flag;
     if ($('btnLangHome')) $('btnLangHome').textContent = flag + (I.lang === 'el' ? ' EN' : ' ΕΛ');
+    // v1.27 SEO: τίτλος/περιγραφή/lang & εισαγωγική ενότητα ακολουθούν τη γλώσσα
+    set('aboutTitle', 'aboutTitle'); set('aboutBody', 'aboutBody', true);
+    document.title = t('pageTitle');
+    const md = document.querySelector('meta[name="description"]');
+    if (md) md.setAttribute('content', t('metaDesc'));
+    document.documentElement.lang = I.lang;
   }
 
   function toggleLang() {

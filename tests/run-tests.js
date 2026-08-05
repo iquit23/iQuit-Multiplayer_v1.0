@@ -669,7 +669,83 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.2'), 'εμφανιζόμενη έκδοση Αύγουστος 1.2');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.3'), 'εμφανιζόμενη έκδοση Αύγουστος 1.3');
+}
+
+// ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
+section('Αύγουστος 1.3 SEO metadata');
+{
+  const idx = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  const I18N = require('../js/i18n.js');
+  const uiSrc2 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  // Τίτλος & περιγραφή
+  assert(/<title>I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού<\/title>/.test(idx), 'ελληνικός title στο static HTML');
+  const desc = (idx.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
+  ['online επιτραπέζιο παιχνίδι', 'οικονομικού αλφαβητισμού', 'αποταμίευση', 'επενδύσεις', 'δάνεια', 'οικονομική ανεξαρτησία', 'με φίλους']
+    .forEach(k => assert(desc.indexOf(k) > -1, 'meta description περιέχει «' + k + '»'));
+  // Canonical: ΑΚΡΙΒΩΣ ένα, στο .com
+  assert((idx.match(/rel="canonical"/g) || []).length === 1, 'ακριβώς ΕΝΑ canonical');
+  assert(idx.includes('<link rel="canonical" href="https://iquitgame.com/">'), 'canonical → https://iquitgame.com/');
+  assert(!/iquitgame\.gr/.test(idx), 'κανένα .gr URL στο HTML (το redirect ζει στο Cloudflare)');
+  // Open Graph / Twitter
+  ['og:type', 'og:title', 'og:description', 'og:url', 'og:site_name', 'og:image'].forEach(p =>
+    assert(idx.includes('property="' + p + '"'), 'υπάρχει ' + p));
+  ['twitter:card', 'twitter:title', 'twitter:description', 'twitter:image'].forEach(n =>
+    assert(idx.includes('name="' + n + '"'), 'υπάρχει ' + n));
+  assert((idx.match(/property="og:title"/g) || []).length === 1 && (idx.match(/<title>/g) || []).length === 1, 'χωρίς διπλά/αντικρουόμενα title tags');
+  // Τα δηλωμένα assets ΥΠΑΡΧΟΥΝ πραγματικά
+  const files = ['iquit-game-board-v2.png', 'icon.svg', 'manifest.webmanifest', 'robots.txt', 'sitemap.xml'];
+  files.forEach(f => assert(fs.existsSync(__dirname + '/../' + f), 'υπάρχει το αρχείο ' + f));
+  // Τα XML assets πρέπει να είναι WELL-FORMED — ένα malformed SVG/XML δεν αποδίδεται καθόλου
+  // στον browser (π.χ. σχόλιο με διπλή παύλα «--», που απαγορεύεται από το XML spec).
+  ['icon.svg', 'sitemap.xml'].forEach(f => {
+    const xml = fs.readFileSync(__dirname + '/../' + f, 'utf8');
+    // (α) γρήγοροι έλεγχοι που πιάνουν τα συνήθη λάθη χωρίς εξωτερικό εργαλείο
+    const comments = xml.match(/<!--[\s\S]*?-->/g) || [];
+    comments.forEach(c => assert(c.slice(4, -3).indexOf('--') === -1, f + ': XML σχόλιο ΧΩΡΙΣ διπλή παύλα «--»'));
+    assert((xml.match(/<!--/g) || []).length === comments.length, f + ': κανένα ανοιχτό/ημιτελές σχόλιο');
+    assert(!/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/.test(xml), f + ': κανένα ακατάλληλο & (πρέπει να είναι entity)');
+    // (β) πραγματικό parse με τον XML parser του Node (DOMParser μέσω xmldom δεν υπάρχει —
+    //     χρησιμοποιούμε xmllint αν είναι διαθέσιμο, αλλιώς ο παραπάνω έλεγχος αρκεί ως δίχτυ)
+    try {
+      const { execSync } = require('child_process');
+      execSync('xmllint --noout ' + JSON.stringify(__dirname + '/../' + f), { stdio: 'pipe' });
+      assert(true, f + ': xmllint well-formed ✓');
+    } catch (e) {
+      if (e.status) assert(false, f + ': xmllint ΑΠΕΤΥΧΕ — ' + String(e.stderr || '').split('\n')[0]);
+      // αν λείπει το xmllint (ENOENT), το (α) έχει ήδη καλύψει το κρίσιμο σενάριο
+    }
+  });
+  assert(/^<svg[\s>]/.test(fs.readFileSync(__dirname + '/../icon.svg', 'utf8').trim()) &&
+    /<\/svg>\s*$/.test(fs.readFileSync(__dirname + '/../icon.svg', 'utf8').trim()), 'icon.svg: σωστό root <svg> element');
+  assert(idx.includes('https://iquitgame.com/iquit-game-board-v2.png'), 'og:image → υπαρκτό artwork στο canonical domain');
+  assert(idx.includes('href="/icon.svg"') && !idx.includes('data:image/svg+xml,<svg'), 'favicon = πραγματικό αρχείο (fetchable από Google), όχι data: URI');
+  // JSON-LD: έγκυρο JSON, WebSite, χωρίς SearchAction (δεν υπάρχει αναζήτηση), χωρίς Organization
+  const ld = JSON.parse((idx.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/) || [])[1]);
+  assert(ld['@type'] === 'WebSite' && ld.name === 'I QUIT!' && ld.alternateName === 'IQuitGame' && ld.url === 'https://iquitgame.com/', 'JSON-LD WebSite με σωστά πεδία');
+  assert(!ld.potentialAction && !JSON.stringify(ld).includes('Organization'), 'χωρίς SearchAction/Organization (δεν υπάρχουν επιβεβαιωμένα στοιχεία)');
+  // robots/sitemap συνεπή με το canonical
+  assert(fs.readFileSync(__dirname + '/../sitemap.xml', 'utf8').includes('<loc>https://iquitgame.com/</loc>'), 'sitemap μόνο με το πραγματικό public URL');
+  assert(!/room=|transport=|turnsetup/.test(fs.readFileSync(__dirname + '/../sitemap.xml', 'utf8')), 'sitemap χωρίς room codes/test flags');
+  assert(fs.readFileSync(__dirname + '/../robots.txt', 'utf8').includes('Sitemap: https://iquitgame.com/sitemap.xml'), 'robots.txt δείχνει στο sitemap');
+  assert(JSON.parse(fs.readFileSync(__dirname + '/../manifest.webmanifest', 'utf8')).icons[0].src === '/icon.svg', 'manifest δείχνει σε υπαρκτό icon');
+  // Εισαγωγική ενότητα + i18n
+  assert(idx.includes('id="aboutBox"') && idx.includes('Τι είναι το I QUIT!'), 'ενότητα «Τι είναι το I QUIT!» στην αρχική');
+  assert(idx.indexOf('id="aboutBox"') > idx.indexOf('id="btnCreate"') && idx.indexOf('id="aboutBox"') > idx.indexOf('id="btnJoin"'), 'η ενότητα είναι ΚΑΤΩ από δημιουργία/είσοδο δωματίου');
+  assert(typeof I18N.t === 'function' && typeof I18N.setLang === 'function', 'i18n API διαθέσιμο');
+  I18N.setLang('el');
+  assert(I18N.t('pageTitle') === 'I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού', 'EL pageTitle');
+  ['αποταμίευση', 'επενδύσεις', 'δάνεια', 'οικονομική ανεξαρτησία', 'με φίλους'].forEach(k =>
+    assert(I18N.t('aboutBody').indexOf(k) > -1, 'EL aboutBody περιέχει «' + k + '»'));
+  I18N.setLang('en');
+  assert(I18N.t('pageTitle') === 'I QUIT! — Online Financial Literacy Board Game', 'EN pageTitle');
+  ['saving', 'investing', 'loans', 'financial independence', 'with friends'].forEach(k =>
+    assert(I18N.t('aboutBody').indexOf(k) > -1, 'EN aboutBody περιέχει «' + k + '»'));
+  assert(I18N.t('metaDesc').indexOf('financial literacy board game') > -1, 'EN metaDesc πλήρης');
+  I18N.setLang('el');
+  // Το UI ενημερώνει τίτλο/description/lang σε αλλαγή γλώσσας
+  assert(uiSrc2.includes("document.title = t('pageTitle')") && uiSrc2.includes("document.documentElement.lang = I.lang"), 'applyStatic ενημερώνει title & lang attribute');
+  assert(uiSrc2.includes("meta[name=\"description\"]"), 'applyStatic ενημερώνει τη meta description');
 }
 
 console.log('\n══════════════════════════');
