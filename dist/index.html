@@ -142,6 +142,11 @@ h1,h2,h3{margin:0;}
 .lobby-player .nm{flex:1; font-size:15px; font-weight:600;}
 .tag{font-size:10px; padding:2px 8px; border-radius:20px; background:#0a1320; border:1px solid var(--line); color:var(--muted);}
 .kick{background:none; border:none; color:#e8847f; font-size:16px; padding:4px 8px;}
+/* v1.31: compact read-only γραμμή bots (guest view) — έως 2 σειρές σε mobile, ποτέ μία row/bot */
+.botline{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:10px 4px;
+  border-top:1px solid var(--line); font-size:13px; color:var(--muted);}
+.botline .bl-t{font-weight:700; color:var(--txt);}
+.botline .bl-b{white-space:nowrap;}
 
 /* ---------- GAME LAYOUT (v0.7: μεγαλύτερο ταμπλό για laptop) ---------- */
 #screen-game .wrap{display:grid; grid-template-columns:1fr; gap:12px; max-width:1280px;}
@@ -449,7 +454,11 @@ body.game-over #myDash{z-index:auto;}
 .botbtn{text-align:left; padding:10px 12px; font-size:14px; background:#0a1320;
   border:1px solid var(--line); border-radius:10px; color:var(--txt);}
 .botbtn .muted{font-size:11px;}
-.botbtn.added{border-color:var(--green); opacity:.55;}
+/* v1.31: επιλεγμένο bot — πράσινο περίγραμμα + κόκκινο ✕ δεξιά («πάτα ξανά για αφαίρεση»).
+   Το ✕ είναι ΟΠΤΙΚΗ ένδειξη μέσα στο ίδιο κουμπί, ΟΧΙ ξεχωριστό interactive στοιχείο. */
+.botbtn{display:flex; align-items:center; gap:6px;}
+.botbtn.added{border-color:var(--green); opacity:.85;}
+.botbtn .bx{margin-left:auto; color:var(--red); font-weight:800; font-size:15px; line-height:1; flex:0 0 auto;}
 .modal .acts{display:flex; flex-direction:column; gap:8px;}
 .modal .acts button{padding:13px; font-size:15px;}
 .buy{background:linear-gradient(90deg,var(--accent2),var(--accent)); font-weight:800;}
@@ -509,7 +518,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.7</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.8</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -553,6 +562,9 @@ body.game-over #myDash{z-index:auto;}
   <div class="card">
     <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;"><span id="lblPlayers">Παίκτες</span> <span id="lobbyCount"></span></h3>
     <div id="lobbyPlayers"></div>
+    <!-- v1.31: τα bots ΔΕΝ πιάνουν μία γραμμή το καθένα. Ο host τα βλέπει/διαχειρίζεται στο
+         roster «Πρόσθεσε bot»· ο guest (που δεν έχει roster) τα βλέπει εδώ, read-only. -->
+    <div id="botLine" class="hidden"></div>
   </div>
 
   <div class="card">
@@ -875,7 +887,7 @@ body.game-over #myDash{z-index:auto;}
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
       // Lobby
       room: 'Δωμάτιο', shareBtn: '📤 Κοινοποίηση κωδικού', players: 'Παίκτες', pickPawn: 'Διάλεξε το πιόνι σου',
-      addBot: '🤖 Πρόσθεσε bot', startBtn: '🚀 Έναρξη παιχνιδιού',
+      addBot: '🤖 Πρόσθεσε bot', botsLbl: 'Bots', startBtn: '🚀 Έναρξη παιχνιδιού',
       guestWait: 'Περιμένουμε τον host να ξεκινήσει το παιχνίδι…', leave: 'Αποχώρηση',
       you: '(εσύ)', online: 'online', offline: 'offline',
       shareText: 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: {url}',
@@ -1125,7 +1137,7 @@ body.game-over #myDash{z-index:auto;}
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',
       room: 'Room', shareBtn: '📤 Share invite link', players: 'Players', pickPawn: 'Pick your pawn',
-      addBot: '🤖 Add a bot', startBtn: '🚀 Start game',
+      addBot: '🤖 Add a bot', botsLbl: 'Bots', startBtn: '🚀 Start game',
       guestWait: 'Waiting for the host to start the game…', leave: 'Leave',
       you: '(you)', online: 'online', offline: 'offline',
       shareText: 'We are playing I QUIT! 🎲 Tap the link to join my room: {url}',
@@ -4380,45 +4392,70 @@ body.game-over #myDash{z-index:auto;}
     $('lobbyCode').textContent = App.lobby.code;
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
-    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)'; // v1.18: δείχνουμε 5 (χωράνε 6)
-    $('lobbyPlayers').innerHTML = App.lobby.players.map((p, i) =>
+    // v1.18: δείχνουμε 5 (χωράνε 6) — ο μετρητής μετρά ΟΛΟΥΣ (ανθρώπους + bots)
+    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)';
+    // v1.31: ΜΟΝΟ οι άνθρωποι παίρνουν γραμμή. Τα bots φαίνονται και διαχειρίζονται στο roster
+    // από κάτω (πράσινο περίγραμμα + κόκκινο ✕), οπότε η διπλή εμφάνιση ήταν περιττή.
+    $('lobbyPlayers').innerHTML = App.lobby.players.filter(p => !p.isBot).map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + '</span>' +
       (p.id === 'p0' ? '<span class="tag">HOST</span>' : '') +
-      (p.isBot ? stratTag(p.strategy) : (p.connected ? '<span class="tag" style="color:var(--green)">online</span>' : '<span class="tag">offline</span>')) +
-      (p.isBot ? '<button class="kick" data-kick="' + p.id + '">✕</button>' : '') +
+      (p.connected ? '<span class="tag" style="color:var(--green)">online</span>' : '<span class="tag">offline</span>') +
       '</div>').join('');
-    $('lobbyPlayers').querySelectorAll('[data-kick]').forEach(b => b.onclick = () => {
-      App.lobby.players = App.lobby.players.filter(x => x.id !== b.dataset.kick);
-      saveHostSession(); broadcastLobby(); renderLobby();
-    });
+    renderBotLine(App.lobby.players, true); // ο host τα βλέπει στο roster — εδώ κρύβεται
     // v0.5: roster από επώνυμα bots με στρατηγική (v1.29: η στρατηγική μένει ΚΡΥΦΗ — εικονίδιο + όνομα)
+    // v1.31: το ΙΔΙΟ κουμπί κάνει toggle — πάτημα σε επιλεγμένο bot το ΑΦΑΙΡΕΙ. Το κόκκινο ✕
+    // είναι απλή οπτική ένδειξη (span, ΟΧΙ nested κουμπί): κλικαμπλ είναι ΟΛΟ το κουμπί.
+    // ΠΡΟΣΟΧΗ στο disabled: «full && !added» — ένα ήδη επιλεγμένο bot ΔΕΝ κλειδώνει ποτέ,
+    // αλλιώς δεν θα μπορούσε να αφαιρεθεί. Το ίδιο το threshold (>= 6) μένει ως έχει.
     const full = App.lobby.players.length >= 6;
     $('botRoster').innerHTML = BOT_ROSTER.map(b => {
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
-      return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '" ' + (added || full ? 'disabled' : '') + '>' +
-        prof.icon + ' <b>' + esc(b.name) + '</b>' + (added ? ' ✓' : '') + '</button>';
+      return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '"' +
+        ' aria-pressed="' + (added ? 'true' : 'false') + '"' + (full && !added ? ' disabled' : '') + '>' +
+        prof.icon + ' <b>' + esc(b.name) + '</b>' +
+        (added ? '<span class="bx" aria-hidden="true">✕</span>' : '') + '</button>';
     }).join('');
     $('botRoster').querySelectorAll('[data-addbot]').forEach(btn => btn.onclick = () => {
       const spec = BOT_ROSTER.find(b => b.name === btn.dataset.addbot);
-      if (!spec || App.lobby.players.length >= 6) return;
-      const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
-      App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
-      saveHostSession(); renderLobby();
+      if (!spec) return;
+      const existing = App.lobby.players.find(x => x.isBot && x.name === spec.name);
+      if (existing) { // toggle-off: αφαίρεση του bot
+        App.lobby.players = App.lobby.players.filter(x => x !== existing);
+      } else {
+        if (App.lobby.players.length >= 6) return;
+        const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
+        App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
+      }
+      saveHostSession(); broadcastLobby(); renderLobby();
     });
     $('btnStart').disabled = App.lobby.players.length < 1; // v1.2: επιτρέπεται και SOLO (χωρίς bot)
     renderPawnPick(App.lobby.players);
     broadcastLobby();
   }
+  // v1.31: μία compact READ-ONLY γραμμή για τα bots — μόνο εκεί που δεν υπάρχει roster (guest).
+  // Εμφανίζει εικονίδιο + ΟΝΟΜΑ κάθε bot· η στρατηγική παραμένει κρυφή παντού.
+  function renderBotLine(players, hide) {
+    const box = $('botLine');
+    if (!box) return;
+    const bots = (players || []).filter(p => p.isBot);
+    if (hide || !bots.length) { box.className = 'hidden'; box.innerHTML = ''; box.removeAttribute('aria-label'); return; }
+    box.className = 'botline';
+    box.setAttribute('aria-label', t('botsLbl') + ': ' + bots.map(b => b.name).join(', '));
+    box.innerHTML = '<span class="bl-t" aria-hidden="true">🤖 ' + esc(t('botsLbl')) + ':</span>' +
+      bots.map(b => '<span class="bl-b" aria-hidden="true">' + ((BOTS.PROFILES[b.strategy] || {}).icon || '🤖') +
+        ' ' + esc(b.name) + '</span>').join('');
+  }
+
   function renderLobbyGuest(msg) {
-    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18
-    $('lobbyPlayers').innerHTML = msg.players.map((p, i) =>
+    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18: μετρά ΚΑΙ τα bots
+    $('lobbyPlayers').innerHTML = msg.players.filter(p => !p.isBot).map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
       (p.id === 'p0' ? '<span class="tag">HOST</span>' : '') +
-      (p.isBot ? stratTag(p.strategy) : '') +
       '</div>').join('');
+    renderBotLine(msg.players, false); // ο guest δεν έχει roster → βλέπει εδώ ποια bots παίζουν
     renderPawnPick(msg.players);
   }
 

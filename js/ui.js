@@ -755,45 +755,70 @@
     $('lobbyCode').textContent = App.lobby.code;
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
-    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)'; // v1.18: δείχνουμε 5 (χωράνε 6)
-    $('lobbyPlayers').innerHTML = App.lobby.players.map((p, i) =>
+    // v1.18: δείχνουμε 5 (χωράνε 6) — ο μετρητής μετρά ΟΛΟΥΣ (ανθρώπους + bots)
+    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)';
+    // v1.31: ΜΟΝΟ οι άνθρωποι παίρνουν γραμμή. Τα bots φαίνονται και διαχειρίζονται στο roster
+    // από κάτω (πράσινο περίγραμμα + κόκκινο ✕), οπότε η διπλή εμφάνιση ήταν περιττή.
+    $('lobbyPlayers').innerHTML = App.lobby.players.filter(p => !p.isBot).map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + '</span>' +
       (p.id === 'p0' ? '<span class="tag">HOST</span>' : '') +
-      (p.isBot ? stratTag(p.strategy) : (p.connected ? '<span class="tag" style="color:var(--green)">online</span>' : '<span class="tag">offline</span>')) +
-      (p.isBot ? '<button class="kick" data-kick="' + p.id + '">✕</button>' : '') +
+      (p.connected ? '<span class="tag" style="color:var(--green)">online</span>' : '<span class="tag">offline</span>') +
       '</div>').join('');
-    $('lobbyPlayers').querySelectorAll('[data-kick]').forEach(b => b.onclick = () => {
-      App.lobby.players = App.lobby.players.filter(x => x.id !== b.dataset.kick);
-      saveHostSession(); broadcastLobby(); renderLobby();
-    });
+    renderBotLine(App.lobby.players, true); // ο host τα βλέπει στο roster — εδώ κρύβεται
     // v0.5: roster από επώνυμα bots με στρατηγική (v1.29: η στρατηγική μένει ΚΡΥΦΗ — εικονίδιο + όνομα)
+    // v1.31: το ΙΔΙΟ κουμπί κάνει toggle — πάτημα σε επιλεγμένο bot το ΑΦΑΙΡΕΙ. Το κόκκινο ✕
+    // είναι απλή οπτική ένδειξη (span, ΟΧΙ nested κουμπί): κλικαμπλ είναι ΟΛΟ το κουμπί.
+    // ΠΡΟΣΟΧΗ στο disabled: «full && !added» — ένα ήδη επιλεγμένο bot ΔΕΝ κλειδώνει ποτέ,
+    // αλλιώς δεν θα μπορούσε να αφαιρεθεί. Το ίδιο το threshold (>= 6) μένει ως έχει.
     const full = App.lobby.players.length >= 6;
     $('botRoster').innerHTML = BOT_ROSTER.map(b => {
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
-      return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '" ' + (added || full ? 'disabled' : '') + '>' +
-        prof.icon + ' <b>' + esc(b.name) + '</b>' + (added ? ' ✓' : '') + '</button>';
+      return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '"' +
+        ' aria-pressed="' + (added ? 'true' : 'false') + '"' + (full && !added ? ' disabled' : '') + '>' +
+        prof.icon + ' <b>' + esc(b.name) + '</b>' +
+        (added ? '<span class="bx" aria-hidden="true">✕</span>' : '') + '</button>';
     }).join('');
     $('botRoster').querySelectorAll('[data-addbot]').forEach(btn => btn.onclick = () => {
       const spec = BOT_ROSTER.find(b => b.name === btn.dataset.addbot);
-      if (!spec || App.lobby.players.length >= 6) return;
-      const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
-      App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
-      saveHostSession(); renderLobby();
+      if (!spec) return;
+      const existing = App.lobby.players.find(x => x.isBot && x.name === spec.name);
+      if (existing) { // toggle-off: αφαίρεση του bot
+        App.lobby.players = App.lobby.players.filter(x => x !== existing);
+      } else {
+        if (App.lobby.players.length >= 6) return;
+        const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
+        App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
+      }
+      saveHostSession(); broadcastLobby(); renderLobby();
     });
     $('btnStart').disabled = App.lobby.players.length < 1; // v1.2: επιτρέπεται και SOLO (χωρίς bot)
     renderPawnPick(App.lobby.players);
     broadcastLobby();
   }
+  // v1.31: μία compact READ-ONLY γραμμή για τα bots — μόνο εκεί που δεν υπάρχει roster (guest).
+  // Εμφανίζει εικονίδιο + ΟΝΟΜΑ κάθε bot· η στρατηγική παραμένει κρυφή παντού.
+  function renderBotLine(players, hide) {
+    const box = $('botLine');
+    if (!box) return;
+    const bots = (players || []).filter(p => p.isBot);
+    if (hide || !bots.length) { box.className = 'hidden'; box.innerHTML = ''; box.removeAttribute('aria-label'); return; }
+    box.className = 'botline';
+    box.setAttribute('aria-label', t('botsLbl') + ': ' + bots.map(b => b.name).join(', '));
+    box.innerHTML = '<span class="bl-t" aria-hidden="true">🤖 ' + esc(t('botsLbl')) + ':</span>' +
+      bots.map(b => '<span class="bl-b" aria-hidden="true">' + ((BOTS.PROFILES[b.strategy] || {}).icon || '🤖') +
+        ' ' + esc(b.name) + '</span>').join('');
+  }
+
   function renderLobbyGuest(msg) {
-    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18
-    $('lobbyPlayers').innerHTML = msg.players.map((p, i) =>
+    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18: μετρά ΚΑΙ τα bots
+    $('lobbyPlayers').innerHTML = msg.players.filter(p => !p.isBot).map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
       (p.id === 'p0' ? '<span class="tag">HOST</span>' : '') +
-      (p.isBot ? stratTag(p.strategy) : '') +
       '</div>').join('');
+    renderBotLine(msg.players, false); // ο guest δεν έχει roster → βλέπει εδώ ποια bots παίζουν
     renderPawnPick(msg.players);
   }
 

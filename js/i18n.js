@@ -64,7 +64,7 @@
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
       // Lobby
       room: 'Δωμάτιο', shareBtn: '📤 Κοινοποίηση κωδικού', players: 'Παίκτες', pickPawn: 'Διάλεξε το πιόνι σου',
-      addBot: '🤖 Πρόσθεσε bot', startBtn: '🚀 Έναρξη παιχνιδιού',
+      addBot: '🤖 Πρόσθεσε bot', botsLbl: 'Bots', startBtn: '🚀 Έναρξη παιχνιδιού',
       guestWait: 'Περιμένουμε τον host να ξεκινήσει το παιχνίδι…', leave: 'Αποχώρηση',
       you: '(εσύ)', online: 'online', offline: 'offline',
       shareText: 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: {url}',
@@ -314,7 +314,7 @@
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',
       room: 'Room', shareBtn: '📤 Share invite link', players: 'Players', pickPawn: 'Pick your pawn',
-      addBot: '🤖 Add a bot', startBtn: '🚀 Start game',
+      addBot: '🤖 Add a bot', botsLbl: 'Bots', startBtn: '🚀 Start game',
       guestWait: 'Waiting for the host to start the game…', leave: 'Leave',
       you: '(you)', online: 'online', offline: 'offline',
       shareText: 'We are playing I QUIT! 🎲 Tap the link to join my room: {url}',

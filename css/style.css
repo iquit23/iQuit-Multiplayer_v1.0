@@ -105,6 +105,11 @@ h1,h2,h3{margin:0;}
 .lobby-player .nm{flex:1; font-size:15px; font-weight:600;}
 .tag{font-size:10px; padding:2px 8px; border-radius:20px; background:#0a1320; border:1px solid var(--line); color:var(--muted);}
 .kick{background:none; border:none; color:#e8847f; font-size:16px; padding:4px 8px;}
+/* v1.31: compact read-only γραμμή bots (guest view) — έως 2 σειρές σε mobile, ποτέ μία row/bot */
+.botline{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:10px 4px;
+  border-top:1px solid var(--line); font-size:13px; color:var(--muted);}
+.botline .bl-t{font-weight:700; color:var(--txt);}
+.botline .bl-b{white-space:nowrap;}
 
 /* ---------- GAME LAYOUT (v0.7: μεγαλύτερο ταμπλό για laptop) ---------- */
 #screen-game .wrap{display:grid; grid-template-columns:1fr; gap:12px; max-width:1280px;}
@@ -412,7 +417,11 @@ body.game-over #myDash{z-index:auto;}
 .botbtn{text-align:left; padding:10px 12px; font-size:14px; background:#0a1320;
   border:1px solid var(--line); border-radius:10px; color:var(--txt);}
 .botbtn .muted{font-size:11px;}
-.botbtn.added{border-color:var(--green); opacity:.55;}
+/* v1.31: επιλεγμένο bot — πράσινο περίγραμμα + κόκκινο ✕ δεξιά («πάτα ξανά για αφαίρεση»).
+   Το ✕ είναι ΟΠΤΙΚΗ ένδειξη μέσα στο ίδιο κουμπί, ΟΧΙ ξεχωριστό interactive στοιχείο. */
+.botbtn{display:flex; align-items:center; gap:6px;}
+.botbtn.added{border-color:var(--green); opacity:.85;}
+.botbtn .bx{margin-left:auto; color:var(--red); font-weight:800; font-size:15px; line-height:1; flex:0 0 auto;}
 .modal .acts{display:flex; flex-direction:column; gap:8px;}
 .modal .acts button{padding:13px; font-size:15px;}
 .buy{background:linear-gradient(90deg,var(--accent2),var(--accent)); font-weight:800;}
