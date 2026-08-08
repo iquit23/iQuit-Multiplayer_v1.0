@@ -302,6 +302,66 @@ async function run() {
     st = await whoIsOnTop();
     ok(!st.dlg && st.z === '100' && st.inDash, 'F: κάρτα ΜΕΤΑ από dialog → η .dlg καθαρίστηκε, το dashboard ξανά πάνω');
     await ctx4.close();
+
+    // ============ BOTS: εικονίδιο + όνομα, ΚΑΜΙΑ ορατή στρατηγική (host & guest, EL & EN) ============
+    // Τα ΠΡΑΓΜΑΤΙΚΑ strings από το i18n.js (όχι υποθέσεις):
+    const STRAT_EL = ['Επιθετικός', 'Αμυντικός', 'Ισορροπημένος', 'Μεγιστάνας', 'Χρηματιστής', 'Ακαδημαϊκός'];
+    const STRAT_EN = ['Aggressive', 'Defensive', 'Balanced', 'Tycoon', 'Stock Picker', 'Scholar'];
+    // Τα εικονίδια διαβάζονται από την ΠΡΑΓΜΑΤΙΚΗ πηγή (bots.js), όχι hardcoded στο test
+    const PROFILES = require('../js/bots.js').PROFILES;
+    const BOTS_ALL = [['Ίκαρος', 'aggressive'], ['Καλυψώ', 'balanced'], ['Δανάη', 'defensive'],
+      ['Κροίσος', 'tycoon'], ['Ερμής', 'stockpicker'], ['Αθηνά', 'scholar']]
+      .map(([n, s]) => [n, PROFILES[s].icon]);
+    const ctx5 = await newCtx(1280, 900);
+    const H = await ctx5.newPage();
+    await H.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await H.fill('#playerName', 'Γιώργος');
+    await H.click('#btnCreate');
+    await H.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+    // D) το roster δείχνει ΟΛΑ τα ονόματα (τα icons ελέγχονται από τα unit tests μέσω PROFILES)
+    const rosterTxt = await H.evaluate(() => document.getElementById('botRoster').textContent);
+    BOTS_ALL.forEach(([n]) => ok(rosterTxt.indexOf(n) > -1, 'D: roster δείχνει «' + n + '»'));
+    ok(await H.evaluate(() => document.querySelectorAll('#botRoster .botbtn').length) === 6, 'D: 6 κουμπιά bot');
+    // E) κανένας χαρακτηρισμός — ούτε ως κείμενο, ούτε ως title/aria-label
+    const scan = async (pg, where) => pg.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      const attrs = [...el.querySelectorAll('*')].map(n => (n.getAttribute('title') || '') + ' ' + (n.getAttribute('aria-label') || '')).join(' ');
+      return { text: el.textContent, attrs };
+    }, where);
+    let rs = await scan(H, '#botRoster');
+    STRAT_EL.forEach(s => ok(rs.text.indexOf(s) === -1 && rs.attrs.indexOf(s) === -1, 'E(EL): «' + s + '» ΔΕΝ εμφανίζεται στο roster (ούτε σε title/aria)'));
+    // προσθήκη 3 bots → λίστα παικτών (host view)
+    for (const n of ['Ίκαρος', 'Δανάη', 'Κροίσος']) await H.evaluate((nm) => document.querySelector('[data-addbot="' + nm + '"]').click(), n);
+    await H.waitForTimeout(300);
+    let ps = await scan(H, '#lobbyPlayers');
+    ['Ίκαρος', 'Δανάη', 'Κροίσος'].forEach(n => ok(ps.text.indexOf(n) > -1, 'D: λίστα παικτών (host) δείχνει «' + n + '»'));
+    const addedIcons = ['Ίκαρος', 'Δανάη', 'Κροίσος'].map(n => (BOTS_ALL.find(b => b[0] === n) || [])[1]);
+    ok(addedIcons.every(ic => ic && ps.text.indexOf(ic) > -1), 'D: τα εικονίδια των bots διατηρούνται στη λίστα (host: ' + addedIcons.join(' ') + ')');
+    STRAT_EL.forEach(s => ok(ps.text.indexOf(s) === -1 && ps.attrs.indexOf(s) === -1, 'E(EL): «' + s + '» ΔΕΝ εμφανίζεται στη λίστα παικτών (host)'));
+    // F) EN
+    await H.evaluate(() => document.getElementById('btnLang').click());
+    await H.waitForTimeout(300);
+    rs = await scan(H, '#botRoster'); ps = await scan(H, '#lobbyPlayers');
+    STRAT_EN.forEach(s => ok(rs.text.indexOf(s) === -1 && ps.text.indexOf(s) === -1 && rs.attrs.indexOf(s) === -1 && ps.attrs.indexOf(s) === -1,
+      'E(EN): «' + s + '» ΔΕΝ εμφανίζεται πουθενά στο lobby'));
+    await H.evaluate(() => document.getElementById('btnLang').click());
+    await H.waitForTimeout(200);
+    // F) GUEST view — ίδιος έλεγχος στο renderLobbyGuest
+    const guestLobby = await H.evaluate(() => {
+      // προσομοίωση του μηνύματος «lobby» που λαμβάνει ο guest, με τα ΙΔΙΑ δεδομένα
+      const msg = { code: 'TEST', players: window.IQ_TEST.App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: true, pawn: null })) };
+      window.IQ_TEST.renderLobbyGuest(msg);
+      const el = document.getElementById('lobbyPlayers');
+      const attrs = [...el.querySelectorAll('*')].map(n => (n.getAttribute('title') || '') + ' ' + (n.getAttribute('aria-label') || '')).join(' ');
+      return { text: el.textContent, attrs, strategies: msg.players.filter(p => p.isBot).map(p => p.strategy) };
+    });
+    ['Ίκαρος', 'Δανάη', 'Κροίσος'].forEach(n => ok(guestLobby.text.indexOf(n) > -1, 'F: guest view δείχνει «' + n + '»'));
+    STRAT_EL.forEach(s => ok(guestLobby.text.indexOf(s) === -1 && guestLobby.attrs.indexOf(s) === -1, 'F: «' + s + '» ΔΕΝ εμφανίζεται στο guest view'));
+    // C) το strategy ΥΠΑΡΧΕΙ στα δεδομένα που στέλνονται στον guest (κρυφό, όχι χαμένο)
+    ok(guestLobby.strategies.length === 3 && guestLobby.strategies.every(s => !!s),
+      'C: το strategy ταξιδεύει κανονικά στο lobby payload (' + guestLobby.strategies.join(',') + ')');
+    if (process.env.IQUIT_SHOTS) await H.screenshot({ path: path.join(process.env.IQUIT_SHOTS, 'lobby-bots-desktop.png') }).catch(() => {});
+    await ctx5.close();
   } catch (e) {
     failed++;
     console.error('  ✗ FAIL (εξαίρεση): ' + e.message.split('\n')[0]);

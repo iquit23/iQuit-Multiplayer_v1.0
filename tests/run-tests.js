@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.6'), 'εμφανιζόμενη έκδοση Αύγουστος 1.6');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.7'), 'εμφανιζόμενη έκδοση Αύγουστος 1.7');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -923,6 +923,86 @@ section('Αύγουστος 1.4 Account beta — username & απομόνωση')
     /sendPasswordResetEmail\(c\.email, actionSettings\(\)\)/.test(acc), 'όλα τα email links περνούν actionCodeSettings');
   assert(idx2.indexOf('js/account.js') < idx2.indexOf('js/ui.js'), 'το account.js φορτώνεται πριν το ui.js');
   assert(fs.readFileSync(__dirname + '/../tools/build.js', 'utf8').indexOf("'account.js'") > -1, 'το build ενσωματώνει το account.js');
+}
+
+// ---------- 12. Αύγουστος 1.7: οι στρατηγικές των bots μένουν ΚΡΥΦΕΣ στο UI ----------
+section('Αύγουστος 1.7 Bots — κρυφή στρατηγική, ανέπαφη συμπεριφορά');
+{
+  const uiSrc4 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  const BOTS_P = require('../js/bots.js');
+  const I18N3 = require('../js/i18n.js');
+
+  // A) Τα 6 bots κρατούν ΤΑ ΙΔΙΑ internal strategy keys
+  const roster = (uiSrc4.match(/const BOT_ROSTER = \[([\s\S]*?)\];/) || [])[1] || '';
+  const pairs = [...roster.matchAll(/name:\s*'([^']+)',\s*strategy:\s*'([^']+)'/g)].map(m => ({ name: m[1], strategy: m[2] }));
+  assert(pairs.length === 6, 'A: 6 bots στο roster (' + pairs.length + ')');
+  const expected = { 'Ίκαρος': 'aggressive', 'Καλυψώ': 'balanced', 'Δανάη': 'defensive', 'Κροίσος': 'tycoon', 'Ερμής': 'stockpicker', 'Αθηνά': 'scholar' };
+  Object.keys(expected).forEach(n => {
+    const b = pairs.find(x => x.name === n);
+    assert(b && b.strategy === expected[n], 'A: ' + n + ' → strategy «' + expected[n] + '» ΑΜΕΤΑΒΛΗΤΗ');
+  });
+
+  // B) Κάθε strategy key αντιστοιχεί σε έγκυρο profile ΜΕ εικονίδιο (και τις παραμέτρους απόφασης)
+  pairs.forEach(b => {
+    const prof = BOTS_P.PROFILES[b.strategy];
+    assert(!!prof, 'B: υπάρχει profile για «' + b.strategy + '»');
+    assert(!!prof.icon && prof.icon.length > 0, 'B: το profile «' + b.strategy + '» έχει icon (' + prof.icon + ')');
+    ['cushion', 'bbAge', 'bbEarlyMult', 'bondCushion', 'repay'].forEach(k =>
+      assert(prof[k] !== undefined, 'B: παράμετρος απόφασης «' + k + '» ανέπαφη στο ' + b.strategy));
+  });
+
+  // C) Το strategy εξακολουθεί να ταξιδεύει σε lobby broadcast / session / hostStart
+  assert(/broadcast\(\{ t: 'lobby'[\s\S]{0,220}strategy: p\.strategy \|\| null/.test(uiSrc4), 'C: strategy στο lobby broadcast');
+  assert(/lobby: \{ code: App\.lobby\.code[\s\S]{0,240}strategy: p\.strategy \|\| null/.test(uiSrc4), 'C: strategy στο saveHostSession');
+  assert(/App\.lobby\.players\.map\(p => \(\{ id: p\.id, name: p\.name, isBot: p\.isBot, pawn: p\.pawn, strategy: p\.strategy \}\)\)/.test(uiSrc4), 'C: strategy στο hostStart spec');
+  assert(/strategy: spec\.strategy/.test(uiSrc4), 'C: το bot μπαίνει στο lobby ΜΕ τη στρατηγική του');
+  const engSrc = fs.readFileSync(__dirname + '/../js/engine.js', 'utf8');
+  assert(/strategy: ps\.strategy \|\| 'balanced'/.test(engSrc), 'C: ο engine κρατά το strategy του παίκτη');
+  const botsSrc = fs.readFileSync(__dirname + '/../js/bots.js', 'utf8');
+  assert(/function profileOf\(p\) \{ return PROFILES\[p\.strategy\]/.test(botsSrc), 'C: profileOf() οδηγεί ακόμα τις αποφάσεις');
+
+  // E) ΚΑΝΕΝΑ ορατό strategy label — ούτε κείμενο, ούτε title/tooltip, ούτε aria-label
+  assert(!/t\('strat_'/.test(uiSrc4), 'E: το ui.js ΔΕΝ εμφανίζει πουθενά μεταφρασμένο strategy label');
+  const tagFn = (uiSrc4.match(/function stratTag\(strategy\) \{[\s\S]*?\n  \}/) || [''])[0];
+  assert(/prof\.icon/.test(tagFn) && !/strat_/.test(tagFn), 'E: stratTag() → μόνο icon');
+  assert(!/title="[^"]*strat_|aria-label="[^"]*strat_/.test(uiSrc4), 'E: κανένα title/aria-label με στρατηγική');
+  const rosterTpl = (uiSrc4.match(/\$\('botRoster'\)\.innerHTML[\s\S]*?\.join\(''\);/) || [''])[0];
+  assert(/prof\.icon/.test(rosterTpl) && /esc\(b\.name\)/.test(rosterTpl) && !/strat_/.test(rosterTpl),
+    'E: το roster δείχνει εικονίδιο + όνομα, χωρίς χαρακτηρισμό');
+  // τα ΠΡΑΓΜΑΤΙΚΑ strings και στις δύο γλώσσες δεν πρέπει να παράγονται από το UI
+  ['el', 'en'].forEach(L => {
+    I18N3.setLang(L);
+    ['aggressive', 'defensive', 'balanced', 'tycoon', 'stockpicker', 'scholar'].forEach(k => {
+      const label = I18N3.t('strat_' + k);
+      assert(label && label !== 'strat_' + k, 'E: το i18n κλειδί strat_' + k + ' ΔΙΑΤΗΡΕΙΤΑΙ (' + L + ': ' + label + ')');
+    });
+  });
+  I18N3.setLang('el');
+  // το heading της ενότητας δεν υπόσχεται πλέον επιλογή στρατηγικής (EL & EN)
+  ['el', 'en'].forEach(L => {
+    I18N3.setLang(L);
+    const h = I18N3.t('addBot');
+    assert(!/στρατηγικ|strategy/i.test(h), 'E: το heading «Πρόσθεσε bot» ΔΕΝ αναφέρει στρατηγική (' + L + ': ' + h + ')');
+    assert(/bot/i.test(h), 'E: το heading παραμένει κατανοητό (' + L + ': ' + h + ')');
+  });
+  I18N3.setLang('el');
+  const idxSrc5 = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  assert(!/διάλεξε στρατηγική|pick a strategy|choose strategy/i.test(idxSrc5), 'E: ούτε το static HTML αναφέρει επιλογή στρατηγικής');
+  // τα PROFILES[].label παραμένουν ως έχουν (χωρίς cleanup σε αυτό το batch)
+  assert(BOTS_P.PROFILES.aggressive.label === 'Επιθετικός', 'PROFILES.label διατηρείται ανέπαφο (χωρίς refactor)');
+
+  // G) Η συμπεριφορά διαφέρει ΟΝΤΩΣ ανά στρατηγική (απόδειξη ότι δεν «ισοπεδώθηκαν»)
+  const mk = (strategy) => {
+    const s = E.newGame([{ id: 'a', name: 'A', isBot: true, strategy: strategy }, { id: 'b', name: 'B', isBot: true }], 7);
+    const p = s.players[0];
+    p.cash = 600; p.age = 26;
+    s.pending = { type: 'card', playerId: 'a', cardId: 'BB13', deck: 'bb' };
+    return BOTS.decide(s, 'a');
+  };
+  const dAgg = JSON.stringify(mk('aggressive')), dDef = JSON.stringify(mk('defensive'));
+  assert(dAgg !== undefined && dDef !== undefined, 'G: τα bots αποφασίζουν κανονικά και με τα δύο profiles');
+  assert(/aggressive: 0, balanced: 0\.06, defensive: 0\.15, tycoon: 0\.04, stockpicker: 0\.05, scholar: 0\.12/.test(botsSrc),
+    'G: τα ποσοστά ΤΕΑ ανά στρατηγική παραμένουν διαφορετικά');
 }
 
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------

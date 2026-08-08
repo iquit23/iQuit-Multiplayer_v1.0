@@ -623,9 +623,12 @@
       }
     });
   }
+  // v1.29: ΜΟΝΟ το εικονίδιο του bot — η στρατηγική/προσωπικότητά του ΔΕΝ αποκαλύπτεται στον
+  // παίκτη (ούτε ως κείμενο, ούτε ως title/tooltip, ούτε ως aria-label). Εσωτερικά το
+  // p.strategy παραμένει ανέπαφο και συνεχίζει να καθορίζει τις αποφάσεις του (bots.js).
   function stratTag(strategy) {
     const prof = BOTS.PROFILES[strategy];
-    return prof ? '<span class="tag">' + prof.icon + ' ' + t('strat_' + strategy) + '</span>' : '';
+    return prof ? '<span class="tag">' + prof.icon + '</span>' : '';
   }
 
   // v0.9: μετάφραση των στατικών στοιχείων της σελίδας
@@ -764,13 +767,13 @@
       App.lobby.players = App.lobby.players.filter(x => x.id !== b.dataset.kick);
       saveHostSession(); broadcastLobby(); renderLobby();
     });
-    // v0.5: roster από επώνυμα bots με στρατηγική
+    // v0.5: roster από επώνυμα bots με στρατηγική (v1.29: η στρατηγική μένει ΚΡΥΦΗ — εικονίδιο + όνομα)
     const full = App.lobby.players.length >= 6;
     $('botRoster').innerHTML = BOT_ROSTER.map(b => {
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
       return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '" ' + (added || full ? 'disabled' : '') + '>' +
-        prof.icon + ' <b>' + esc(b.name) + '</b> <span class="muted">' + t('strat_' + b.strategy) + '</span>' + (added ? ' ✓' : '') + '</button>';
+        prof.icon + ' <b>' + esc(b.name) + '</b>' + (added ? ' ✓' : '') + '</button>';
     }).join('');
     $('botRoster').querySelectorAll('[data-addbot]').forEach(btn => btn.onclick = () => {
       const spec = BOT_ROSTER.find(b => b.name === btn.dataset.addbot);
@@ -1996,6 +1999,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats };
+  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest };
   init();
 })();

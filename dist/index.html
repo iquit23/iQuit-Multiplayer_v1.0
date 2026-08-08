@@ -509,7 +509,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.6</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.7</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -562,7 +562,7 @@ body.game-over #myDash{z-index:auto;}
 
   <div id="hostControls">
     <div class="card">
-      <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;" id="lblAddBot">🤖 Πρόσθεσε bot (διάλεξε στρατηγική)</h3>
+      <h3 style="font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;" id="lblAddBot">🤖 Πρόσθεσε bot</h3>
       <div id="botRoster"></div>
     </div>
     <button class="primary" id="btnStart">🚀 Έναρξη παιχνιδιού</button>
@@ -875,7 +875,7 @@ body.game-over #myDash{z-index:auto;}
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
       // Lobby
       room: 'Δωμάτιο', shareBtn: '📤 Κοινοποίηση κωδικού', players: 'Παίκτες', pickPawn: 'Διάλεξε το πιόνι σου',
-      addBot: '🤖 Πρόσθεσε bot (διάλεξε στρατηγική)', startBtn: '🚀 Έναρξη παιχνιδιού',
+      addBot: '🤖 Πρόσθεσε bot', startBtn: '🚀 Έναρξη παιχνιδιού',
       guestWait: 'Περιμένουμε τον host να ξεκινήσει το παιχνίδι…', leave: 'Αποχώρηση',
       you: '(εσύ)', online: 'online', offline: 'offline',
       shareText: 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: {url}',
@@ -1125,7 +1125,7 @@ body.game-over #myDash{z-index:auto;}
       codeLen: 'Room codes have 4 characters.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',
       room: 'Room', shareBtn: '📤 Share invite link', players: 'Players', pickPawn: 'Pick your pawn',
-      addBot: '🤖 Add a bot (pick a strategy)', startBtn: '🚀 Start game',
+      addBot: '🤖 Add a bot', startBtn: '🚀 Start game',
       guestWait: 'Waiting for the host to start the game…', leave: 'Leave',
       you: '(you)', online: 'online', offline: 'offline',
       shareText: 'We are playing I QUIT! 🎲 Tap the link to join my room: {url}',
@@ -4248,9 +4248,12 @@ body.game-over #myDash{z-index:auto;}
       }
     });
   }
+  // v1.29: ΜΟΝΟ το εικονίδιο του bot — η στρατηγική/προσωπικότητά του ΔΕΝ αποκαλύπτεται στον
+  // παίκτη (ούτε ως κείμενο, ούτε ως title/tooltip, ούτε ως aria-label). Εσωτερικά το
+  // p.strategy παραμένει ανέπαφο και συνεχίζει να καθορίζει τις αποφάσεις του (bots.js).
   function stratTag(strategy) {
     const prof = BOTS.PROFILES[strategy];
-    return prof ? '<span class="tag">' + prof.icon + ' ' + t('strat_' + strategy) + '</span>' : '';
+    return prof ? '<span class="tag">' + prof.icon + '</span>' : '';
   }
 
   // v0.9: μετάφραση των στατικών στοιχείων της σελίδας
@@ -4389,13 +4392,13 @@ body.game-over #myDash{z-index:auto;}
       App.lobby.players = App.lobby.players.filter(x => x.id !== b.dataset.kick);
       saveHostSession(); broadcastLobby(); renderLobby();
     });
-    // v0.5: roster από επώνυμα bots με στρατηγική
+    // v0.5: roster από επώνυμα bots με στρατηγική (v1.29: η στρατηγική μένει ΚΡΥΦΗ — εικονίδιο + όνομα)
     const full = App.lobby.players.length >= 6;
     $('botRoster').innerHTML = BOT_ROSTER.map(b => {
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
       return '<button class="botbtn' + (added ? ' added' : '') + '" data-addbot="' + esc(b.name) + '" ' + (added || full ? 'disabled' : '') + '>' +
-        prof.icon + ' <b>' + esc(b.name) + '</b> <span class="muted">' + t('strat_' + b.strategy) + '</span>' + (added ? ' ✓' : '') + '</button>';
+        prof.icon + ' <b>' + esc(b.name) + '</b>' + (added ? ' ✓' : '') + '</button>';
     }).join('');
     $('botRoster').querySelectorAll('[data-addbot]').forEach(btn => btn.onclick = () => {
       const spec = BOT_ROSTER.find(b => b.name === btn.dataset.addbot);
@@ -5621,7 +5624,7 @@ body.game-over #myDash{z-index:auto;}
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats };
+  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest };
   init();
 })();
 
