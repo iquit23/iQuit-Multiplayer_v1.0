@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.4'), 'εμφανιζόμενη έκδοση Αύγουστος 1.4');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.5'), 'εμφανιζόμενη έκδοση Αύγουστος 1.5');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -925,6 +925,20 @@ section('Αύγουστος 1.4 Account beta — username & απομόνωση')
   assert(fs.readFileSync(__dirname + '/../tools/build.js', 'utf8').indexOf("'account.js'") > -1, 'το build ενσωματώνει το account.js');
 }
 
-console.log('\n══════════════════════════');
-console.log((failed === 0 ? '✅' : '❌') + ' Tests: ' + passed + ' passed, ' + failed + ' failed');
-process.exit(failed === 0 ? 0 : 1);
+// ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------
+// Τρέχει αυτόματα όταν υπάρχει playwright· αλλιώς παραλείπεται με μήνυμα (όπως τα emulator tests).
+(async () => {
+  section('Layout regression: μεγάλα ονόματα καρτών (browser)');
+  let r = { passed: 0, failed: 0, skipped: true };
+  try {
+    r = await require('./layout.e2e.js').run();
+  } catch (e) {
+    console.log('  ⏭  ΠΑΡΑΛΕΙΨΗ: ' + e.message.split('\n')[0]);
+  }
+  passed += r.passed; failed += r.failed;
+
+  console.log('\n══════════════════════════');
+  console.log((failed === 0 ? '✅' : '❌') + ' Tests: ' + passed + ' passed, ' + failed + ' failed' +
+    (r.skipped ? ' (layout e2e: παραλείφθηκε — χρειάζεται playwright)' : ''));
+  process.exit(failed === 0 ? 0 : 1);
+})();

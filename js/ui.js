@@ -47,6 +47,7 @@
     myPawn: localStorage.getItem('iquit_pawn') || null,
     guestLobby: null, // τελευταίο lobby snapshot (guest)
     anim: null, lastAnimSeq: null,
+    tipFor: null,     // v1.28: ποιο κομμένο όνομα έχει ανοιχτό popover (singleton)
     logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
@@ -1008,8 +1009,11 @@
       if (myTurn && i.kind === 'bond') btns = '<button class="mini sell" data-redeem="' + i.uid + '">' + t('sellBond', { v: fmt(i.cost) }) + '</button>';
       if (myTurn && i.kind === 'funding') btns = '<button class="mini sell" data-sellf="' + i.uid + '">' + t('sellToPlayer') + '</button>';
       const ttl = invTitle(i);
+      // Το ΟΝΟΜΑ κόβεται στις 2 γραμμές (CSS), το ΚΟΣΤΟΣ είναι ξεχωριστό αδελφό στοιχείο ώστε
+      // να παραμένει πάντα ορατό. Το aria-label έχει ΠΑΝΤΑ το πλήρες όνομα (και όταν χωράει).
       return '<div class="inv"><span class="dot" style="background:' + color + '"></span>' +
-        '<span class="nm" title="' + esc(ttl) + '">' + esc(ttl) + ' <span class="muted">' + fmt(i.cost) + '</span></span>' + btns + right + '</div>';
+        '<span class="nm" data-full="' + esc(ttl) + '" aria-label="' + esc(ttl) + '" title="' + esc(ttl) + '">' + esc(ttl) + '</span>' +
+        '<span class="cost">' + fmt(i.cost) + '</span>' + btns + right + '</div>';
     }).join('') : '<div class="muted">' + t('noInv') + '</div>';
 
     let loanHtml = '';
@@ -1074,7 +1078,86 @@
     if (det) det.ontoggle = () => { App.expOpen = det.open; }; // v0.6: μένει ανοιχτό μέχρι να το κλείσεις εσύ
     const bl = $('btnLoan');
     if (bl) bl.onclick = () => { const v = Math.floor(parseFloat($('loanAmt').value)); if (v > 0) openLoanConfirm(v); };
+    bindTruncTips(box); // v1.28: μόνο τα ΟΝΤΩΣ κομμένα ονόματα γίνονται διαδραστικά
   }
+
+  // ============================================================ ΚΟΜΜΕΝΑ ΟΝΟΜΑΤΑ (tooltip)
+  // Ένα ΜΟΝΑΔΙΚΟ popover για όλη τη σελίδα (όχι ένα ανά κάρτα). Το desktop hover καλύπτεται
+  // από το native title· εδώ καλύπτονται πληκτρολόγιο και αφή, όπου το title δεν δουλεύει.
+  // Καθολικό: δένεται σε ΟΠΟΙΟΔΗΠΟΤΕ στοιχείο με data-full — κανένα special case ονόματος/ID.
+  function tipEl() {
+    let el = $('tipPop');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'tipPop';
+      el.className = 'hidden';
+      // ΟΠΤΙΚΗ βοήθεια μόνο: το πλήρες όνομα είναι ήδη διαθέσιμο στους αναγνώστες οθόνης μέσω
+      // του aria-label του ονόματος. Χωρίς aria-hidden θα ακουγόταν ΔΥΟ φορές το ίδιο κείμενο.
+      el.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function hideTip() {
+    const el = $('tipPop');
+    if (el) el.className = 'hidden';
+    if (App.tipFor) App.tipFor.setAttribute('aria-expanded', 'false');
+    App.tipFor = null;
+  }
+  function showTip(target) {
+    const el = tipEl();
+    el.textContent = target.getAttribute('data-full') || target.textContent;
+    el.className = '';
+    const r = target.getBoundingClientRect(), b = el.getBoundingClientRect();
+    // κάτω από το στοιχείο· αν δεν χωρά, από πάνω. Πάντα εντός viewport.
+    let top = r.bottom + 6;
+    if (top + b.height > innerHeight - 8) top = Math.max(8, r.top - b.height - 6);
+    let left = Math.min(Math.max(8, r.left), innerWidth - b.width - 8);
+    el.style.top = top + 'px';
+    el.style.left = left + 'px';
+    if (App.tipFor && App.tipFor !== target) App.tipFor.setAttribute('aria-expanded', 'false');
+    target.setAttribute('aria-expanded', 'true');
+    App.tipFor = target;
+  }
+  function toggleTip(target) { if (App.tipFor === target) hideTip(); else showTip(target); }
+
+  function bindTruncTips(scope) {
+    (scope || document).querySelectorAll('[data-full]').forEach(el => {
+      // ΜΟΝΟ αν το κείμενο ΟΝΤΩΣ κόπηκε (clamp ή πλάτος). Αν χωράει, δεν γίνεται focusable.
+      const cut = el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+      // Αν χωράει, καθαρίζουμε ΚΑΙ τα semantics: δεν είναι κουμπί, δεν «ανοίγει» τίποτα.
+      if (!cut) {
+        el.classList.remove('trunc');
+        ['tabindex', 'role', 'aria-expanded'].forEach(a => el.removeAttribute(a));
+        return;
+      }
+      if (el.classList.contains('trunc')) return; // ήδη δεμένο
+      el.classList.add('trunc');
+      el.setAttribute('tabindex', '0');
+      // Semantics: το κομμένο όνομα λειτουργεί ως DISCLOSURE — πατιέται (click/Enter/Space) και
+      // εναλλάσσει την εμφάνιση του πλήρους ονόματος. Άρα role="button" + aria-expanded, που
+      // περιγράφουν ακριβώς αυτό. ΔΕΝ μπαίνει aria-controls: το popover είναι aria-hidden
+      // (οπτικό διπλότυπο του aria-label), οπότε δεν υπάρχει προσβάσιμος στόχος να δείξει.
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-expanded', 'false');
+      el.addEventListener('click', (e) => {
+        // ΚΡΙΣΙΜΟ: να μην πυροδοτηθεί κουμπί/ενέργεια της γραμμής (π.χ. πώληση)
+        e.preventDefault(); e.stopPropagation();
+        toggleTip(el);
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); e.stopPropagation(); toggleTip(el); }
+        else if (e.key === 'Escape') { e.stopPropagation(); hideTip(); el.blur(); }
+      });
+      el.addEventListener('focus', () => showTip(el));
+      el.addEventListener('blur', () => { if (App.tipFor === el) hideTip(); });
+    });
+  }
+  // tap/click εκτός, Escape, scroll ή resize → κλείσιμο
+  document.addEventListener('click', (e) => { if (App.tipFor && !e.target.closest('[data-full]')) hideTip(); }, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
+  addEventListener('scroll', () => { if (App.tipFor) hideTip(); }, { passive: true, capture: true });
+  addEventListener('resize', () => { if (App.tipFor) hideTip(); });
 
   // v0.6: εκπαιδευτική επιβεβαίωση δανείου — βλέπεις ΤΙ θα πληρώσεις πριν δεσμευτείς
   function openLoanConfirm(amount) {

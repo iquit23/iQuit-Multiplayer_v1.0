@@ -146,9 +146,16 @@ h1,h2,h3{margin:0;}
 /* ---------- GAME LAYOUT (v0.7: μεγαλύτερο ταμπλό για laptop) ---------- */
 #screen-game .wrap{display:grid; grid-template-columns:1fr; gap:12px; max-width:1280px;}
 @media(min-width:900px){
-  #screen-game .wrap{grid-template-columns:minmax(560px,1.35fr) 1fr; align-items:start;}
+  /* ΠΡΟΣΟΧΗ: το «1fr» ισοδυναμεί με minmax(auto,1fr) και το auto-minimum ενός grid track είναι
+     το MIN-CONTENT του περιεχομένου. Ένα μεγάλο όνομα κάρτας στο χαρτοφυλάκιο φούσκωνε έτσι τη
+     δεξιά στήλη (529→629px) και ΜΙΚΡΑΙΝΕ το ταμπλό (715→615px). Το minmax(0,1fr) κόβει αυτή τη
+     συνεισφορά — οι αναλογίες 1.35fr/1fr μένουν ΑΚΡΙΒΩΣ ίδιες. */
+  #screen-game .wrap{grid-template-columns:minmax(560px,1.35fr) minmax(0,1fr); align-items:start;}
   #colLeft{position:sticky; top:10px;}
 }
+/* defensive: τα grid/flex items έχουν min-width:auto — χωρίς αυτό, μακρύ περιεχόμενο μπορεί να
+   ξαναδιογκώσει τη στήλη (ισχύει και για τη μονή στήλη σε mobile) */
+#colRight{min-width:0;}
 .topbar{display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--card);
   border-bottom:1px solid var(--line); position:sticky; top:0; z-index:30;}
 .topbar .code{font-weight:800; letter-spacing:2px; color:var(--gold); font-size:13px;}
@@ -315,7 +322,14 @@ h1,h2,h3{margin:0;}
 .inv{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px;}
 .inv:last-child{border-bottom:none;}
 .dot{width:11px; height:11px; border-radius:50%; flex:0 0 auto;}
-.inv .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* Όνομα κάρτας: ΕΩΣ 2 γραμμές, μετά αποσιωπητικά. Αν χωράει, δεν κόβεται τίποτα.
+   Το overflow-wrap:anywhere καλύπτει και ακραία μονολεκτικά ονόματα. */
+.inv .nm{flex:1; min-width:0; overflow:hidden; white-space:normal; overflow-wrap:anywhere;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3;}
+/* το κόστος βγήκε ΕΞΩ από το clamped όνομα — οικονομική πληροφορία δεν κρύβεται ποτέ */
+.inv .cost{color:var(--muted); font-size:12px; white-space:nowrap; flex:0 0 auto;}
+.inv .nm.trunc{cursor:pointer;}
+.inv .nm.trunc:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
 .inv .inc{color:var(--accent); font-weight:700; font-size:12px; white-space:nowrap;}
 .mini{font-size:11px; padding:5px 9px; border-radius:8px; background:#0a1320; border:1px solid var(--line); color:var(--muted);}
 .mini.sell{border-color:#2e466a; color:#9ec2f0;}
@@ -335,7 +349,8 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 .op .ret{color:var(--gold); font-size:10px; font-weight:700;}
 
 /* ---------- LOG ---------- */
-.log{font-size:12px; color:var(--muted); line-height:1.75; max-height:200px; overflow:auto; overflow-anchor:none;}
+.log{font-size:12px; color:var(--muted); line-height:1.75; max-height:200px; overflow:auto; overflow-anchor:none;
+  overflow-wrap:anywhere;} /* μεγάλα ονόματα καρτών στο ιστορικό δεν διογκώνουν τη στήλη */
 .log b{color:var(--txt);}
 
 /* ---------- MODAL ---------- */
@@ -353,6 +368,14 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 /* v1.10 (αίτημα Γιώργου): η καρτέλα του παίκτη (meter → δάνεια) μένει ΦΩΤΙΣΜΕΝΗ όσο είναι
    ανοιχτή μια κάρτα — μόνο ιστορικό/υπόλοιπα σκοτεινιάζουν. z-index 110 > overlay(100). */
 #myDash{position:relative; z-index:110;}
+/* Singleton popover για κομμένα ονόματα (πληκτρολόγιο/αφή). z-index 115: ΠΑΝΩ από το
+   #myDash(110) ώστε να φαίνεται πάνω από το χαρτοφυλάκιο, ΚΑΤΩ από #hintBox(120), toasts(200),
+   flycard(300) και ξενάγηση(399-401). Κλείνει ούτως ή άλλως όταν ανοίγει κάρτα/modal. */
+#tipPop{position:fixed; z-index:115; max-width:min(320px, calc(100vw - 24px));
+  background:var(--card2); color:var(--txt); border:1px solid var(--accent); border-radius:12px;
+  padding:9px 12px; font-size:13px; line-height:1.45; box-shadow:0 10px 30px rgba(0,0,0,.55);
+  overflow-wrap:anywhere;}
+#tipPop.hidden{display:none;}
 /* v1.14: στο ΤΕΛΟΣ της παρτίδας η καρτέλα υποχωρεί — τα «Αναλυτικά παρτίδας» φαίνονται ολόκληρα */
 body.game-over #myDash{z-index:auto;}
 
@@ -479,7 +502,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.4</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.5</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -3642,6 +3665,7 @@ body.game-over #myDash{z-index:auto;}
     myPawn: localStorage.getItem('iquit_pawn') || null,
     guestLobby: null, // τελευταίο lobby snapshot (guest)
     anim: null, lastAnimSeq: null,
+    tipFor: null,     // v1.28: ποιο κομμένο όνομα έχει ανοιχτό popover (singleton)
     logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
@@ -4603,8 +4627,11 @@ body.game-over #myDash{z-index:auto;}
       if (myTurn && i.kind === 'bond') btns = '<button class="mini sell" data-redeem="' + i.uid + '">' + t('sellBond', { v: fmt(i.cost) }) + '</button>';
       if (myTurn && i.kind === 'funding') btns = '<button class="mini sell" data-sellf="' + i.uid + '">' + t('sellToPlayer') + '</button>';
       const ttl = invTitle(i);
+      // Το ΟΝΟΜΑ κόβεται στις 2 γραμμές (CSS), το ΚΟΣΤΟΣ είναι ξεχωριστό αδελφό στοιχείο ώστε
+      // να παραμένει πάντα ορατό. Το aria-label έχει ΠΑΝΤΑ το πλήρες όνομα (και όταν χωράει).
       return '<div class="inv"><span class="dot" style="background:' + color + '"></span>' +
-        '<span class="nm" title="' + esc(ttl) + '">' + esc(ttl) + ' <span class="muted">' + fmt(i.cost) + '</span></span>' + btns + right + '</div>';
+        '<span class="nm" data-full="' + esc(ttl) + '" aria-label="' + esc(ttl) + '" title="' + esc(ttl) + '">' + esc(ttl) + '</span>' +
+        '<span class="cost">' + fmt(i.cost) + '</span>' + btns + right + '</div>';
     }).join('') : '<div class="muted">' + t('noInv') + '</div>';
 
     let loanHtml = '';
@@ -4669,7 +4696,86 @@ body.game-over #myDash{z-index:auto;}
     if (det) det.ontoggle = () => { App.expOpen = det.open; }; // v0.6: μένει ανοιχτό μέχρι να το κλείσεις εσύ
     const bl = $('btnLoan');
     if (bl) bl.onclick = () => { const v = Math.floor(parseFloat($('loanAmt').value)); if (v > 0) openLoanConfirm(v); };
+    bindTruncTips(box); // v1.28: μόνο τα ΟΝΤΩΣ κομμένα ονόματα γίνονται διαδραστικά
   }
+
+  // ============================================================ ΚΟΜΜΕΝΑ ΟΝΟΜΑΤΑ (tooltip)
+  // Ένα ΜΟΝΑΔΙΚΟ popover για όλη τη σελίδα (όχι ένα ανά κάρτα). Το desktop hover καλύπτεται
+  // από το native title· εδώ καλύπτονται πληκτρολόγιο και αφή, όπου το title δεν δουλεύει.
+  // Καθολικό: δένεται σε ΟΠΟΙΟΔΗΠΟΤΕ στοιχείο με data-full — κανένα special case ονόματος/ID.
+  function tipEl() {
+    let el = $('tipPop');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'tipPop';
+      el.className = 'hidden';
+      // ΟΠΤΙΚΗ βοήθεια μόνο: το πλήρες όνομα είναι ήδη διαθέσιμο στους αναγνώστες οθόνης μέσω
+      // του aria-label του ονόματος. Χωρίς aria-hidden θα ακουγόταν ΔΥΟ φορές το ίδιο κείμενο.
+      el.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function hideTip() {
+    const el = $('tipPop');
+    if (el) el.className = 'hidden';
+    if (App.tipFor) App.tipFor.setAttribute('aria-expanded', 'false');
+    App.tipFor = null;
+  }
+  function showTip(target) {
+    const el = tipEl();
+    el.textContent = target.getAttribute('data-full') || target.textContent;
+    el.className = '';
+    const r = target.getBoundingClientRect(), b = el.getBoundingClientRect();
+    // κάτω από το στοιχείο· αν δεν χωρά, από πάνω. Πάντα εντός viewport.
+    let top = r.bottom + 6;
+    if (top + b.height > innerHeight - 8) top = Math.max(8, r.top - b.height - 6);
+    let left = Math.min(Math.max(8, r.left), innerWidth - b.width - 8);
+    el.style.top = top + 'px';
+    el.style.left = left + 'px';
+    if (App.tipFor && App.tipFor !== target) App.tipFor.setAttribute('aria-expanded', 'false');
+    target.setAttribute('aria-expanded', 'true');
+    App.tipFor = target;
+  }
+  function toggleTip(target) { if (App.tipFor === target) hideTip(); else showTip(target); }
+
+  function bindTruncTips(scope) {
+    (scope || document).querySelectorAll('[data-full]').forEach(el => {
+      // ΜΟΝΟ αν το κείμενο ΟΝΤΩΣ κόπηκε (clamp ή πλάτος). Αν χωράει, δεν γίνεται focusable.
+      const cut = el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+      // Αν χωράει, καθαρίζουμε ΚΑΙ τα semantics: δεν είναι κουμπί, δεν «ανοίγει» τίποτα.
+      if (!cut) {
+        el.classList.remove('trunc');
+        ['tabindex', 'role', 'aria-expanded'].forEach(a => el.removeAttribute(a));
+        return;
+      }
+      if (el.classList.contains('trunc')) return; // ήδη δεμένο
+      el.classList.add('trunc');
+      el.setAttribute('tabindex', '0');
+      // Semantics: το κομμένο όνομα λειτουργεί ως DISCLOSURE — πατιέται (click/Enter/Space) και
+      // εναλλάσσει την εμφάνιση του πλήρους ονόματος. Άρα role="button" + aria-expanded, που
+      // περιγράφουν ακριβώς αυτό. ΔΕΝ μπαίνει aria-controls: το popover είναι aria-hidden
+      // (οπτικό διπλότυπο του aria-label), οπότε δεν υπάρχει προσβάσιμος στόχος να δείξει.
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-expanded', 'false');
+      el.addEventListener('click', (e) => {
+        // ΚΡΙΣΙΜΟ: να μην πυροδοτηθεί κουμπί/ενέργεια της γραμμής (π.χ. πώληση)
+        e.preventDefault(); e.stopPropagation();
+        toggleTip(el);
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); e.stopPropagation(); toggleTip(el); }
+        else if (e.key === 'Escape') { e.stopPropagation(); hideTip(); el.blur(); }
+      });
+      el.addEventListener('focus', () => showTip(el));
+      el.addEventListener('blur', () => { if (App.tipFor === el) hideTip(); });
+    });
+  }
+  // tap/click εκτός, Escape, scroll ή resize → κλείσιμο
+  document.addEventListener('click', (e) => { if (App.tipFor && !e.target.closest('[data-full]')) hideTip(); }, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
+  addEventListener('scroll', () => { if (App.tipFor) hideTip(); }, { passive: true, capture: true });
+  addEventListener('resize', () => { if (App.tipFor) hideTip(); });
 
   // v0.6: εκπαιδευτική επιβεβαίωση δανείου — βλέπεις ΤΙ θα πληρώσεις πριν δεσμευτείς
   function openLoanConfirm(amount) {
