@@ -1241,6 +1241,10 @@
     const mb = $('modalBody');
     mb.classList.toggle('wide', !!wide);
     mb.innerHTML = html;
+    // ΔΥΟ επίπεδα overlay (βλ. σχόλιο στο style.css): οι κάρτες-ΑΠΟΦΑΣΕΙΣ αφήνουν σκόπιμα ορατή
+    // την καρτέλα του παίκτη, ενώ τα ΠΛΗΡΟΦΟΡΙΑΚΑ dialogs (wide) καλύπτουν όλο το game UI.
+    // toggle (όχι add): η .dlg καθαρίζεται όταν το επόμενο overlay είναι κάρτα παιχνιδιού.
+    $('overlay').classList.toggle('dlg', !!wide);
     $('overlay').classList.remove('hidden');
   }
   function closeOverlay() { $('overlay').classList.add('hidden'); App.localModal = null; }
@@ -1992,6 +1996,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration };
+  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats };
   init();
 })();

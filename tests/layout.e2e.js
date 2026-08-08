@@ -205,6 +205,103 @@ async function run() {
     await M.waitForTimeout(150);
     ok(!(await tipOpen()), 'D: resize → κλείνει');
     await ctx3.close();
+
+    // ================= STACKING: πληροφοριακά dialogs vs κάρτες παιχνιδιού =================
+    // Τα ΠΛΗΡΟΦΟΡΙΑΚΑ (Κανόνες/Ερωτηματολόγιο/Αναλυτικά) πρέπει να καλύπτουν το #myDash.
+    // Οι ΚΑΡΤΕΣ-ΑΠΟΦΑΣΕΙΣ πρέπει να το αφήνουν ορατό (σκόπιμο feature v1.10).
+    const ctx4 = await newCtx(1280, 900);
+    const S = await newGame(ctx4, 1280, 900);
+    // Ποιο στοιχείο είναι μπροστά ΕΚΕΙ ΠΟΥ ΕΠΙΚΑΛΥΠΤΟΝΤΑΙ modal και dashboard;
+    // Το #overlay έχει inset:0 — το backdrop του καλύπτει ΟΛΗ την οθόνη. Άρα ο καθοριστικός
+    // έλεγχος είναι: πάνω στο ΙΔΙΟ το dashboard, ποιο στοιχείο επιστρέφει το elementFromPoint;
+    //   informational dialog → #overlay (το dashboard είναι από κάτω, σκοτεινιασμένο)
+    //   κάρτα παιχνιδιού     → #myDash (μένει φωτισμένο & κλικαμπλ — feature v1.10)
+    const whoIsOnTop = () => S.evaluate(() => {
+      const dash = document.getElementById('myDash').getBoundingClientRect();
+      const pts = [[dash.left + dash.width / 2, dash.top + 20], [dash.left + dash.width / 2, dash.top + dash.height / 2]];
+      const hits = pts.map(([x, y]) => {
+        const el = document.elementFromPoint(x, y);
+        return { inOverlay: !!(el && el.closest('#overlay')), inDash: !!(el && el.closest('#myDash')) };
+      });
+      const ov = document.getElementById('overlay');
+      return {
+        inOverlay: hits.every(h => h.inOverlay),
+        inDash: hits.every(h => h.inDash),
+        dashVisible: dash.width > 0 && dash.height > 0,
+        dlg: ov.classList.contains('dlg'),
+        z: getComputedStyle(ov).zIndex,
+        dashZ: getComputedStyle(document.getElementById('myDash')).zIndex,
+      };
+    });
+    // τα πληροφοριακά dialogs καλούνται από το δημόσιο IQ_UI· το showStats είναι διαθέσιμο
+    // μόνο μέσω του e2e hook (δεν ανήκει στο δημόσιο API)
+    const openDlg = async (fn) => {
+      await S.evaluate((f) => ((window.IQ_UI && window.IQ_UI[f]) || window.IQ_TEST[f])(), fn);
+      await S.waitForTimeout(350);
+    };
+    const closeDlg = () => S.evaluate(() => { const b = document.querySelector('#overlay:not(.hidden) .ghost, #overlay:not(.hidden) [id$="Close"], #overlay:not(.hidden) #fbCancel'); if (b) b.click(); });
+
+    // A) Κανόνες
+    await openDlg('showRules');
+    let st = await whoIsOnTop();
+    ok(st.dashVisible, 'A: Κανόνες — το #myDash είναι ορατό στο παρασκήνιο (το σενάριο ισχύει)');
+    ok(st.dlg && st.z === '130', 'A: το overlay πήρε .dlg (z-index ' + st.z + ')');
+    ok(st.inOverlay && !st.inDash, 'A: στο σημείο επικάλυψης μπροστά είναι ΤΟ DIALOG, όχι το #myDash');
+    // προαιρετικό screenshot ΜΟΝΟ αν ζητηθεί ρητά — τα tests δεν αφήνουν artifacts στο repo
+    if (process.env.IQUIT_SHOTS) await S.screenshot({ path: path.join(process.env.IQUIT_SHOTS, 'rules-over-dash.png') }).catch(() => {});
+    // D) κλείσιμο
+    await closeDlg(); await S.waitForTimeout(300);
+    const afterClose = await S.evaluate(() => {
+      const ov = document.getElementById('overlay');
+      const d = document.getElementById('myDash').getBoundingClientRect();
+      const el = document.elementFromPoint(d.left + d.width / 2, d.top + 20);
+      return { hidden: ov.classList.contains('hidden'), dashHit: !!(el && el.closest('#myDash')), dlg: ov.classList.contains('dlg') };
+    });
+    ok(afterClose.hidden, 'D: το overlay κρύφτηκε μετά το κλείσιμο');
+    ok(afterClose.dashHit, 'D: το dashboard επανήλθε και δέχεται κλικ');
+
+    // B) Ερωτηματολόγιο
+    await openDlg('showFeedback');
+    st = await whoIsOnTop();
+    ok(st.dlg && st.inOverlay && !st.inDash, 'B: Ερωτηματολόγιο πάνω από το dashboard');
+    await closeDlg(); await S.waitForTimeout(250);
+
+    // C) Αναλυτικά παρτίδας (χρειάζεται rankings)
+    await S.evaluate(() => {
+      const T = window.IQ_TEST, g = T.App.game;
+      g.rankings = g.players.map((p, i) => ({ name: p.name, retiredAge: null, months: 100 - i, bankrupt: false, id: p.id }));
+      T.render();
+    });
+    await openDlg('showStats');
+    st = await whoIsOnTop();
+    ok(st.dlg && st.inOverlay && !st.inDash, 'C: Αναλυτικά παρτίδας πάνω από το dashboard');
+    await closeDlg(); await S.waitForTimeout(250);
+
+    // E) REGRESSION GUARD: κάρτα παιχνιδιού (μη-wide) → το #myDash ΠΑΡΑΜΕΝΕΙ πάνω (v1.10)
+    await S.evaluate(() => {
+      const T = window.IQ_TEST, g = T.App.game;
+      g.pending = { type: 'reveal', playerId: T.App.myId, special: 'inflation' };
+      T.render();
+    });
+    await S.waitForTimeout(350);
+    st = await whoIsOnTop();
+    ok(!st.dlg && st.z === '100', 'E: κάρτα παιχνιδιού → overlay ΧΩΡΙΣ .dlg (z-index ' + st.z + ')');
+    ok(st.inDash && !st.inOverlay, 'E: το #myDash παραμένει ΠΑΝΩ από την κάρτα (feature v1.10 ανέπαφο)');
+
+    // F) wide → close → μη-wide: η .dlg ΔΕΝ έμεινε κολλημένη
+    await S.evaluate(() => { document.getElementById('overlay').classList.add('hidden'); const T = window.IQ_TEST; T.App.game.pending = null; T.render(); });
+    await openDlg('showRules');
+    ok((await whoIsOnTop()).dlg, 'F: μετά το άνοιγμα Κανόνων υπάρχει .dlg');
+    await closeDlg(); await S.waitForTimeout(250);
+    await S.evaluate(() => {
+      const T = window.IQ_TEST, g = T.App.game;
+      g.pending = { type: 'reveal', playerId: T.App.myId, special: 'inflation' };
+      T.render();
+    });
+    await S.waitForTimeout(350);
+    st = await whoIsOnTop();
+    ok(!st.dlg && st.z === '100' && st.inDash, 'F: κάρτα ΜΕΤΑ από dialog → η .dlg καθαρίστηκε, το dashboard ξανά πάνω');
+    await ctx4.close();
   } catch (e) {
     failed++;
     console.error('  ✗ FAIL (εξαίρεση): ' + e.message.split('\n')[0]);

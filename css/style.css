@@ -328,6 +328,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   #overlay .modal.wide{margin-left:auto; margin-right:auto; align-self:center; margin-top:0; max-height:88vh;} /* κανόνες/ερωτηματολόγιο: κεντραρισμένα */
 }
 #overlay.hidden{display:none;}
+/* ΔΥΟ ΕΠΙΠΕΔΑ OVERLAY — γιατί:
+   • ΑΠΟΦΑΣΕΙΣ ΠΑΙΧΝΙΔΙΟΥ (κάρτες αγοράς/φόρου/πληθωρισμού): z-index 100, ΚΑΤΩ από το #myDash(110)
+     ώστε να βλέπεις μετρητά/χαρτοφυλάκιο όσο αποφασίζεις (σκόπιμο, v1.10).
+   • ΠΛΗΡΟΦΟΡΙΑΚΑ DIALOGS (Κανόνες, Ερωτηματολόγιο, Αναλυτικά — όσα ανοίγουν με wide): πρέπει να
+     καλύπτουν ΟΛΟ το game UI. z-index 130 > #myDash(110), #tipPop(115), #hintBox(120)
+     και < toasts(200), flycard(300), ξενάγηση(399-401) — που μένουν αμετάβλητα. */
+#overlay.dlg{z-index:130;}
 /* v1.10 (αίτημα Γιώργου): η καρτέλα του παίκτη (meter → δάνεια) μένει ΦΩΤΙΣΜΕΝΗ όσο είναι
    ανοιχτή μια κάρτα — μόνο ιστορικό/υπόλοιπα σκοτεινιάζουν. z-index 110 > overlay(100). */
 #myDash{position:relative; z-index:110;}

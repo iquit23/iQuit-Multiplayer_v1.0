@@ -365,6 +365,13 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
   #overlay .modal.wide{margin-left:auto; margin-right:auto; align-self:center; margin-top:0; max-height:88vh;} /* κανόνες/ερωτηματολόγιο: κεντραρισμένα */
 }
 #overlay.hidden{display:none;}
+/* ΔΥΟ ΕΠΙΠΕΔΑ OVERLAY — γιατί:
+   • ΑΠΟΦΑΣΕΙΣ ΠΑΙΧΝΙΔΙΟΥ (κάρτες αγοράς/φόρου/πληθωρισμού): z-index 100, ΚΑΤΩ από το #myDash(110)
+     ώστε να βλέπεις μετρητά/χαρτοφυλάκιο όσο αποφασίζεις (σκόπιμο, v1.10).
+   • ΠΛΗΡΟΦΟΡΙΑΚΑ DIALOGS (Κανόνες, Ερωτηματολόγιο, Αναλυτικά — όσα ανοίγουν με wide): πρέπει να
+     καλύπτουν ΟΛΟ το game UI. z-index 130 > #myDash(110), #tipPop(115), #hintBox(120)
+     και < toasts(200), flycard(300), ξενάγηση(399-401) — που μένουν αμετάβλητα. */
+#overlay.dlg{z-index:130;}
 /* v1.10 (αίτημα Γιώργου): η καρτέλα του παίκτη (meter → δάνεια) μένει ΦΩΤΙΣΜΕΝΗ όσο είναι
    ανοιχτή μια κάρτα — μόνο ιστορικό/υπόλοιπα σκοτεινιάζουν. z-index 110 > overlay(100). */
 #myDash{position:relative; z-index:110;}
@@ -502,7 +509,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.5</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 1.6</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -4859,6 +4866,10 @@ body.game-over #myDash{z-index:auto;}
     const mb = $('modalBody');
     mb.classList.toggle('wide', !!wide);
     mb.innerHTML = html;
+    // ΔΥΟ επίπεδα overlay (βλ. σχόλιο στο style.css): οι κάρτες-ΑΠΟΦΑΣΕΙΣ αφήνουν σκόπιμα ορατή
+    // την καρτέλα του παίκτη, ενώ τα ΠΛΗΡΟΦΟΡΙΑΚΑ dialogs (wide) καλύπτουν όλο το game UI.
+    // toggle (όχι add): η .dlg καθαρίζεται όταν το επόμενο overlay είναι κάρτα παιχνιδιού.
+    $('overlay').classList.toggle('dlg', !!wide);
     $('overlay').classList.remove('hidden');
   }
   function closeOverlay() { $('overlay').classList.add('hidden'); App.localModal = null; }
@@ -5610,7 +5621,7 @@ body.game-over #myDash{z-index:auto;}
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration };
+  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats };
   init();
 })();
 
