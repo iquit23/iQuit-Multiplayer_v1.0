@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.8'), 'εμφανιζόμενη έκδοση Αύγουστος 1.8');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 1.9'), 'εμφανιζόμενη έκδοση Αύγουστος 1.9');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -1003,6 +1003,69 @@ section('Αύγουστος 1.7 Bots — κρυφή στρατηγική, ανέ
   assert(dAgg !== undefined && dDef !== undefined, 'G: τα bots αποφασίζουν κανονικά και με τα δύο profiles');
   assert(/aggressive: 0, balanced: 0\.06, defensive: 0\.15, tycoon: 0\.04, stockpicker: 0\.05, scholar: 0\.12/.test(botsSrc),
     'G: τα ποσοστά ΤΕΑ ανά στρατηγική παραμένουν διαφορετικά');
+}
+
+// ---------- 13. Αύγουστος 1.9: ΕΝΑ όριο χωρητικότητας (host + 4 = 5 συνολικά) ----------
+section('Αύγουστος 1.9 Capacity — ένα canonical όριο παντού');
+{
+  const uiSrc5 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  const netfbSrc = fs.readFileSync(__dirname + '/../js/net-fb.js', 'utf8');
+  const rules5 = JSON.parse(fs.readFileSync(__dirname + '/../database.rules.json', 'utf8')).rules;
+  const I18N5 = require('../js/i18n.js');
+  const strip5 = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const code5 = strip5(uiSrc5);
+
+  // ΕΝΑ canonical όριο, καμία σκόρπια σταθερά
+  assert(/const MAX_PLAYERS = 5;/.test(uiSrc5), 'ορίζεται MAX_PLAYERS = 5');
+  assert(!/players\.length >= 6/.test(code5), 'κανένα «>= 6» δεν έμεινε στη λογική');
+  assert(!/'\/5\)'|\/6\)/.test(code5), 'οι μετρητές δεν έχουν hardcoded παρονομαστή');
+  assert((code5.match(/MAX_PLAYERS/g) || []).length >= 6, 'το MAX_PLAYERS χρησιμοποιείται σε ΟΛΑ τα σημεία (μετρητές host+guest, roster, add-bot, rejection)');
+  // κάθε capacity σημείο ξεχωριστά
+  assert(/lobbyCount'\)\.textContent = '\(' \+ App\.lobby\.players\.length \+ '\/' \+ MAX_PLAYERS/.test(code5), 'μετρητής HOST → /MAX_PLAYERS');
+  assert(/lobbyCount'\)\.textContent = '\(' \+ msg\.players\.length \+ '\/' \+ MAX_PLAYERS/.test(code5), 'μετρητής GUEST → /MAX_PLAYERS');
+  assert(/const full = App\.lobby\.players\.length >= MAX_PLAYERS/.test(code5), 'roster full → MAX_PLAYERS');
+  assert(/if \(App\.lobby\.players\.length >= MAX_PLAYERS\) return;/.test(code5), 'add-bot handler → MAX_PLAYERS');
+  assert(/players\.length >= MAX_PLAYERS\) \{ send\(\{ t: 'rejected'/.test(code5), 'απόρριψη νέου guest → MAX_PLAYERS');
+  // το selected bot ΔΕΝ κλειδώνει ποτέ (παραμένει αφαιρέσιμο στα 5/5)
+  assert(/full && !added \? ' disabled' : ''/.test(code5), 'disabled μόνο για ΜΗ επιλεγμένα (τα επιλεγμένα αφαιρούνται πάντα)');
+
+  // μηνύματα «γεμάτο» σε EL & EN, με το σωστό πλήθος
+  ['el', 'en'].forEach(L => {
+    I18N5.setLang(L);
+    const m = I18N5.t('roomFull', { n: 5 });
+    assert(m.indexOf('5') > -1 && m.indexOf('6') === -1, L.toUpperCase() + ': μήνυμα «γεμάτο» αναφέρει 5, όχι 6 (' + m + ')');
+    assert(I18N5.t('roomStarted') !== 'roomStarted', L.toUpperCase() + ': μήνυμα «ξεκίνησε» μεταφρασμένο');
+  });
+  I18N5.setLang('el');
+  assert(!/rejected', msg: '[Τ]/.test(uiSrc5), 'τα μηνύματα απόρριψης δεν είναι πια hardcoded ελληνικά');
+
+  // Firebase: 4 guest slots + host = 5 → ΤΑΥΤΙΖΕΤΑΙ, και ΔΕΝ αλλάξαμε τίποτα εκεί
+  assert(/const SLOTS = \['s1', 's2', 's3', 's4'\]/.test(netfbSrc), 'Firebase: 4 guest slots (αμετάβλητα)');
+  assert(rules5.rooms.$code.slots.$slot['.validate'] === "$slot === 's1' || $slot === 's2' || $slot === 's3' || $slot === 's4'",
+    'Firebase rules: μόνο s1-s4 (αμετάβλητα)');
+  assert(4 + 1 === 5, 'Firebase 4 guests + host = 5 → συμφωνεί με MAX_PLAYERS');
+
+  // κείμενο αρχικής/κανόνων ήδη έλεγε 1-5 — παραμένει συνεπές
+  ['el', 'en'].forEach(L => {
+    I18N5.setLang(L);
+    assert(/1-5/.test(I18N5.t('homeFoot')), L.toUpperCase() + ': footer «1-5 παίκτες» συμφωνεί με το όριο');
+  });
+  I18N5.setLang('el');
+
+  // Το e2e hook των host callbacks ΔΕΝ διαρρέει στο production namespace
+  assert(!/App\.hostCbs/.test(code5), 'τα host callbacks ΔΕΝ εκτίθενται στο App (production namespace καθαρό)');
+  assert(/const E2E = new URLSearchParams\(location\.search\)\.get\('e2e'\) === '1';/.test(code5),
+    'υπάρχει ΕΝΑΣ κοινός e2e διακόπτης (ο ήδη υπάρχων, ανυψωμένος σε const)');
+  assert(/if \(E2E && window\.IQ_TEST\) window\.IQ_TEST\.hostCbs = cbs;/.test(code5),
+    'τα host callbacks μπαίνουν στο ΥΠΑΡΧΟΝ IQ_TEST hook μόνο με ?e2e=1');
+  assert(!/hostCbs/.test(code5.replace(/if \(E2E && window\.IQ_TEST\) window\.IQ_TEST\.hostCbs = cbs;/, '')),
+    'καμία άλλη αναφορά σε hostCbs εκτός του e2e-guarded σημείου');
+  assert(/if \(E2E\) window\.IQ_TEST = \{/.test(code5), 'το IQ_TEST χτίζεται μόνο σε e2e mode');
+
+  // gameplay/engine ΔΕΝ αγγίχτηκε
+  const engSrc5 = fs.readFileSync(__dirname + '/../js/engine.js', 'utf8');
+  assert(/INFLATION_BY_PLAYERS = \{ 1: 0\.08, 2: 0\.05, 3: 0\.04, 4: 0\.03, 5: 0\.02, 6: 0\.01 \}/.test(engSrc5),
+    'ο πίνακας πληθωρισμού ΔΕΝ άλλαξε (gameplay data — το 6 μένει αβλαβές)');
 }
 
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------

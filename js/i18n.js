@@ -61,6 +61,9 @@
         '<p>Νικητής είναι όποιος φτάσει πρώτος στην οικονομική του ελευθερία: όταν το παθητικό εισόδημα καλύψει όλα τα έξοδα, φωνάζεις «I QUIT!»</p>',
       rulesBtn: '📜 Κανόνες', resumeHost: '▶ Συνέχεια παιχνιδιού «{code}» (host)', resumeGuest: '▶ Επανασύνδεση στο δωμάτιο {code}',
       codeLen: 'Ο κωδικός δωματίου έχει 4 χαρακτήρες.',
+      // v1.32: ήταν hardcoded ελληνικά μέσα στο ui.js (ο guest τα έβλεπε ελληνικά και σε EN)
+      roomFull: 'Το δωμάτιο είναι γεμάτο ({n} παίκτες).',
+      roomStarted: 'Το παιχνίδι έχει ήδη ξεκινήσει σε αυτό το δωμάτιο.',
       inviteMsg: 'Πρόσκληση στο δωμάτιο «{code}»! Γράψε το όνομά σου και πάτα «Είσοδος».',
       // Lobby
       room: 'Δωμάτιο', shareBtn: '📤 Κοινοποίηση κωδικού', players: 'Παίκτες', pickPawn: 'Διάλεξε το πιόνι σου',
@@ -312,6 +315,8 @@
         '<p>The winner is whoever reaches financial freedom first: when your passive income covers all your expenses, you shout “I QUIT!”</p>',
       rulesBtn: '📜 Rules', resumeHost: '▶ Resume game “{code}” (host)', resumeGuest: '▶ Reconnect to room {code}',
       codeLen: 'Room codes have 4 characters.',
+      roomFull: 'This room is full ({n} players).',
+      roomStarted: 'The game in this room has already started.',
       inviteMsg: 'You are invited to room “{code}”! Type your name and press “Join”.',
       room: 'Room', shareBtn: '📤 Share invite link', players: 'Players', pickPawn: 'Pick your pawn',
       addBot: '🤖 Add a bot', botsLbl: 'Bots', startBtn: '🚀 Start game',

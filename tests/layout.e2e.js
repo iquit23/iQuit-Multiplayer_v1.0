@@ -420,16 +420,16 @@ async function run() {
       ok(!ik.hasX && ik.pressed === 'false' && !ik.added, tag + ' 4: το ✕ εξαφανίστηκε, aria-pressed="false", χωρίς selected styling');
 
       // 5 + 6) capacity με το ΥΠΑΡΧΟΝ threshold (>= 6)
-      for (const n of ['Ίκαρος', 'Καλυψώ', 'Δανάη', 'Κροίσος', 'Ερμής']) { await tapBot(T2, n); await T2.waitForTimeout(120); }
+      for (const n of ['Ίκαρος', 'Καλυψώ', 'Δανάη', 'Κροίσος']) { await tapBot(T2, n); await T2.waitForTimeout(120); }
       bs = await botState(T2);
       const sel5 = bs.btns.filter(b => b.added), unsel5 = bs.btns.filter(b => !b.added);
-      ok(sel5.length === 5, tag + ' 5/6: 5 bots επιλεγμένα (υπάρχον threshold — δεν το αλλάξαμε)');
+      ok(sel5.length === 4, tag + ' 5/6: 4 bots επιλεγμένα → host + 4 = 5 ΣΥΝΟΛΙΚΑ (v1.32)');
       ok(sel5.every(b => !b.disabled && b.hasX), tag + ' 5: τα ΕΠΙΛΕΓΜΕΝΑ παραμένουν ενεργά με ✕ (αφαιρέσιμα)');
       ok(unsel5.every(b => b.disabled), tag + ' 6: τα ΜΗ επιλεγμένα είναι disabled όταν γεμίσει');
       // πράγματι αφαιρείται ενώ είναι «γεμάτο»
-      await tapBot(T2, 'Ερμής'); await T2.waitForTimeout(150);
+      await tapBot(T2, 'Κροίσος'); await T2.waitForTimeout(150);
       bs = await botState(T2);
-      ok(bs.btns.filter(b => b.added).length === 4 && bs.btns.filter(b => !b.added).every(b => !b.disabled),
+      ok(bs.btns.filter(b => b.added).length === 3 && bs.btns.filter(b => !b.added).every(b => !b.disabled),
         tag + ' 5: αφαίρεση ΕΝΩ ήταν γεμάτο → ξεκλειδώνουν ξανά τα υπόλοιπα');
 
       // 9) καμία στρατηγική σε text/title/aria
@@ -584,6 +584,90 @@ async function run() {
       if (process.env.IQUIT_SHOTS) await R.screenshot({ path: path.join(process.env.IQUIT_SHOTS, 'v131-guest-' + tag + '.png'), fullPage: w < 500 }).catch(() => {});
       await ctxR.close();
     }
+
+    // ================= CAPACITY (v1.32): host + 4 = 5 ΣΥΝΟΛΙΚΑ, ποτέ 6/5 =================
+    const capState = (pg) => pg.evaluate(() => ({
+      count: document.getElementById('lobbyCount').textContent,
+      total: window.IQ_TEST.App.lobby ? window.IQ_TEST.App.lobby.players.length : 0,
+      selected: [...document.querySelectorAll('[data-addbot].added')].map(b => b.getAttribute('data-addbot')),
+      disabled: [...document.querySelectorAll('[data-addbot')].filter(b => b.disabled).map(b => b.getAttribute('data-addbot')),
+    }));
+    const ctxC = await newCtx(1280, 900);
+    const C = await ctxC.newPage();
+    await C.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await C.fill('#playerName', 'Γιώργος');
+    await C.click('#btnCreate');
+    await C.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+
+    // A) host μόνος
+    let cs = await capState(C);
+    ok(cs.count === '(1/5)' && cs.total === 1, 'A: host μόνος → 1/5');
+    // B) host + 4 bots
+    for (const n of ['Ίκαρος', 'Καλυψώ', 'Δανάη', 'Κροίσος']) { await tapBot(C, n); await C.waitForTimeout(120); }
+    cs = await capState(C);
+    ok(cs.count === '(5/5)' && cs.total === 5, 'B: host + 4 bots → 5/5');
+    // C) 5ο bot ΔΕΝ προστίθεται
+    await tapBot(C, 'Ερμής'); await C.waitForTimeout(200);
+    cs = await capState(C);
+    ok(cs.count === '(5/5)' && cs.total === 5 && cs.selected.length === 4, 'C: 5ο bot ΔΕΝ προστέθηκε (παραμένει 5/5)');
+    ok(cs.count !== '(6/5)', 'K: πουθενά «6/5»');
+    // D) στα 5/5: unselected disabled, selected αφαιρέσιμα
+    ok(cs.disabled.length === 2 && cs.disabled.indexOf('Ερμής') > -1 && cs.disabled.indexOf('Αθηνά') > -1,
+      'D: στα 5/5 τα ΜΗ επιλεγμένα είναι disabled');
+    ok(cs.selected.every(n => cs.disabled.indexOf(n) === -1), 'D: τα ΕΠΙΛΕΓΜΕΝΑ παραμένουν αφαιρέσιμα');
+    // E) αφαίρεση → 4/5 και ανοίγει θέση
+    await tapBot(C, 'Κροίσος'); await C.waitForTimeout(150);
+    cs = await capState(C);
+    ok(cs.count === '(4/5)' && cs.total === 4 && cs.disabled.length === 0, 'E: αφαίρεση → 4/5 και ξεκλειδώνουν όλα');
+    await tapBot(C, 'Ερμής'); await C.waitForTimeout(150);
+    ok((await capState(C)).count === '(5/5)', 'E: η ελεύθερη θέση δέχεται νέο bot');
+
+    // F/G/H/I/J) ανθρώπινοι guests μέσω του πραγματικού onHello (host-side λογική)
+    const humanTests = await C.evaluate(() => {
+      const T = window.IQ_TEST, out = {};
+      // καθαρό lobby: host + 2 bots
+      T.App.lobby.players = T.App.lobby.players.filter(p => !p.isBot).concat(
+        [{ id: 'p1', name: 'Bot1', isBot: true, strategy: 'aggressive', connected: true, token: null },
+         { id: 'p2', name: 'Bot2', isBot: true, strategy: 'defensive', connected: true, token: null }]);
+      // H) mixed: + 2 άνθρωποι = 5 συνολικά
+      const rejects = [];
+      const join = (name) => {
+        let res = null; // ΠΡΟΣΟΧΗ: ο host στέλνει welcome ΚΑΙ chatlog — κρατάμε το πρώτο ουσιαστικό
+        T.hostCbs.onHello('c-' + name, { name: name }, (m) => { if (!res || res.t === 'chatlog') res = m; });
+        if (res && res.t === 'rejected') rejects.push(res.msg);
+        return res;
+      };
+      const a = join('Άννα'), b = join('Βασίλης');
+      out.afterTwo = T.App.lobby.players.length;
+      // G) 5ος άνθρωπος → απόρριψη
+      const c = join('Γιάννα');
+      out.afterThird = T.App.lobby.players.length;
+      out.rejectMsg = rejects[0] || '';
+      out.rejected = !!(c && c.t === 'rejected');
+      // I) reconnect κατόχου slot: ίδιο token → δεν μετράει ως νέος
+      const tok = (a && a.token) || null;
+      let rec = null;
+      T.hostCbs.onHello('c-again', { name: 'Άννα', token: tok }, (m) => { if (!rec) rec = m; });
+      out.afterReconnect = T.App.lobby.players.length;
+      out.reconnectOk = !!(rec && rec.t === 'welcome');
+      T.renderLobby();
+      out.count = document.getElementById('lobbyCount').textContent;
+      return out;
+    });
+    ok(humanTests.afterTwo === 5, 'F/H: host + 2 bots + 2 άνθρωποι = 5 συνολικά');
+    ok(humanTests.afterThird === 5 && humanTests.rejected, 'G: ο επόμενος άνθρωπος ΑΠΟΡΡΙΠΤΕΤΑΙ (παραμένει 5)');
+    ok(/5/.test(humanTests.rejectMsg) && humanTests.rejectMsg.indexOf('6') === -1,
+      'G: το μήνυμα αναφέρει 5 παίκτες («' + humanTests.rejectMsg + '»)');
+    ok(humanTests.afterReconnect === 5 && humanTests.reconnectOk, 'I: reconnect κατόχου θέσης ΔΕΝ μετράει ως 6ος');
+    ok(humanTests.count === '(5/5)', 'J/K: ο μετρητής δείχνει (5/5), ποτέ (6/5)');
+    // J) ο guest βλέπει επίσης παρονομαστή 5
+    const gDen = await C.evaluate(() => {
+      const T = window.IQ_TEST;
+      T.renderLobbyGuest({ code: 'T', players: T.App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: true, pawn: null })) });
+      return document.getElementById('lobbyCount').textContent;
+    });
+    ok(gDen === '(5/5)', 'J: και ο guest βλέπει παρονομαστή 5 (' + gDen + ')');
+    await ctxC.close();
   } catch (e) {
     failed++;
     console.error('  ✗ FAIL (εξαίρεση): ' + e.message.split('\n')[0]);

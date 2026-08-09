@@ -25,8 +25,16 @@
     { name: 'Ερμής', strategy: 'stockpicker' },
     { name: 'Αθηνά', strategy: 'scholar' },
   ];
+  // v1.32: ΕΝΑ canonical όριο χωρητικότητας για όλο τον client — host + έως 4 ακόμη
+  // (άνθρωποι ή bots) = 5 ΣΥΝΟΛΙΚΑ. Ταυτίζεται με τα 4 guest slots του Firebase transport
+  // (net-fb.js s1-s4 + host) και με το «1-5 παίκτες» της αρχικής/κανόνων.
+  // Πριν: μετρητής «/5» αλλά λογική «>= 6» → ο host μπορούσε να φτάσει 6 bots και να δει «(6/5)».
+  const MAX_PLAYERS = 5;
   // v1.8: fast mode για automated tests (?fast=1) — μικρά διαστήματα heartbeat/migration/bots
   const FAST = /[?&]fast=1/.test(location.search);
+  // v1.32: ο ΥΠΑΡΧΩΝ e2e διακόπτης, ανυψωμένος σε const ώστε να τον βλέπουν και οι εσωτερικές
+  // συναρτήσεις (π.χ. hostCreate) — καμία έκθεση στο production App namespace.
+  const E2E = new URLSearchParams(location.search).get('e2e') === '1';
   const BOT_DELAY = FAST ? 900 : 5200, DISCO_DELAY = FAST ? 3000 : 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
   const HB_MS = FAST ? 1200 : 5000;          // κάθε πότε «χτυπά» ο host
   const HB_LOST_MS = FAST ? 4000 : 15000;    // πόση σιωπή = χαμένος host
@@ -383,8 +391,8 @@
           } else broadcastLobby();
           return;
         }
-        if (App.game) { send({ t: 'rejected', msg: 'Το παιχνίδι έχει ήδη ξεκινήσει σε αυτό το δωμάτιο.' }); return; }
-        if (App.lobby.players.length >= 6) { send({ t: 'rejected', msg: 'Το δωμάτιο είναι γεμάτο (6 παίκτες).' }); return; }
+        if (App.game) { send({ t: 'rejected', msg: t('roomStarted') }); return; }
+        if (App.lobby.players.length >= MAX_PLAYERS) { send({ t: 'rejected', msg: t('roomFull', { n: MAX_PLAYERS }) }); return; }
         const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
         let name = String(msg.name || 'Παίκτης').slice(0, 14);
         while (App.lobby.players.some(p => p.name === name)) name += '2';
@@ -424,6 +432,10 @@
         }
       },
     };
+    // e2e-only: εκθέτουμε τα ΠΡΑΓΜΑΤΙΚΑ host callbacks στο ήδη υπάρχον IQ_TEST hook, ώστε τα
+    // capacity tests να καλούν την αληθινή onHello αντί να αντιγράφουν τη λογική. Σε production
+    // (χωρίς ?e2e=1) δεν υπάρχει IQ_TEST και το App μένει καθαρό.
+    if (E2E && window.IQ_TEST) window.IQ_TEST.hostCbs = cbs;
     App.net = NET.createHost(cbs, saved ? saved.lobby.code : undefined);
   }
 
@@ -755,8 +767,8 @@
     $('lobbyCode').textContent = App.lobby.code;
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
-    // v1.18: δείχνουμε 5 (χωράνε 6) — ο μετρητής μετρά ΟΛΟΥΣ (ανθρώπους + bots)
-    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/5)';
+    // ο μετρητής μετρά ΟΛΟΥΣ (ανθρώπους + bots) — v1.32: ίδιο όριο με τη λογική, ποτέ «6/5»
+    $('lobbyCount').textContent = '(' + App.lobby.players.length + '/' + MAX_PLAYERS + ')';
     // v1.31: ΜΟΝΟ οι άνθρωποι παίρνουν γραμμή. Τα bots φαίνονται και διαχειρίζονται στο roster
     // από κάτω (πράσινο περίγραμμα + κόκκινο ✕), οπότε η διπλή εμφάνιση ήταν περιττή.
     $('lobbyPlayers').innerHTML = App.lobby.players.filter(p => !p.isBot).map((p, i) =>
@@ -770,8 +782,8 @@
     // v1.31: το ΙΔΙΟ κουμπί κάνει toggle — πάτημα σε επιλεγμένο bot το ΑΦΑΙΡΕΙ. Το κόκκινο ✕
     // είναι απλή οπτική ένδειξη (span, ΟΧΙ nested κουμπί): κλικαμπλ είναι ΟΛΟ το κουμπί.
     // ΠΡΟΣΟΧΗ στο disabled: «full && !added» — ένα ήδη επιλεγμένο bot ΔΕΝ κλειδώνει ποτέ,
-    // αλλιώς δεν θα μπορούσε να αφαιρεθεί. Το ίδιο το threshold (>= 6) μένει ως έχει.
-    const full = App.lobby.players.length >= 6;
+    // αλλιώς δεν θα μπορούσε να αφαιρεθεί.
+    const full = App.lobby.players.length >= MAX_PLAYERS;
     $('botRoster').innerHTML = BOT_ROSTER.map(b => {
       const added = App.lobby.players.some(x => x.isBot && x.name === b.name);
       const prof = BOTS.PROFILES[b.strategy];
@@ -787,7 +799,7 @@
       if (existing) { // toggle-off: αφαίρεση του bot
         App.lobby.players = App.lobby.players.filter(x => x !== existing);
       } else {
-        if (App.lobby.players.length >= 6) return;
+        if (App.lobby.players.length >= MAX_PLAYERS) return;
         const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
         App.lobby.players.push({ id, name: spec.name, isBot: true, strategy: spec.strategy, connected: true, token: null });
       }
@@ -812,7 +824,7 @@
   }
 
   function renderLobbyGuest(msg) {
-    $('lobbyCount').textContent = '(' + msg.players.length + '/5)'; // v1.18: μετρά ΚΑΙ τα bots
+    $('lobbyCount').textContent = '(' + msg.players.length + '/' + MAX_PLAYERS + ')'; // μετρά ΚΑΙ τα bots
     $('lobbyPlayers').innerHTML = msg.players.filter(p => !p.isBot).map((p, i) =>
       '<div class="lobby-player">' + avatarHtml(p, i) +
       '<span class="nm">' + esc(p.name) + (p.id === App.myId ? ' <span class="muted">' + t('you') + '</span>' : '') + '</span>' +
@@ -2024,6 +2036,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (new URLSearchParams(location.search).get('e2e') === '1') window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby };
   init();
 })();
