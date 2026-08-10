@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 1.9'), 'εμφανιζόμενη έκδοση Αύγουστος 1.9');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 2.0'), 'εμφανιζόμενη έκδοση Αύγουστος 2.0');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -1066,6 +1066,53 @@ section('Αύγουστος 1.9 Capacity — ένα canonical όριο παντ�
   const engSrc5 = fs.readFileSync(__dirname + '/../js/engine.js', 'utf8');
   assert(/INFLATION_BY_PLAYERS = \{ 1: 0\.08, 2: 0\.05, 3: 0\.04, 4: 0\.03, 5: 0\.02, 6: 0\.01 \}/.test(engSrc5),
     'ο πίνακας πληθωρισμού ΔΕΝ άλλαξε (gameplay data — το 6 μένει αβλαβές)');
+}
+
+// ---------- 14. Αύγουστος 2.0: τρία νέα πιόνια (👛 🦍 🏠) ----------
+section('Αύγουστος 2.0 Πιόνια — 12 συνολικά, τα 9 πρώτα ανέπαφα');
+{
+  const uiSrc6 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  const m6 = uiSrc6.match(/const PAWNS = \[([^\]]*)\];/);
+  assert(!!m6, 'η λίστα PAWNS υπάρχει και είναι ΕΝΑ literal (μία πηγή αλήθειας)');
+  const pawns = m6[1].split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(s => s.length);
+
+  // A: ακριβώς 12
+  assert(pawns.length === 12, 'A: ακριβώς 12 διαθέσιμα πιόνια (ήταν 9)');
+  // B: τα 9 πρώτα ίδια ΚΑΙ στην ίδια σειρά
+  const OLD9 = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$'];
+  OLD9.forEach((p, i) => assert(pawns[i] === p, 'B: θέση ' + (i + 1) + ' παραμένει ' + p));
+  assert(JSON.stringify(pawns.slice(0, 9)) === JSON.stringify(OLD9), 'B: τα 9 πρώτα αμετάβλητα ως σύνολο & σειρά');
+  // C: τα τρία τελευταία ακριβώς αυτά
+  assert(JSON.stringify(pawns.slice(9)) === JSON.stringify(['👛', '🦍', '🏠']), 'C: τα 3 νέα είναι 👛 🦍 🏠 σε αυτή τη σειρά');
+  assert(pawns.indexOf('🚀') === -1, 'C: ο 🚀 ΔΕΝ προστέθηκε (ρητή εντολή)');
+  // μοναδικότητα τιμών — το emoji ΕΙΝΑΙ το id
+  assert(new Set(pawns).size === pawns.length, 'κάθε πιόνι εμφανίζεται ΜΙΑ φορά (το emoji είναι το id)');
+
+  // E: ο host validator δουλεύει πάνω στην ΙΔΙΑ λίστα (άρα δέχεται αυτόματα τα νέα)
+  assert(/PAWNS\.indexOf\(pawn\) === -1\) return;/.test(uiSrc6), 'E: host validation μέσω PAWNS.indexOf (μία πηγή)');
+  // F: η μοναδικότητα ανά παρτίδα δεν άλλαξε
+  assert(/App\.lobby\.players\.some\(x => x\.pawn === pawn && x\.id !== pl\.id\)\) return;/.test(uiSrc6),
+    'F: ο host απορρίπτει πιασμένο πιόνι (αμετάβλητος μηχανισμός)');
+  assert(/const taken = owner && !mine;/.test(uiSrc6), 'F: το UI απενεργοποιεί τα πιασμένα');
+  // G: sync host→guest μέσω του ίδιου lobby payload
+  assert(/pawn: p\.pawn \|\| null/.test(uiSrc6), 'G: το pawn ταξιδεύει στο lobby broadcast (γενικό string)');
+  // J/H: καμία ειδική μεταχείριση — ο renderer διαβάζει σκέτο p.pawn
+  assert(/box\.innerHTML = PAWNS\.map\(pw => \{/.test(uiSrc6), 'J: ο selector χτίζεται από τη λίστα, χωρίς hardcoded πιόνια');
+
+  // ήχοι: 3 νέα cases, το default παραμένει για ό,τι δεν καλύπτεται
+  ['👛', '🦍', '🏠'].forEach(p => assert(new RegExp("case '" + p + "':").test(uiSrc6), 'ήχος βήματος για ' + p));
+  assert(/default: \/\/ γράμμα\/🤖: το κλασικό τικ/.test(uiSrc6), 'το default case του ήχου παραμένει (fallback)');
+  OLD9.forEach(p => {
+    if (p === '€' || p === '$' || p === '₿' || p === '💰') return; // μοιράζονται ένα case
+    assert(new RegExp("case '" + p + "':").test(uiSrc6), 'J: ο ήχος του υπάρχοντος ' + p + ' παραμένει');
+  });
+
+  // schema/gameplay ΔΕΝ άλλαξαν — το pawn ήταν ήδη γενικό nullable string
+  const engSrc6 = fs.readFileSync(__dirname + '/../js/engine.js', 'utf8');
+  assert(/pawn: ps\.isBot \? '🤖' : \(ps\.pawn \|\| null\)/.test(engSrc6), 'engine: το pawn περνά ως έχει (καμία αλλαγή schema)');
+  assert(/const SLOTS = \['s1', 's2', 's3', 's4'\]/.test(fs.readFileSync(__dirname + '/../js/net-fb.js', 'utf8')),
+    'Firebase slots αμετάβλητα (τα πιόνια δεν τα αγγίζουν)');
+  assert(/const MAX_PLAYERS = 5;/.test(uiSrc6), 'το capacity της Αύγουστος 1.9 παραμένει ανέπαφο');
 }
 
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------

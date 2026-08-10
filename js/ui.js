@@ -41,7 +41,9 @@
   const MIG_BASE_MS = FAST ? 2500 : 12000;   // αναμονή πριν το takeover (πρώτος διάδοχος)
   const MIG_STEP_MS = FAST ? 4000 : 10000;   // επιπλέον αναμονή ανά επόμενο διάδοχο
   const HOST_KEY = 'iquit_host_v1', GUEST_KEY = 'iquit_guest_v1', NAME_KEY = 'iquit_name';
-  const PAWNS = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$'];
+  // v1.33: +3 πιόνια στο ΤΕΛΟΣ (τα 9 πρώτα μένουν ακριβώς ίδια & στην ίδια σειρά — το emoji ΕΙΝΑΙ
+  // το id, οπότε αλλαγή σειράς/τιμής θα έσπαγε αποθηκευμένα localStorage['iquit_pawn'] & sessions).
+  const PAWNS = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$', '👛', '🦍', '🏠'];
 
   const App = {
     role: null, myId: null, net: null,
@@ -111,6 +113,13 @@
         noiseBurst(.05, 900, .1); break;
       case '💰': case '₿': case '€': case '$': // κέρματα: κλινκ
         beep(1900 + Math.random() * 500, .05, 'sine', .05); beep(2600, .07, 'sine', .035, .03); break;
+      // v1.33: τα τρία νέα πιόνια — μόνο με τους ΥΠΑΡΧΟΝΤΕΣ helpers (beep/noiseBurst/sweep)
+      case '👛': // κούμπωμα πορτοφολιού: δύο κοφτά μεταλλικά κλικ
+        noiseBurst(.025, 3200, .06); beep(2400, .035, 'square', .025, .05); break;
+      case '🦍': // γορίλας: χαμηλό διπλό γδούπο στο στήθος
+        noiseBurst(.09, 90, .16); noiseBurst(.08, 75, .13, .13); break;
+      case '🏠': // ξύλινη πόρτα: κοφτό «τοκ» με ξύλινο σώμα
+        noiseBurst(.05, 420, .11); beep(180, .09, 'triangle', .055); break;
       default: // γράμμα/🤖: το κλασικό τικ
         beep(App._stepAlt ? 900 : 700, .045, 'square', .045); App._stepAlt = !App._stepAlt;
     }

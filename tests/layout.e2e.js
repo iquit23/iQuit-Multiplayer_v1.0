@@ -668,6 +668,180 @@ async function run() {
     });
     ok(gDen === '(5/5)', 'J: και ο guest βλέπει παρονομαστή 5 (' + gDen + ')');
     await ctxC.close();
+
+    // ---------- Αύγουστος 2.0: τρία νέα πιόνια (👛 🦍 🏠) ----------
+    const NEW3 = ['👛', '🦍', '🏠'];
+    const OLD9 = ['🐎', '🚗', '✈️', '🚢', '👟', '💰', '₿', '€', '$'];
+
+    // K) μηδέν οριζόντια υπερχείλιση σε 4 πλάτη + σωστός αριθμός/σειρά κουμπιών
+    for (const [w, h, tag] of [[1280, 900, '1280'], [390, 844, '390'], [360, 780, '360'], [320, 700, '320']]) {
+      const ctxP = await newCtx(w, h, w < 500);
+      const P4 = await ctxP.newPage();
+      await P4.setViewportSize({ width: w, height: h });
+      await P4.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+      await P4.fill('#playerName', 'Γ');
+      await P4.click('#btnCreate');
+      await P4.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+      const st = await P4.evaluate(() => {
+        const bs = [...document.querySelectorAll('#pawnPick .pawnbtn')];
+        const box = document.getElementById('pawnPick').getBoundingClientRect();
+        return {
+          list: bs.map(b => b.dataset.pawn),
+          maxRight: Math.max(...bs.map(b => Math.round(b.getBoundingClientRect().right))),
+          boxRight: Math.round(box.right),
+          doc: Math.round(document.documentElement.scrollWidth), win: innerWidth,
+        };
+      });
+      ok(st.list.length === 12, tag + ' A: εμφανίζονται 12 πιόνια (' + st.list.length + ')');
+      ok(JSON.stringify(st.list.slice(0, 9)) === JSON.stringify(OLD9), tag + ' B/J: τα 9 πρώτα ίδια & στη σειρά');
+      ok(JSON.stringify(st.list.slice(9)) === JSON.stringify(NEW3), tag + ' C: τα 3 τελευταία = 👛 🦍 🏠');
+      ok(st.doc <= st.win + 1, tag + ' K: καμία οριζόντια κύλιση σελίδας (' + st.doc + ' ≤ ' + st.win + ')');
+      ok(st.maxRight <= st.boxRight + 1, tag + ' K: κανένα κουμπί δεν ξεφεύγει από την περιοχή');
+      await ctxP.close();
+    }
+
+    // D/E/F/G/H/I) λειτουργική συμπεριφορά των νέων πιονιών (desktop)
+    const ctxQ = await newCtx(1280, 900);
+    const Q = await ctxQ.newPage();
+    await Q.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await Q.fill('#playerName', 'Γιώργος');
+    await Q.click('#btnCreate');
+    await Q.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+
+    for (const pw of NEW3) {
+      // D) επιλογή από το lobby με πραγματικό click
+      await Q.click('#pawnPick .pawnbtn[data-pawn="' + pw + '"]');
+      await Q.waitForTimeout(120);
+      const sel = await Q.evaluate((p) => {
+        const T = window.IQ_TEST, btn = document.querySelector('#pawnPick .pawnbtn[data-pawn="' + p + '"]');
+        const me = T.App.lobby.players.find(x => x.id === T.App.myId);
+        return { cls: btn.className, mine: me ? me.pawn : null, app: T.App.myPawn, ls: localStorage.getItem('iquit_pawn') };
+      }, pw);
+      ok(sel.mine === pw && sel.app === pw, 'D: ' + pw + ' επιλέγεται από το lobby');
+      ok(/\bsel\b/.test(sel.cls), 'D: ' + pw + ' σημειώνεται ως επιλεγμένο (.sel)');
+      ok(sel.ls === pw, 'I: ' + pw + ' αποθηκεύεται στο localStorage (persistence σε reload)');
+    }
+
+    // E/F/G/I) host-side λογική μέσω των ΠΡΑΓΜΑΤΙΚΩΝ callbacks
+    const pawnHost = await Q.evaluate((NEW) => {
+      const T = window.IQ_TEST, out = { accepted: {}, dup: {}, sync: {} };
+      // καθαρό lobby: μόνο ο host
+      T.App.lobby.players = T.App.lobby.players.filter(p => p.id === T.App.myId);
+      const me = T.App.lobby.players[0]; me.pawn = null;
+      // δύο ανθρώπινοι guests
+      const mk = (n) => { let r = null; T.hostCbs.onHello('c-' + n, { name: n }, (m) => { if (!r || r.t === 'chatlog') r = m; }); return r; };
+      mk('Άννα'); mk('Βασίλης');
+      const A = T.App.lobby.players.find(p => p.name === 'Άννα');
+      const B = T.App.lobby.players.find(p => p.name === 'Βασίλης');
+      NEW.forEach(pw => {
+        // E) ο host δέχεται το νέο πιόνι ως valid
+        A.pawn = null; B.pawn = null;
+        T.hostCbs.onPawn('c-Άννα', pw);
+        out.accepted[pw] = A.pawn === pw;
+        // F) ο δεύτερος ΔΕΝ μπορεί να πάρει το ίδιο
+        T.hostCbs.onPawn('c-Βασίλης', pw);
+        out.dup[pw] = B.pawn === null;
+      });
+      // άκυρο πιόνι εκτός λίστας → απορρίπτεται (ο guard δεν χαλάρωσε)
+      A.pawn = null; T.hostCbs.onPawn('c-Άννα', '🚀');
+      out.rocketRejected = A.pawn === null;
+      // G) sync host→guest: το πιόνι μπαίνει στο lobby payload που βλέπει ο guest
+      A.pawn = NEW[1]; B.pawn = NEW[2];
+      const payload = T.App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, connected: p.connected, pawn: p.pawn || null }));
+      T.renderLobbyGuest({ code: 'T', players: payload });
+      out.sync.payload = payload.filter(p => p.pawn).map(p => p.pawn);
+      out.sync.dom = [...document.querySelectorAll('#lobbyPlayers .avatar')].map(a => a.textContent);
+      // H) πέρασμα στο game state μέσω του ΠΡΑΓΜΑΤΙΚΟΥ engine
+      const spec = T.App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, pawn: p.pawn, strategy: p.strategy }));
+      spec[0].pawn = NEW[0];
+      const g = window.IQ_ENGINE ? window.IQ_ENGINE.newGame(spec, 12345) : null;
+      out.engine = g ? g.players.map(p => p.pawn) : null;
+      return out;
+    }, NEW3);
+
+    NEW3.forEach(pw => {
+      ok(pawnHost.accepted[pw] === true, 'E: ο host δέχεται το ' + pw + ' ως valid pawn');
+      ok(pawnHost.dup[pw] === true, 'F: δεύτερος παίκτης ΔΕΝ παίρνει το ήδη πιασμένο ' + pw);
+    });
+    ok(pawnHost.rocketRejected === true, 'E: πιόνι εκτός λίστας (🚀) απορρίπτεται — ο guard δεν χαλάρωσε');
+    ok(JSON.stringify(pawnHost.sync.payload) === JSON.stringify([NEW3[1], NEW3[2]]), 'G: τα νέα πιόνια μπαίνουν στο lobby payload host→guest');
+    ok(NEW3.slice(1).every(p => pawnHost.sync.dom.indexOf(p) > -1), 'G: ο guest τα βλέπει στα avatars (' + pawnHost.sync.dom.join(' ') + ')');
+    if (pawnHost.engine) ok(NEW3.every(p => pawnHost.engine.indexOf(p) > -1), 'H: και τα 3 περνούν στο game state του engine');
+
+    // H) πραγματική εμφάνιση πάνω στο board μετά την έναρξη
+    const onBoard = await Q.evaluate(() => {
+      const T = window.IQ_TEST;
+      return [...document.querySelectorAll('.pawnspot .pawn')].map(s => s.textContent);
+    });
+    await Q.evaluate(() => document.getElementById('btnStart').click());
+    await Q.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
+    const boardPawns = await Q.evaluate((NEW) => {
+      const T = window.IQ_TEST;
+      T.App.game.players.forEach((p, i) => { if (!p.isBot && NEW[i]) p.pawn = NEW[i]; });
+      T.render();
+      return [...document.querySelectorAll('.pawnspot .pawn')].map(s => ({ txt: s.textContent, emo: s.classList.contains('emo') }));
+    }, NEW3);
+    NEW3.forEach((pw, i) => {
+      const hit = boardPawns.find(b => b.txt === pw);
+      if (i < boardPawns.length) {
+        ok(!!hit, 'H: το ' + pw + ' εμφανίζεται πάνω στο board');
+        if (hit) ok(hit.emo === true, 'H: το ' + pw + ' παίρνει την κλάση .emo (σωστό μέγεθος γραμματοσειράς)');
+      }
+    });
+    void onBoard;
+    await ctxQ.close();
+
+    // I) ΠΡΑΓΜΑΤΙΚΟ reload: το νέο πιόνι επιβιώνει και ξαναδηλώνεται μετά την επανασύνδεση
+    const ctxR = await newCtx(1280, 900);
+    const R = await ctxR.newPage();
+    await R.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await R.fill('#playerName', 'Ρία');
+    await R.click('#btnCreate');
+    await R.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+    await R.click('#pawnPick .pawnbtn[data-pawn="🦍"]');
+    await R.waitForTimeout(150);
+    const savedSession = await R.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('iquit_host_v1') || 'null');
+      return { inSession: s ? (s.lobby.players.find(p => p.pawn) || {}).pawn : null, ls: localStorage.getItem('iquit_pawn') };
+    });
+    ok(savedSession.inSession === '🦍', 'I: το 🦍 αποθηκεύεται στο host session (save/load)');
+    await R.reload();
+    await R.waitForFunction(() => window.IQ_TEST, null, { timeout: 15000 });
+    const afterReload = await R.evaluate(() => ({ myPawn: window.IQ_TEST.App.myPawn, ls: localStorage.getItem('iquit_pawn') }));
+    ok(afterReload.myPawn === '🦍' && afterReload.ls === '🦍', 'I: μετά από reload το 🦍 διατηρείται (App.myPawn + localStorage)');
+    await ctxR.close();
+
+    // I) resume ΞΕΚΙΝΗΜΕΝΗΣ παρτίδας — το κουμπί επαναφοράς εμφανίζεται μόνο με phase === 'playing',
+    // άρα χρειάζεται καθαρό context: lobby → επιλογή πιονιού → έναρξη → reload → resume.
+    const ctxResume = await newCtx(1280, 900);
+    const R2 = await ctxResume.newPage();
+    await R2.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await R2.fill('#playerName', 'Ρία');
+    await R2.click('#btnCreate');
+    await R2.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+    await R2.click('#pawnPick .pawnbtn[data-pawn="🦍"]');
+    await R2.waitForTimeout(150);
+    await R2.evaluate(() => document.getElementById('btnStart').click());
+    await R2.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
+    const inGame = await R2.evaluate(() => {
+      const T = window.IQ_TEST;
+      return (T.App.game.players.find(p => p.id === T.App.myId) || {}).pawn;
+    });
+    ok(inGame === '🦍', 'I/H: το 🦍 περνά στο game state κατά την έναρξη');
+    await R2.reload();
+    await R2.waitForFunction(() => document.getElementById('btnResumeHost'), null, { timeout: 15000 });
+    await R2.evaluate(() => document.getElementById('btnResumeHost').click());
+    await R2.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
+    const afterResume = await R2.evaluate(() => {
+      const T = window.IQ_TEST;
+      return {
+        pawn: (T.App.game.players.find(p => p.id === T.App.myId) || {}).pawn,
+        onBoard: [...document.querySelectorAll('.pawnspot .pawn')].map(s => s.textContent),
+      };
+    });
+    ok(afterResume.pawn === '🦍', 'I: μετά από reload + resume παρτίδας το 🦍 παραμένει στον παίκτη');
+    ok(afterResume.onBoard.indexOf('🦍') > -1, 'I: και εξακολουθεί να φαίνεται πάνω στο board');
+    await ctxResume.close();
   } catch (e) {
     failed++;
     console.error('  ✗ FAIL (εξαίρεση): ' + e.message.split('\n')[0]);
