@@ -54,11 +54,9 @@ h1,h2,h3{margin:0;}
 .logo em{color:var(--accent); font-style:normal;}
 .tagline{text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;}
 .home-label{font-size:12px; color:var(--muted); margin:14px 0 5px; text-transform:uppercase; letter-spacing:.5px;}
-/* Beta λογαριασμών (ΜΟΝΟ με ?accountbeta=1) — δεν φορτώνεται καν χωρίς το flag */
+/* Προαιρετικοί λογαριασμοί — το παιχνίδι παραμένει διαθέσιμο και ως guest */
 .accbox{margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 14px;}
 .accbox .acc-head{display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;}
-.accbox .acc-beta{font-size:10px; font-weight:800; letter-spacing:.6px; color:#0e1726;
-  background:var(--yellow); border-radius:6px; padding:2px 6px;}
 .accbox input{margin-bottom:9px;}
 .accbox .acc-tabs{display:flex; gap:8px; margin-bottom:11px;}
 .accbox .acc-tab{flex:1; padding:9px 10px; font-size:13px; background:#0a1320; color:var(--muted);

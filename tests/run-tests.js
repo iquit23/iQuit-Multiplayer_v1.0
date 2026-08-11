@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 2.0'), 'εμφανιζόμενη έκδοση Αύγουστος 2.0');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 2.1'), 'εμφανιζόμενη έκδοση Αύγουστος 2.1');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -752,8 +752,8 @@ section('Αύγουστος 1.3 SEO metadata');
   assert(uiSrc2.includes("meta[name=\"description\"]"), 'applyStatic ενημερώνει τη meta description');
 }
 
-// ---------- 10. Αύγουστος 1.4: Beta λογαριασμών (usernames) ----------
-section('Αύγουστος 1.4 Account beta — username & απομόνωση');
+// ---------- 10. Αύγουστος 2.1: Προαιρετικοί λογαριασμοί (usernames) ----------
+section('Αύγουστος 2.1 Λογαριασμοί — username & απομόνωση');
 {
   const A = require('../js/account.js');
   const I18N2 = require('../js/i18n.js');
@@ -761,12 +761,13 @@ section('Αύγουστος 1.4 Account beta — username & απομόνωση')
   const acc = fs.readFileSync(__dirname + '/../js/account.js', 'utf8');
   const rules = JSON.parse(fs.readFileSync(__dirname + '/../database.rules.json', 'utf8')).rules;
 
-  // --- flag isolation ---
-  assert(A.enabled('?accountbeta=1') && A.enabled('?fast=1&accountbeta=1'), 'το panel ενεργοποιείται με ?accountbeta=1');
-  ['', '?room=ABCD', '?transport=peer', '?accountbeta=0', '?accountbeta=2'].forEach(q =>
-    assert(!A.enabled(q), 'ΧΩΡΙΣ flag δεν ενεργοποιείται (' + (q || 'κενό') + ')'));
-  assert(acc.indexOf("if (!api.enabled(location.search)) return api;") > -1, 'το account.js βγαίνει νωρίς χωρίς το flag (κανένα DOM/SDK)');
-  assert(!/accountbeta/.test(idx2.replace(/js\/account\.js/g, '')), 'το index.html δεν εμφανίζει τίποτα σχετικό χωρίς το flag');
+  // --- επίσημα διαθέσιμο, προαιρετικό, με emergency off ---
+  ['', '?room=ABCD', '?transport=peer', '?accountbeta=1', '?fast=1&accountbeta=1', '?accountbeta=2'].forEach(q =>
+    assert(A.enabled(q), 'λογαριασμός διαθέσιμος στο κανονικό URL (' + (q || 'κενό') + ')'));
+  assert(!A.enabled('?accountbeta=0') && !A.enabled('?room=ABCD&accountbeta=0'), 'accountbeta=0: προσωρινή πλήρης απενεργοποίηση');
+  assert(acc.indexOf("if (!api.enabled(location.search)) return api;") > -1, 'με accountbeta=0: early return πριν από DOM/SDK/auth');
+  assert(idx2.indexOf('js/account.js') > -1, 'το προαιρετικό account module φορτώνεται από το index');
+  assert(acc.indexOf('acc-beta') === -1, 'δεν εμφανίζεται πλέον ένδειξη BETA');
 
   // --- normalization: case-insensitive, ελληνικά με τόνους, τελικό ς ---
   assert(A.normalizeUsername('George') === 'george' && A.normalizeUsername('GEORGE') === 'george' && A.normalizeUsername('george') === 'george', 'George/GEORGE/george → ίδιο');
@@ -840,7 +841,7 @@ section('Αύγουστος 1.4 Account beta — username & απομόνωση')
 
   // --- το κανονικό multiplayer δεν άλλαξε ---
   assert(netfb.indexOf("const SLOTS = ['s1', 's2', 's3', 's4']") > -1, 'δομή δωματίου (4 slots) αμετάβλητη');
-  assert(netfb.indexOf('authReady: fbReady') > -1, 'το account beta ΜΟΙΡΑΖΕΤΑΙ το ίδιο auth bootstrap (κανένα δεύτερο uid)');
+  assert(netfb.indexOf('authReady: fbReady') > -1, 'ο προαιρετικός λογαριασμός ΜΟΙΡΑΖΕΤΑΙ το ίδιο auth bootstrap (κανένα δεύτερο uid)');
   assert(/onAuthStateChanged/.test(netfb) && /υπάρχει ΗΔΗ συνδεδεμένος χρήστης/.test(netfb), 'το transport κρατά υπάρχοντα χρήστη αντί για τυφλό signInAnonymously');
   assert(acc.indexOf('linkWithCredential') > -1, 'η εγγραφή γίνεται με link πάνω στον ανώνυμο (ίδιο uid)');
   assert(acc.indexOf('IQ_NET_FB.authReady') > -1, 'το panel δεν αρχικοποιεί δικό του Firebase app');
@@ -917,7 +918,7 @@ section('Αύγουστος 1.4 Account beta — username & απομόνωση')
   }
 
   // --- email links → canonical domain ---
-  assert(acc.indexOf("const PROD_URL = 'https://iquitgame.com/?accountbeta=1'") > -1, 'τα email links επιστρέφουν στο canonical .com');
+  assert(acc.indexOf("const PROD_URL = 'https://iquitgame.com/'") > -1, 'τα email links επιστρέφουν στο canonical .com');
   assert(!/localhost/.test(accCode), 'κανένα localhost στο production flow');
   assert((acc.match(/sendEmailVerification\(actionSettings\(\)\)/g) || []).length === 2 &&
     /sendPasswordResetEmail\(c\.email, actionSettings\(\)\)/.test(acc), 'όλα τα email links περνούν actionCodeSettings');

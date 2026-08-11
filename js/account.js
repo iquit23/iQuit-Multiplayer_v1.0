@@ -1,6 +1,7 @@
-/* I QUIT! — ΠΡΟΑΙΡΕΤΙΚΟΙ ΛΟΓΑΡΙΑΣΜΟΙ (BETA). Ενεργό ΜΟΝΟ με ?accountbeta=1.
-   Πλήρως απομονωμένο: χωρίς το flag δεν δημιουργείται κανένα DOM, δεν φορτώνεται SDK,
-   δεν αγγίζεται το auth και το παιχνίδι λειτουργεί ακριβώς όπως σήμερα (guest, χωρίς εγγραφή).
+/* I QUIT! — ΠΡΟΑΙΡΕΤΙΚΟΙ ΛΟΓΑΡΙΑΣΜΟΙ.
+   Ενεργοί κανονικά, χωρίς να απαιτούνται για το παιχνίδι. Το ?accountbeta=0 λειτουργεί
+   ως προσωρινός διακόπτης ασφαλείας: τότε δεν δημιουργείται DOM, δεν φορτώνεται SDK,
+   δεν αγγίζεται το auth και το παιχνίδι λειτουργεί ως guest, χωρίς εγγραφή.
 
    ΣΧΕΔΙΑΣΗ
    • Ταυτότητα: το ΙΔΙΟ Firebase uid που ήδη χρησιμοποιεί το multiplayer (net-fb.js). Η εγγραφή
@@ -78,10 +79,10 @@
     sameUsername: sameUsername,
     authErrorKey: authErrorKey,
     MIN_LEN: MIN_LEN, MAX_LEN: MAX_LEN,
-    enabled: function (search) { return /[?&]accountbeta=1/.test(String(search || '')); },
+    enabled: function (search) { return !/[?&]accountbeta=0(?:&|$)/.test(String(search || '')); },
   };
 
-  // ================= UI (browser only, ΜΟΝΟ με ?accountbeta=1) =================
+  // ================= UI (browser only, εκτός αν δοθεί ?accountbeta=0) =================
   if (typeof document === 'undefined' || typeof location === 'undefined') return api;
   if (!api.enabled(location.search)) return api;
 
@@ -95,11 +96,11 @@
   // Πού επιστρέφει ο χρήστης μετά το «Continue» στη σελίδα επιβεβαίωσης/επαναφοράς της Google.
   // ΠΑΡΑΓΩΓΗ: πάντα το canonical https://iquitgame.com/ (ΠΟΤΕ .gr — αυτό κάνει 301 — ούτε localhost).
   // Εκτός παραγωγής (τοπικές δοκιμές/e2e) χρησιμοποιείται το τρέχον origin ώστε να μη σπάει η ροή.
-  const PROD_URL = 'https://iquitgame.com/?accountbeta=1';
+  const PROD_URL = 'https://iquitgame.com/';
   function actionSettings() {
     const host = (location.hostname || '').toLowerCase();
     const isProd = host === 'iquitgame.com' || host === 'www.iquitgame.com' || host === 'iquitgame.gr' || host === 'www.iquitgame.gr';
-    return { url: isProd ? PROD_URL : (location.origin + location.pathname + '?accountbeta=1'), handleCodeInApp: false };
+    return { url: isProd ? PROD_URL : (location.origin + location.pathname), handleCodeInApp: false };
   }
 
   function fb() { return root.firebase; }
@@ -160,7 +161,7 @@
     }
 
     box.innerHTML =
-      '<div class="acc-head"><b>' + esc(t('accTitle')) + '</b><span class="acc-beta">BETA</span></div>' +
+      '<div class="acc-head"><b>' + esc(t('accTitle')) + '</b></div>' +
       body +
       (st.msg ? '<div class="acc-msg' + (st.msgOk ? ' ok' : '') + '" id="accMsg">' + esc(st.msg) + '</div>' : '');
 

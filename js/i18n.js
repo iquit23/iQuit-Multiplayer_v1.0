@@ -18,7 +18,7 @@
       // v1.27 SEO: τίτλος σελίδας + εισαγωγική ενότητα «Τι είναι το I QUIT!»
       pageTitle: 'I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού',
       metaDesc: 'Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.',
-      // Beta λογαριασμών (ΜΟΝΟ με ?accountbeta=1) — το email δεν εμφανίζεται ποτέ σε άλλους παίκτες
+      // Προαιρετικοί λογαριασμοί — το email δεν εμφανίζεται ποτέ σε άλλους παίκτες
       accTitle: 'Λογαριασμός (προαιρετικός)',
       accSignup: 'Εγγραφή', accLogin: 'Σύνδεση',
       accEmailPh: 'Email', accPassPh: 'Κωδικός (6+ χαρακτήρες)',
@@ -272,7 +272,7 @@
       // v1.27 SEO
       pageTitle: 'I QUIT! — Online Financial Literacy Board Game',
       metaDesc: 'Play I QUIT!, an online financial literacy board game. Learn about saving, investing, loans and financial independence while playing with friends.',
-      // Account beta (only with ?accountbeta=1)
+      // Optional accounts — email is never shown to other players
       accTitle: 'Account (optional)',
       accSignup: 'Sign up', accLogin: 'Log in',
       accEmailPh: 'Email', accPassPh: 'Password (6+ characters)',
