@@ -796,11 +796,12 @@ section('Αύγουστος 2.1 Λογαριασμοί — username & απομό
   // --- μηνύματα σφαλμάτων EL+EN ---
   const errKeys = ['accErrUserEmpty', 'accErrUserSpace', 'accErrUserLen', 'accErrUserChars', 'accErrUserTaken',
     'accErrEmailUsed', 'accErrEmailBad', 'accErrWeakPass', 'accErrWrongPass', 'accErrNoUser', 'accErrTooMany',
-    'accErrNetwork', 'accErrBadLink', 'accErrLinkFailed', 'accErrInRoom', 'accErrGeneric'];
+    'accErrVerification', 'accErrPermission', 'accErrNetwork', 'accErrDatabase', 'accErrUnexpected',
+    'accErrBadLink', 'accErrLinkFailed', 'accErrInRoom', 'accErrGeneric'];
   const uiKeys = ['accTitle', 'accSignup', 'accLogin', 'accSignupBtn', 'accLoginBtn', 'accForgot', 'accLogout',
     'accGuestNote', 'accVerifySent', 'accResetSent', 'accUnverified', 'accVerified', 'accSignedIn', 'accVerifyBody',
     'accResend', 'accRecheck', 'accVerifiedNow', 'accStillUnverified', 'accPickUserBody', 'accUserPh',
-    'accClaimBtn', 'accUserSet', 'accUseNote', 'accLoggedOut'];
+    'accClaimBtn', 'accUserSet', 'accUseNote', 'accLoggedOut', 'accProfileLoading', 'accProfileError', 'accRetry'];
   ['el', 'en'].forEach(L => {
     I18N2.setLang(L);
     errKeys.concat(uiKeys).forEach(k => assert(I18N2.t(k) !== k && I18N2.t(k).length > 1, L.toUpperCase() + ' μετάφραση: ' + k));
@@ -1119,6 +1120,11 @@ section('Αύγουστος 2.0 Πιόνια — 12 συνολικά, τα 9 π�
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------
 // Τρέχει αυτόματα όταν υπάρχει playwright· αλλιώς παραλείπεται με μήνυμα (όπως τα emulator tests).
 (async () => {
+  section('Account regression A–J');
+  const accountRegression = await require('./account-regression.test.js').run();
+  passed += accountRegression.passed;
+  failed += accountRegression.failed;
+
   section('Layout regression: μεγάλα ονόματα καρτών (browser)');
   let r = { passed: 0, failed: 0, skipped: true };
   try {

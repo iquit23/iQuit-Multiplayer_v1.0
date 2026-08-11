@@ -52,6 +52,168 @@
   }
   function sameUsername(a, b) { return normalizeUsername(a) === normalizeUsername(b); }
 
+  function accountFailure(key, cause) {
+    const e = new Error(key);
+    e.accountErrorKey = key;
+    if (cause) e.cause = cause;
+    return e;
+  }
+
+  // Τα database errors δεν είναι auth errors: ειδικά το PERMISSION_DENIED δεν αποδεικνύει
+  // ότι ένα username είναι πιασμένο. Η πραγματική διάκριση γίνεται με diagnostic read πιο κάτω.
+  function serviceErrorKey(error) {
+    if (error && error.accountErrorKey) return error.accountErrorKey;
+    const code = String((error && (error.code || error.message)) || '').toUpperCase();
+    if (/NETWORK|DISCONNECT|OFFLINE/.test(code)) return 'accErrNetwork';
+    if (/TOKEN|REQUIRES_RECENT_LOGIN|USER_DISABLED/.test(code)) return 'accErrVerification';
+    if (/PERMISSION|VALIDATION|RULES|CONFIG/.test(code)) return 'accErrPermission';
+    if (/UNAVAILABLE|DATABASE|INTERNAL/.test(code)) return 'accErrDatabase';
+    return 'accErrUnexpected';
+  }
+
+  function readAuthSnapshot(user) {
+    if (!user) return Promise.resolve({ user: null, tokenEmailVerified: false });
+    if (user.isAnonymous) return Promise.resolve({ user: user, tokenEmailVerified: false });
+    if (typeof user.getIdTokenResult !== 'function') {
+      return Promise.reject(accountFailure('accErrUnexpected'));
+    }
+    return user.getIdTokenResult(false).then(function (tokenResult) {
+      return {
+        user: user,
+        tokenEmailVerified: !!(tokenResult && tokenResult.claims && tokenResult.claims.email_verified === true),
+      };
+    });
+  }
+
+  function authSnapshotSignature(snapshot) {
+    const user = snapshot && snapshot.user;
+    if (!user) return 'signed-out';
+    return [user.uid || '', user.email || '', user.isAnonymous ? 'anon' : 'account',
+      user.emailVerified ? 'user-verified' : 'user-unverified',
+      snapshot.tokenEmailVerified ? 'token-verified' : 'token-unverified'].join('|');
+  }
+
+  function observeAuth(auth, onSnapshot, onError) {
+    let active = true;
+    let generation = 0;
+    let lastSignature = null;
+    const listen = auth && (auth.onIdTokenChanged || auth.onAuthStateChanged);
+    if (typeof listen !== 'function') {
+      onError(accountFailure('accErrUnexpected'));
+      return function () { active = false; };
+    }
+    const unsubscribe = listen.call(auth, function (user) {
+      const currentGeneration = ++generation;
+      readAuthSnapshot(user).then(function (snapshot) {
+        if (!active || currentGeneration !== generation) return;
+        const signature = authSnapshotSignature(snapshot);
+        if (signature === lastSignature) return;
+        lastSignature = signature;
+        onSnapshot(snapshot);
+      }).catch(function (e) {
+        if (active && currentGeneration === generation) onError(e);
+      });
+    }, function (e) { if (active) onError(e); });
+    return function () {
+      if (!active) return;
+      active = false;
+      generation++;
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }
+
+  // Κάθε claim ανανεώνει ΠΡΩΤΑ user + token και ελέγχει ξανά το emailVerified. Έτσι το UI
+  // και τα RTDB rules βλέπουν την ίδια, φρέσκια κατάσταση email_verified.
+  function refreshVerifiedUser(ctx) {
+    const auth = ctx && ctx.fb && ctx.fb.auth && ctx.fb.auth();
+    const before = auth && auth.currentUser;
+    if (!before || before.isAnonymous) return Promise.reject(accountFailure('accErrVerification'));
+    return Promise.resolve().then(function () {
+      return before.reload();
+    }).then(function () {
+      const current = auth.currentUser;
+      if (!current || current.isAnonymous) throw accountFailure('accErrVerification');
+      return current.getIdToken(true);
+    }).then(function () {
+      const current = auth.currentUser;
+      if (!current || current.isAnonymous) throw accountFailure('accErrVerification');
+      return readAuthSnapshot(current);
+    }).then(function (snapshot) {
+      if (!snapshot.user.emailVerified || !snapshot.tokenEmailVerified) {
+        const e = accountFailure('accErrVerification');
+        e.authSnapshot = snapshot;
+        throw e;
+      }
+      return snapshot;
+    }).catch(function (e) {
+      if (e && e.accountErrorKey) throw e;
+      throw accountFailure(serviceErrorKey(e), e);
+    });
+  }
+
+  function readProfile(ctx, user) {
+    if (!user || user.isAnonymous || !user.emailVerified) {
+      return Promise.resolve({ status: 'missing', profile: null });
+    }
+    return ctx.db.ref('users/' + user.uid).once('value').then(function (snap) {
+      const profile = snap.val();
+      if (profile === null || profile === undefined) return { status: 'missing', profile: null };
+      if (profile && profile.username) return { status: 'ready', profile: profile };
+      return { status: 'error', profile: undefined, errorKey: 'accErrDatabase' };
+    }).catch(function (e) {
+      return { status: 'error', profile: undefined, errorKey: serviceErrorKey(e) };
+    });
+  }
+
+  function diagnoseFailedClaim(ctx, normalized, uid, claimError) {
+    return ctx.db.ref('usernames/' + normalized).once('value').then(function (snap) {
+      const owner = snap.val();
+      if (owner && owner !== uid) return { status: 'taken', errorKey: 'accErrUserTaken' };
+      // Μια αμφίσημη αποτυχία δικτύου μπορεί να ήρθε αφού ο server ολοκλήρωσε το atomic write.
+      // Reservation στο ίδιο uid σημαίνει προηγούμενη επιτυχία / ασφαλές idempotent retry.
+      if (owner === uid) return { status: 'owned' };
+      return { status: 'error', errorKey: serviceErrorKey(claimError) };
+    }).catch(function (diagnosticError) {
+      const diagnosticKey = serviceErrorKey(diagnosticError);
+      return {
+        status: 'error',
+        errorKey: diagnosticKey === 'accErrUnexpected' ? serviceErrorKey(claimError) : diagnosticKey,
+      };
+    });
+  }
+
+  function claimUsername(ctx, v) {
+    return refreshVerifiedUser(ctx).then(function (authSnapshot) {
+      const u = authSnapshot.user;
+      const now = Date.now();
+      return ctx.db.ref('users/' + u.uid).once('value').then(function (snap) {
+        const prev = snap.val();
+        const updates = {};
+        updates['usernames/' + v.normalized] = u.uid;
+        updates['users/' + u.uid] = {
+          username: v.username,
+          usernameNormalized: v.normalized,
+          createdAt: (prev && prev.createdAt) || now,
+          updatedAt: now,
+        };
+        // Το atomic update παραμένει ο μοναδικός authoritative μηχανισμός uniqueness.
+        return ctx.db.ref().update(updates).then(function () {
+          return { status: 'claimed', user: u, authSnapshot: authSnapshot };
+        }).catch(function (claimError) {
+          return diagnoseFailedClaim(ctx, v.normalized, u.uid, claimError).then(function (result) {
+            result.user = u;
+            result.authSnapshot = authSnapshot;
+            return result;
+          });
+        });
+      }).catch(function (e) {
+        return { status: 'error', errorKey: serviceErrorKey(e) };
+      });
+    }).catch(function (e) {
+      return { status: 'error', errorKey: serviceErrorKey(e) };
+    });
+  }
+
   // Χαρτογράφηση κωδικών σφάλματος Firebase → i18n κλειδιά (καθαρά μηνύματα, χωρίς τεχνικούς κωδικούς)
   function authErrorKey(code) {
     switch (String(code || '')) {
@@ -80,6 +242,16 @@
     authErrorKey: authErrorKey,
     MIN_LEN: MIN_LEN, MAX_LEN: MAX_LEN,
     enabled: function (search) { return !/[?&]accountbeta=0(?:&|$)/.test(String(search || '')); },
+    _internals: {
+      serviceErrorKey: serviceErrorKey,
+      refreshVerifiedUser: refreshVerifiedUser,
+      diagnoseFailedClaim: diagnoseFailedClaim,
+      claimUsername: claimUsername,
+      readProfile: readProfile,
+      readAuthSnapshot: readAuthSnapshot,
+      authSnapshotSignature: authSnapshotSignature,
+      observeAuth: observeAuth,
+    },
   };
 
   // ================= UI (browser only, εκτός αν δοθεί ?accountbeta=0) =================
@@ -91,7 +263,12 @@
   const esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
   const $ = function (id) { return document.getElementById(id); };
 
-  const st = { user: null, profile: null, busy: false, mode: 'guest', msg: '', msgOk: false };
+  const st = {
+    user: null, profile: undefined, profileStatus: 'idle', profileError: '',
+    tokenEmailVerified: false, authSignature: '', authError: '',
+    busy: false, mode: 'guest', msg: '', msgOk: false,
+  };
+  let authUnsubscribe = null;
 
   // Πού επιστρέφει ο χρήστης μετά το «Continue» στη σελίδα επιβεβαίωσης/επαναφοράς της Google.
   // ΠΑΡΑΓΩΓΗ: πάντα το canonical https://iquitgame.com/ (ΠΟΤΕ .gr — αυτό κάνει 301 — ούτε localhost).
@@ -115,11 +292,66 @@
 
   function setMsg(key, ok, params) { st.msg = key ? t(key, params) : ''; st.msgOk = !!ok; render(); }
 
+  function isVerifiedSnapshot(user, tokenEmailVerified) {
+    return !!(user && !user.isAnonymous && user.emailVerified && tokenEmailVerified === true);
+  }
+
+  function applyAuthSnapshot(ctx, snapshot) {
+    const signature = authSnapshotSignature(snapshot);
+    const previousUid = st.user && st.user.uid;
+    const previousVerified = isVerifiedSnapshot(st.user, st.tokenEmailVerified);
+    const nextUser = snapshot.user;
+    const nextUid = nextUser && nextUser.uid;
+    const nextVerified = isVerifiedSnapshot(nextUser, snapshot.tokenEmailVerified);
+
+    // Πάντα κρατάμε το πραγματικό Auth object, ακόμη κι αν τα ορατά πεδία δεν άλλαξαν.
+    st.user = nextUser;
+    st.tokenEmailVerified = snapshot.tokenEmailVerified === true;
+    st.authError = '';
+    if (signature === st.authSignature) return Promise.resolve(false);
+    st.authSignature = signature;
+    if (previousUid !== nextUid) st.msg = '';
+
+    if (!nextVerified) {
+      st.profile = null;
+      st.profileStatus = 'missing';
+      st.profileError = '';
+      render();
+      return Promise.resolve(true);
+    }
+    if (previousUid !== nextUid || previousVerified !== nextVerified || st.profileStatus === 'idle') {
+      return loadProfile(ctx).then(function () { return true; });
+    }
+    render();
+    return Promise.resolve(true);
+  }
+
+  function setAuthSyncError(error) {
+    st.authError = serviceErrorKey(error);
+    setMsg(st.authError, false);
+  }
+
+  function startAuthObserver(ctx) {
+    if (authUnsubscribe) return authUnsubscribe;
+    const auth = ctx.fb.auth();
+    authUnsubscribe = observeAuth(auth, function (snapshot) {
+      applyAuthSnapshot(ctx, snapshot).catch(setAuthSyncError);
+    }, setAuthSyncError);
+    return authUnsubscribe;
+  }
+
+  function stopAuthObserver() {
+    if (!authUnsubscribe) return;
+    const unsubscribe = authUnsubscribe;
+    authUnsubscribe = null;
+    unsubscribe();
+  }
+
   function render() {
     const box = $('accBox');
     if (!box) return;
     const u = st.user;
-    const verified = !!(u && !u.isAnonymous && u.emailVerified);
+    const verified = isVerifiedSnapshot(u, st.tokenEmailVerified);
     let body = '';
 
     if (!u || u.isAnonymous) {
@@ -143,7 +375,18 @@
         '<button class="primary acc-main" data-acc="resend">' + esc(t('accResend')) + '</button>' +
         '<button class="ghost acc-mini" data-acc="recheck">' + esc(t('accRecheck')) + '</button>' +
         '<button class="ghost acc-mini" data-acc="logout">' + esc(t('accLogout')) + '</button>';
-    } else if (!st.profile || !st.profile.username) {
+    } else if (st.profileStatus === 'loading' || st.profileStatus === 'idle') {
+      body =
+        '<div class="acc-row"><span class="acc-badge ok">' + esc(t('accVerified')) + '</span></div>' +
+        '<div class="acc-note">' + esc(t('accProfileLoading')) + '</div>';
+    } else if (st.profileStatus === 'error') {
+      // Read/service failure: δεν παρουσιάζεται ποτέ ως «δεν υπάρχει profile»/username form.
+      body =
+        '<div class="acc-row"><span class="acc-badge warn">' + esc(t('accProfileError')) + '</span></div>' +
+        '<div class="acc-note">' + esc(t(st.profileError || 'accErrUnexpected')) + '</div>' +
+        '<button class="primary acc-main" data-acc="retry-profile">' + esc(t('accRetry')) + '</button>' +
+        '<button class="ghost acc-mini" data-acc="logout">' + esc(t('accLogout')) + '</button>';
+    } else if (st.profile === null) {
       // Επιβεβαιωμένος — επιλογή μοναδικού username
       body =
         '<div class="acc-row"><span class="acc-badge ok">' + esc(t('accVerified')) + '</span></div>' +
@@ -185,6 +428,7 @@
     if (a === 'resend') return doResend();
     if (a === 'recheck') return doRecheck();
     if (a === 'claim') return doClaim();
+    if (a === 'retry-profile') return doRetryProfile();
     if (a === 'logout') return doLogout();
   }
 
@@ -254,54 +498,56 @@
 
   function doRecheck() {
     busy(true);
-    ready().then(function (ctx) {
-      const u = ctx.fb.auth().currentUser;
-      if (!u) throw new Error('no-user');
-      // reload + ανανέωση token ώστε το email_verified να φτάσει και στα database rules
-      return u.reload().then(function () { return u.getIdToken(true); }).then(function () {
-        st.user = ctx.fb.auth().currentUser;
-        busy(false);
-        if (st.user && st.user.emailVerified) setMsg('accVerifiedNow', true);
-        else setMsg('accStillUnverified', false);
-        return loadProfile(ctx);
+    return ready().then(function (ctx) {
+      return refreshVerifiedUser(ctx).then(function (snapshot) {
+        return applyAuthSnapshot(ctx, snapshot).then(function () {
+          busy(false);
+          setMsg('accVerifiedNow', true);
+        });
+      }).catch(function (e) {
+        // Επιτυχές refresh με unverified user/token: ενημέρωσε με το έγκυρο snapshot.
+        // Αποτυχία reload/token: κράτησε το τελευταίο γνωστό state και δείξε service error.
+        if (e && e.authSnapshot) {
+          return applyAuthSnapshot(ctx, e.authSnapshot).then(function () {
+            busy(false);
+            setMsg('accErrVerification', false);
+          });
+        }
+        throw e;
       });
-    }).catch(function (e) { busy(false); setMsg(e && e.code ? authErrorKey(e.code) : 'accErrNetwork', false); });
+    }).catch(function (e) {
+      busy(false);
+      setAuthSyncError(e);
+    });
   }
 
   function doClaim() {
     const v = validateUsername((($('accUser') || {}).value || ''));
     if (!v.ok) return setMsg(v.error, false);
     busy(true);
-    ready().then(function (ctx) {
-      const u = ctx.fb.auth().currentUser;
-      if (!u || !u.emailVerified) { busy(false); return setMsg('accStillUnverified', false); }
-      // ΠΡΑΓΜΑΤΙΚΑ ΑΤΟΜΙΚΗ κατοχύρωση: ΕΝΑ multi-location update γράφει ΜΑΖΙ το mapping και το
-      // προφίλ — ή κανένα από τα δύο. Καμία περίπτωση για ορφανό mapping / μισό προφίλ, καμία
-      // ανάγκη rollback. Η μοναδικότητα επιβάλλεται SERVER-SIDE από τα rules:
-      // usernames/<norm> γράφεται ΜΟΝΟ αν το κλειδί είναι ελεύθερο (ή ήδη δικό μας) και ΜΟΝΟ με
-      // το δικό μας uid. Δύο ταυτόχρονοι διεκδικητές → ο δεύτερος παίρνει PERMISSION_DENIED και
-      // ΤΙΠΟΤΑ δεν γράφεται γι' αυτόν (το RTDB σειριοποιεί τις γραφές).
-      const now = Date.now();
-      // Επαναληπτική εγγραφή από τον ΙΔΙΟ ιδιοκτήτη δεν πρέπει να χάνει το createdAt
-      return ctx.db.ref('users/' + u.uid).once('value').then(function (snap) {
-        const prev = snap.val();
-        const updates = {};
-        updates['usernames/' + v.normalized] = u.uid;
-        updates['users/' + u.uid] = {
-          username: v.username,
-          usernameNormalized: v.normalized,
-          createdAt: (prev && prev.createdAt) || now,
-          updatedAt: now,
-        };
-        return ctx.db.ref().update(updates).then(function () {
+    return ready().then(function (ctx) {
+      return claimUsername(ctx, v).then(function (result) {
+        if (result.authSnapshot) {
+          st.user = result.authSnapshot.user;
+          st.tokenEmailVerified = result.authSnapshot.tokenEmailVerified === true;
+          st.authSignature = authSnapshotSignature(result.authSnapshot);
+        } else {
+          st.user = ctx.fb.auth().currentUser;
+        }
+        if (result.status === 'claimed' || result.status === 'owned') {
           st.profile = { username: v.username, usernameNormalized: v.normalized };
+          st.profileStatus = 'ready';
+          st.profileError = '';
           applyUsernameToGame(v.username);
           busy(false); setMsg('accUserSet', true, { name: v.username });
-        });
+          return;
+        }
+        busy(false);
+        setMsg(result.errorKey || 'accErrUnexpected', false);
       });
     }).catch(function (e) {
       busy(false);
-      setMsg(e && e.code === 'PERMISSION_DENIED' ? 'accErrUserTaken' : (e && e.code ? authErrorKey(e.code) : 'accErrNetwork'), false);
+      setMsg(serviceErrorKey(e), false);
     });
   }
 
@@ -309,7 +555,8 @@
     busy(true);
     ready().then(function (ctx) {
       return ctx.fb.auth().signOut().then(function () {
-        st.user = null; st.profile = null; st.mode = 'login';
+        st.user = null; st.profile = null; st.profileStatus = 'missing'; st.profileError = '';
+        st.tokenEmailVerified = false; st.authSignature = 'signed-out'; st.mode = 'login';
         // Νέα ανώνυμη ταυτότητα ώστε το multiplayer να συνεχίσει κανονικά ως επισκέπτης
         return ctx.fb.auth().signInAnonymously().then(function () {
           st.user = ctx.fb.auth().currentUser;
@@ -321,18 +568,42 @@
 
   function loadProfile(ctx) {
     const u = ctx.fb.auth().currentUser;
-    if (!u || u.isAnonymous || !u.emailVerified) { st.profile = null; render(); return Promise.resolve(); }
-    return ctx.db.ref('users/' + u.uid).once('value').then(function (s) {
-      const v = s.val();
-      st.profile = v && v.username ? v : null;
-      if (st.profile) applyUsernameToGame(st.profile.username);
+    if (!isVerifiedSnapshot(u, st.tokenEmailVerified)) {
+      st.profile = null; st.profileStatus = 'missing'; st.profileError = ''; render();
+      return Promise.resolve();
+    }
+    st.profile = undefined;
+    st.profileStatus = 'loading';
+    st.profileError = '';
+    render();
+    return readProfile(ctx, u).then(function (result) {
+      st.profile = result.profile;
+      st.profileStatus = result.status;
+      st.profileError = result.errorKey || '';
+      if (result.status === 'ready') applyUsernameToGame(result.profile.username);
       render();
-    }).catch(function () { st.profile = null; render(); });
+    });
+  }
+
+  function doRetryProfile() {
+    busy(true);
+    return ready().then(function (ctx) {
+      st.user = ctx.fb.auth().currentUser;
+      return loadProfile(ctx);
+    }).then(function () {
+      busy(false);
+    }).catch(function (e) {
+      st.profile = undefined;
+      st.profileStatus = 'error';
+      st.profileError = serviceErrorKey(e);
+      busy(false);
+    });
   }
 
   function afterAuthChange(ctx) {
-    st.user = ctx.fb.auth().currentUser;
-    return loadProfile(ctx).then(function () { busy(false); });
+    return readAuthSnapshot(ctx.fb.auth().currentUser).then(function (snapshot) {
+      return applyAuthSnapshot(ctx, snapshot);
+    }).then(function () { busy(false); });
   }
 
   // Το username προσυμπληρώνει το πεδίο ονόματος του παιχνιδιού. ΔΕΝ αλλάζει καμία ροή:
@@ -361,10 +632,15 @@
     });
     render();
     ready().then(function (ctx) {
-      st.user = ctx.fb.auth().currentUser;
       st.mode = 'signup';
-      return loadProfile(ctx);
-    }).catch(function () { setMsg('accErrNetwork', false); });
+      startAuthObserver(ctx);
+    }).catch(function (e) { setMsg(serviceErrorKey(e), false); });
+  }
+
+  function unmount() {
+    stopAuthObserver();
+    const box = $('accBox');
+    if (box && box.parentNode) box.parentNode.removeChild(box);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
@@ -372,5 +648,9 @@
 
   api._state = st;         // μόνο για e2e διαγνωστικά (δεν περιέχει ποτέ password)
   api._render = render;
+  api._mount = mount;
+  api._unmount = unmount;
+  api._startAuthObserver = startAuthObserver;
+  api._doRecheck = doRecheck;
   return api;
 });
