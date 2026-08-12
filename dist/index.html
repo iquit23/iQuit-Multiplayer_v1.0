@@ -516,7 +516,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.1</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.2</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -578,6 +578,7 @@ body.game-over #myDash{z-index:auto;}
     <button class="primary" id="btnStart">🚀 Έναρξη παιχνιδιού</button>
   </div>
   <div id="guestWait" class="muted hidden" style="text-align:center; margin-top:10px;">Περιμένουμε τον host να ξεκινήσει το παιχνίδι…</div>
+  <div class="muted" id="scoreLobbyHint" style="text-align:center; margin-top:10px; font-size:12px;">Για να μετρήσει το παιχνίδι στο seasonal ranking, όλοι οι πραγματικοί παίκτες πρέπει να έχουν επιβεβαιωμένο λογαριασμό.</div>
   <button class="ghost" id="btnRulesLobby" style="width:100%; margin-top:14px; padding:12px;">📜 Κανόνες</button>
   <button class="danger" id="btnLeaveLobby" style="width:100%; margin-top:8px; padding:12px;">Αποχώρηση</button>
 </div>
@@ -897,6 +898,7 @@ body.game-over #myDash{z-index:auto;}
       room: 'Δωμάτιο', shareBtn: '📤 Κοινοποίηση κωδικού', players: 'Παίκτες', pickPawn: 'Διάλεξε το πιόνι σου',
       addBot: '🤖 Πρόσθεσε bot', botsLbl: 'Bots', startBtn: '🚀 Έναρξη παιχνιδιού',
       guestWait: 'Περιμένουμε τον host να ξεκινήσει το παιχνίδι…', leave: 'Αποχώρηση',
+      scoreLobbyHint: 'Για να μετρήσει το παιχνίδι στο seasonal ranking, όλοι οι πραγματικοί παίκτες πρέπει να έχουν επιβεβαιωμένο λογαριασμό.',
       you: '(εσύ)', online: 'online', offline: 'offline',
       shareText: 'Παίζουμε I QUIT! 🎲 Πάτα το link και μπαίνεις κατευθείαν στο δωμάτιό μου: {url}',
       copied: '📋 Αντιγράφηκε το link πρόσκλησης!',
@@ -1018,6 +1020,12 @@ body.game-over #myDash{z-index:auto;}
       // End
       finalRank: 'Τελική Κατάταξη', iquitFree: 'I QUIT στα {age} — οικονομική ελευθερία!',
       survive: '🕒 Το κεφάλαιό {poss} άντεξε για {d} μετά τη συνταξιοδότηση', reached65: 'Έφτασε τα 65',
+      scoreVictory: '🏆 Νίκη! +{points} πόντοι',
+      scoreFreedom: 'Απέκτησες οικονομική ελευθερία στα {age}.',
+      scoreWhy: 'Όσο νωρίτερα κάνεις I QUIT!, τόσο περισσότερους πόντους κερδίζεις.',
+      scoreIneligible: 'Η νίκη δεν προσμετράται στο seasonal ranking.',
+      scorePending: 'Καταγράφεται το seasonal score…',
+      scoreSaveError: 'Η νίκη καταγράφηκε, αλλά το seasonal score δεν αποθηκεύτηκε ακόμη. Θα γίνει ασφαλής επανάληψη στην επανασύνδεση.',
       playAgain: '🔁 Νέο παιχνίδι (ίδιοι παίκτες)', exit: 'Έξοδος', feedbackBtn: '📝 Πες μας τη γνώμη σου (1′)',
       // Feedback
       fbTitle: '📝 Η γνώμη σου μετράει!', fbIntro: 'Ανώνυμο, 14 σύντομες ερωτήσεις — βοηθάς το I QUIT! να γίνει καλύτερο.',
@@ -1156,6 +1164,7 @@ body.game-over #myDash{z-index:auto;}
       room: 'Room', shareBtn: '📤 Share invite link', players: 'Players', pickPawn: 'Pick your pawn',
       addBot: '🤖 Add a bot', botsLbl: 'Bots', startBtn: '🚀 Start game',
       guestWait: 'Waiting for the host to start the game…', leave: 'Leave',
+      scoreLobbyHint: 'For the game to count toward the seasonal ranking, every human player must have a verified account.',
       you: '(you)', online: 'online', offline: 'offline',
       shareText: 'We are playing I QUIT! 🎲 Tap the link to join my room: {url}',
       copied: '📋 Invite link copied!',
@@ -1269,6 +1278,12 @@ body.game-over #myDash{z-index:auto;}
       loanX100: '⚠️ Loans come in multiples of €100 — try {v}.',
       finalRank: 'Final Ranking', iquitFree: 'I QUIT at {age} — financial freedom!',
       survive: '🕒 Capital lasted {d} after retirement', reached65: 'Reached 65',
+      scoreVictory: '🏆 Victory! +{points} points',
+      scoreFreedom: 'You reached financial freedom at {age}.',
+      scoreWhy: 'The earlier you make I QUIT!, the more points you earn.',
+      scoreIneligible: 'This victory does not count toward the seasonal ranking.',
+      scorePending: 'Recording seasonal score…',
+      scoreSaveError: 'The victory was recorded, but the seasonal score has not been saved yet. It will retry safely after reconnecting.',
       playAgain: '🔁 New game (same players)', exit: 'Exit', feedbackBtn: '📝 Give us your feedback (1′)',
       fbTitle: '📝 Your opinion matters!', fbIntro: 'Anonymous, 14 short questions — help make I QUIT! better.',
       fbSubmit: 'Send', fbThanks: '🙏 Thank you! Your answer was sent.', fbErr: 'Could not send — check your connection and try again.',
@@ -1509,16 +1524,282 @@ body.game-over #myDash{z-index:auto;}
 
 </script>
 <script>
+/* I QUIT! — V1 seasonal scoring.
+   Client-authoritative by design for V1: protects against accidental duplicate awards,
+   but a trusted backend is still required for full anti-cheat. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('crypto'));
+  } else {
+    root.IQ_SCORING = factory(root.crypto);
+  }
+})(typeof self !== 'undefined' ? self : this, function (cryptoApi) {
+  'use strict';
+
+  const MIN_WINNING_AGE = 25;
+  const MAX_WINNING_AGE = 64;
+
+  function bytesToUuid(bytes) {
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const h = Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' +
+      h.slice(16, 20) + '-' + h.slice(20);
+  }
+
+  function createGameId() {
+    if (cryptoApi && typeof cryptoApi.randomUUID === 'function') return cryptoApi.randomUUID();
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+      return bytesToUuid(cryptoApi.getRandomValues(new Uint8Array(16)));
+    }
+    if (cryptoApi && typeof cryptoApi.randomBytes === 'function') return bytesToUuid(cryptoApi.randomBytes(16));
+    throw new Error('Secure random UUID generation is unavailable.');
+  }
+
+  // Η μοναδική canonical V1 φόρμουλα του application code.
+  function calculateVictoryScore(winningAge) {
+    if (!Number.isInteger(winningAge) || winningAge < MIN_WINNING_AGE || winningAge > MAX_WINNING_AGE) return 0;
+    return 164 - winningAge;
+  }
+
+  function seasonIdForDate(value) {
+    const d = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(d.getTime())) return null;
+    const q = Math.floor(d.getUTCMonth() / 3) + 1;
+    return d.getUTCFullYear() + '-Q' + q;
+  }
+
+  function freezeHumanRoster(players, uidByPlayer) {
+    uidByPlayer = uidByPlayer || {};
+    return (players || []).filter(function (p) { return p && !p.isBot; }).map(function (p) {
+      const knownUid = uidByPlayer[p.id] || p.accountUid || null;
+      return {
+        playerId: p.id,
+        expectedUid: knownUid,
+        verifiedUid: null,
+        verified: false,
+      };
+    });
+  }
+
+  function allHumansVerified(roster) {
+    return Array.isArray(roster) && roster.length > 0 && roster.every(function (p) {
+      return !!(p && p.playerId && p.verified && p.verifiedUid &&
+        (!p.expectedUid || p.expectedUid === p.verifiedUid));
+    });
+  }
+
+  function mergeRosterProofs(roster, proofs) {
+    let changed = false;
+    (roster || []).forEach(function (entry) {
+      const proof = proofs && proofs[entry.playerId];
+      if (!proof || !proof.uid || (entry.expectedUid && entry.expectedUid !== proof.uid)) return;
+      if (!entry.verified || entry.verifiedUid !== proof.uid) {
+        entry.verified = true;
+        entry.verifiedUid = proof.uid;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  function evaluateGameResult(game) {
+    const no = function (reason) { return { eligible: false, reason: reason, awardedPoints: 0 }; };
+    if (!game || game.phase !== 'ended' || !Array.isArray(game.rankings) || !game.rankings.length) return no('unfinished');
+    const rankedWinner = game.rankings[0];
+    const winner = (game.players || []).find(function (p) { return p.id === rankedWinner.id; });
+    if (!winner || winner.isBot) return no('bot-winner');
+    const winningAge = rankedWinner.retiredAge;
+    const awardedPoints = calculateVictoryScore(winningAge);
+    if (!awardedPoints) return no('no-valid-victory');
+    if (game.scoreSetup !== 'ready') return no('score-setup');
+    if (!allHumansVerified(game.scoreRoster)) return no('human-unverified');
+    const winnerProof = game.scoreRoster.find(function (p) { return p.playerId === winner.id; });
+    if (!winnerProof || !winnerProof.verifiedUid) return no('winner-unverified');
+    const seasonId = game.seasonId || seasonIdForDate(game.completedAt);
+    if (!seasonId || !game.gameId || !Number.isFinite(game.completedAt)) return no('invalid-result');
+    return {
+      eligible: true,
+      gameId: game.gameId,
+      seasonId: seasonId,
+      winnerUid: winnerProof.verifiedUid,
+      winnerPlayerId: winner.id,
+      winningAge: winningAge,
+      awardedPoints: awardedPoints,
+      completedAt: game.completedAt,
+    };
+  }
+
+  function awardRecord(result) {
+    return {
+      gameId: result.gameId,
+      seasonId: result.seasonId,
+      winnerUid: result.winnerUid,
+      winnerPlayerId: result.winnerPlayerId,
+      winningAge: result.winningAge,
+      awardedPoints: result.awardedPoints,
+      eligible: true,
+      completedAt: result.completedAt,
+    };
+  }
+
+  function gameReceipt(result, uid, won) {
+    return Object.assign(awardRecord(result), {
+      creditedUid: uid,
+      won: won === true,
+    });
+  }
+
+  // Pure transaction reducer: το award receipt και τα aggregates αλλάζουν μαζί ή καθόλου.
+  function applyGameTransaction(current, result, uid, won, updatedAt) {
+    const value = current && typeof current === 'object' ? JSON.parse(JSON.stringify(current)) : {
+      points: 0, wins: 0, gamesPlayed: 0, sumWinningAge: 0, awards: {}, updatedAt: 0,
+    };
+    if (!value.awards || typeof value.awards !== 'object') value.awards = {};
+    if (value.awards[result.gameId]) return { duplicate: true, value: value };
+    value.points = Number(value.points) || 0;
+    value.wins = Number(value.wins) || 0;
+    value.gamesPlayed = Number(value.gamesPlayed) || 0;
+    value.sumWinningAge = Number(value.sumWinningAge) || 0;
+    if (won) {
+      value.points += result.awardedPoints;
+      value.wins += 1;
+      value.sumWinningAge += result.winningAge;
+    }
+    value.gamesPlayed += 1;
+    value.updatedAt = updatedAt;
+    value.awards[result.gameId] = gameReceipt(result, uid, won);
+    return { duplicate: false, value: value };
+  }
+
+  function applyAwardTransaction(current, result, updatedAt) {
+    return applyGameTransaction(current, result, result.winnerUid, true, updatedAt);
+  }
+
+  function transactionCreate(ref, value) {
+    return ref.transaction(function (current) {
+      return current === null ? value : undefined;
+    }).then(function (result) {
+      return {
+        created: !!result.committed,
+        value: result.snapshot && result.snapshot.val ? result.snapshot.val() : value,
+      };
+    });
+  }
+
+  function createGameRecord(ctx, game, roomCode, transport) {
+    const uid = ctx && ctx.uid;
+    if (!ctx || !ctx.db || !uid || !game || !game.gameId) return Promise.reject(new Error('Invalid score game context.'));
+    const base = ctx.db.ref('scoreGames/' + game.gameId);
+    const meta = {
+      gameId: game.gameId,
+      hostUid: uid,
+      roomCode: String(roomCode || '').toUpperCase().slice(0, 4),
+      transport: transport === 'peer' ? 'peer' : 'firebase',
+      humanCount: (game.scoreRoster || []).length,
+      createdAt: Date.now(),
+    };
+    return transactionCreate(base.child('meta'), meta).then(function () {
+      return Promise.all((game.scoreRoster || []).map(function (p) {
+        const record = { human: true };
+        if (p.expectedUid) record.expectedUid = p.expectedUid;
+        return transactionCreate(base.child('roster/' + p.playerId), record);
+      }));
+    }).then(function () { return meta; });
+  }
+
+  function registerVerifiedProof(ctx, gameId, playerId, uid) {
+    if (!ctx || !ctx.db || !gameId || !playerId || !uid) return Promise.reject(new Error('Invalid score proof.'));
+    const proof = { uid: uid, verifiedAt: Date.now() };
+    return transactionCreate(ctx.db.ref('scoreGames/' + gameId + '/proofs/' + playerId), proof)
+      .then(function (result) {
+        const stored = result.value || proof;
+        if (stored.uid !== uid) throw new Error('Player slot already has another verified UID.');
+        // Reverse self-proof index: επιτρέπει σε verified participant που έγινε host μετά από
+        // migration να ολοκληρώσει το ίδιο result, χωρίς να εμπιστευόμαστε UID του payload.
+        return transactionCreate(ctx.db.ref('scoreGames/' + gameId + '/participants/' + uid), { playerId: playerId })
+          .then(function (participant) {
+            if (!participant.value || participant.value.playerId !== playerId) {
+              throw new Error('Verified UID is already bound to another player slot.');
+            }
+            return stored;
+          });
+      });
+  }
+
+  function watchProofs(ctx, gameId, onValue, onError) {
+    const ref = ctx.db.ref('scoreGames/' + gameId + '/proofs');
+    const listener = ref.on('value', function (snap) { onValue((snap && snap.val && snap.val()) || {}); }, onError);
+    return function () { ref.off('value', listener); };
+  }
+
+  function persistCompletion(ctx, game) {
+    const result = evaluateGameResult(game);
+    if (!result.eligible) return Promise.reject(new Error('Ineligible game result: ' + result.reason));
+    const record = awardRecord(result);
+    return transactionCreate(ctx.db.ref('scoreGames/' + game.gameId + '/completion'), record).then(function (saved) {
+      const stored = saved.value || record;
+      if (stored.gameId !== record.gameId || stored.winnerUid !== record.winnerUid ||
+          stored.winningAge !== record.winningAge || stored.awardedPoints !== record.awardedPoints) {
+        throw new Error('Stored game result does not match this completion.');
+      }
+      return { duplicate: !saved.created, result: stored };
+    });
+  }
+
+  function creditSeasonGame(ctx, result, uid) {
+    if (!result || !result.eligible || !result.seasonId || !result.winnerUid || !uid) {
+      return Promise.reject(new Error('Invalid seasonal game credit.'));
+    }
+    const won = uid === result.winnerUid;
+    const ref = ctx.db.ref('seasonScores/' + result.seasonId + '/' + uid);
+    let duplicate = false;
+    return ref.transaction(function (current) {
+      const next = applyGameTransaction(current, result, uid, won, Date.now());
+      duplicate = next.duplicate;
+      return next.duplicate ? undefined : next.value;
+    }).then(function (tx) {
+      return {
+        awarded: !!tx.committed,
+        duplicate: !tx.committed || duplicate,
+        aggregate: tx.snapshot && tx.snapshot.val ? tx.snapshot.val() : null,
+      };
+    });
+  }
+
+  return {
+    MIN_WINNING_AGE: MIN_WINNING_AGE,
+    MAX_WINNING_AGE: MAX_WINNING_AGE,
+    createGameId: createGameId,
+    calculateVictoryScore: calculateVictoryScore,
+    seasonIdForDate: seasonIdForDate,
+    freezeHumanRoster: freezeHumanRoster,
+    allHumansVerified: allHumansVerified,
+    mergeRosterProofs: mergeRosterProofs,
+    evaluateGameResult: evaluateGameResult,
+    applyGameTransaction: applyGameTransaction,
+    applyAwardTransaction: applyAwardTransaction,
+    createGameRecord: createGameRecord,
+    registerVerifiedProof: registerVerifiedProof,
+    watchProofs: watchProofs,
+    persistCompletion: persistCompletion,
+    creditSeasonGame: creditSeasonGame,
+    awardSeason: function (ctx, result) { return creditSeasonGame(ctx, result, result && result.winnerUid); },
+  };
+});
+
+</script>
+<script>
 /* I QUIT! — Authoritative Game Engine.
    Pure JS state machine — τρέχει στον host (browser) και σε Node (tests).
    Πηγή αλήθειας μηχανικής: IQuit_App.html + IQuit_Fable_Brief.md §4. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./cards.js'));
+    module.exports = factory(require('./cards.js'), require('./scoring.js'));
   } else {
-    root.IQ_ENGINE = factory(root.IQ_CARDS);
+    root.IQ_ENGINE = factory(root.IQ_CARDS, root.IQ_SCORING);
   }
-})(typeof self !== 'undefined' ? self : this, function (CARDS) {
+})(typeof self !== 'undefined' ? self : this, function (CARDS, SCORING) {
   'use strict';
 
   const START_EXPENSES = { 'Φόροι': 200, 'Ενοίκιο': 500, 'Μεταφορικά': 200, 'Διατροφή': 300, 'Ένδυση': 100, 'Ψυχαγωγία': 100, 'Ασφάλεια': 100 };
@@ -1593,10 +1874,14 @@ body.game-over #myDash{z-index:auto;}
   function pname(p) { return (p.isBot ? '🤖 ' : '') + p.name; }
 
   // ---------- Setup ----------
-  function newGame(playersSpec, seed) {
+  function newGame(playersSpec, seed, options) {
     // playersSpec: [{id, name, isBot}]
+    options = options || {};
     const state = {
       v: 1,
+      // Αμετάβλητη ταυτότητα παρτίδας: ταξιδεύει μέσα στο authoritative state και έτσι
+      // επιβιώνει σε JSON save/restore, reconnect και host migration.
+      gameId: options.gameId || SCORING.createGameId(),
       phase: 'playing',
       rngState: (seed | 0) || (Date.now() | 0),
       turn: 0,
@@ -1628,6 +1913,12 @@ body.game-over #myDash{z-index:auto;}
       lastRoll: null,
       log: [], logSeq: 0,
       rankings: null,
+      completedAt: null,
+      seasonId: null,
+      scoreRoster: options.scoreRoster || SCORING.freezeHumanRoster(playersSpec),
+      scoreSetup: options.scoreSetup || 'pending',
+      scoreEligibility: 'pending',
+      scoreCompletionReady: false,
       // v1.13: εκπαιδευτικά hints — ΜΙΑ φορά ανά μηχανισμό για ΟΛΟ το τραπέζι.
       // hintSeen: ποια hints έχουν ήδη εμφανιστεί · hintActive: το τρέχον (το γράφει ο host)
       hintSeen: {}, hintActive: null,
@@ -1686,6 +1977,10 @@ body.game-over #myDash{z-index:auto;}
   function endGame(state) {
     state.phase = 'ended';
     state.rankings = computeRankings(state);
+    // Ο χρόνος ολοκλήρωσης και το season παγώνουν μία φορά στο state. Retry μετά από
+    // refresh ή quarter boundary δεν μπορεί να μεταφέρει το ίδιο gameId σε άλλο season.
+    if (!Number.isFinite(state.completedAt)) state.completedAt = Date.now();
+    if (!state.seasonId) state.seasonId = SCORING.seasonIdForDate(state.completedAt);
     const w = state.rankings[0];
     log(state, w.retiredAge ? 'lg_endRet' : 'lg_endNo', { n: w.name, age: w.retiredAge });
   }
@@ -3943,7 +4238,7 @@ body.game-over #myDash{z-index:auto;}
   const TRANSPORT_INFO = TPORT.select(location.search);
   const FB_TRANSPORT = TRANSPORT_INFO.mode === 'firebase';
   document.documentElement.dataset.transport = TRANSPORT_INFO.mode; // διαγνωστικό/e2e, χωρίς αλλαγή ροής
-  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
+  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N, SCORE = window.IQ_SCORING;
   const $ = (id) => document.getElementById(id);
   const fmt = E.fmt;
   const t = I.t;
@@ -3996,6 +4291,11 @@ body.game-over #myDash{z-index:auto;}
     logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
+    scoreProofOff: null,
+    scoreProofingKey: null,
+    scoreSetupPromise: null,
+    scoreFinalizePromise: null,
+    scoreCreditState: {},
   };
 
   // ============================================================ ΗΧΟΙ (WebAudio — χωρίς αρχεία)
@@ -4216,6 +4516,182 @@ body.game-over #myDash{z-index:auto;}
     render();
     maybeToastNewLog();
     scheduleAuto();
+    maybeFinalizeHostScore();
+  }
+
+  // ============================================================ V1 SEASONAL SCORING
+  function scoreContext() {
+    if (window.IQ_ACCOUNT && typeof window.IQ_ACCOUNT.enabled === 'function' && !window.IQ_ACCOUNT.enabled(location.search)) {
+      return Promise.reject(new Error('Account scoring is disabled.'));
+    }
+    if (!window.IQ_NET_FB || !window.IQ_NET_FB.authReady) return Promise.reject(new Error('Firebase scoring is unavailable.'));
+    return window.IQ_NET_FB.authReady();
+  }
+
+  function freshVerifiedScoreUser() {
+    return scoreContext().then(ctx => {
+      const refresh = window.IQ_ACCOUNT && window.IQ_ACCOUNT._internals && window.IQ_ACCOUNT._internals.refreshVerifiedUser;
+      if (typeof refresh !== 'function') throw new Error('Verified account refresh is unavailable.');
+      return refresh(ctx).then(snapshot => ({ ctx, snapshot }));
+    });
+  }
+
+  function stopScoreProofObserver() {
+    if (!App.scoreProofOff) return;
+    try { App.scoreProofOff(); } catch (e) {}
+    App.scoreProofOff = null;
+  }
+
+  function publishScoreState() {
+    if (App.role !== 'host' || !App.game) return;
+    saveHostSession();
+    broadcastState();
+    render();
+    if (App.game.phase === 'ended') showEnd();
+    maybeCreditCurrentPlayer();
+  }
+
+  function markScoreCasual(gameId, reason) {
+    if (!App.game || App.game.gameId !== gameId) return;
+    App.game.scoreSetup = 'casual';
+    App.game.scoreEligibility = 'ineligible';
+    App.game.scoreReason = reason || 'score-setup';
+    publishScoreState();
+  }
+
+  function frozenScoreRoster(players) {
+    const uidByPlayer = {};
+    let current = null;
+    try { current = window.firebase && window.firebase.auth().currentUser; } catch (e) {}
+    (players || []).forEach(p => {
+      if (!p || p.isBot) return;
+      if (p.id === App.myId && current && current.uid) uidByPlayer[p.id] = current.uid;
+      else if (FB_TRANSPORT && (p.accountUid || p.clientId)) uidByPlayer[p.id] = p.accountUid || p.clientId;
+    });
+    return SCORE.freezeHumanRoster(players, uidByPlayer);
+  }
+
+  function startScoreProofObserver(ctx, gameId) {
+    stopScoreProofObserver();
+    App.scoreProofOff = SCORE.watchProofs(ctx, gameId, proofs => {
+      const g = App.game;
+      if (!g || g.gameId !== gameId || g.scoreSetup !== 'ready') return;
+      if (!SCORE.mergeRosterProofs(g.scoreRoster, proofs)) return;
+      if (SCORE.allHumansVerified(g.scoreRoster) && g.phase !== 'ended') g.scoreEligibility = 'eligible';
+      publishScoreState();
+      if (g.phase === 'ended') maybeFinalizeHostScore();
+    }, () => {});
+  }
+
+  function ensureLocalScoreProof() {
+    const g = App.game;
+    if (!g || g.scoreSetup !== 'ready' || !g.gameId || !App.myId) return Promise.resolve(false);
+    const entry = (g.scoreRoster || []).find(p => p.playerId === App.myId);
+    if (!entry || entry.verified) return Promise.resolve(!!entry);
+    const key = g.gameId + ':' + App.myId;
+    if (App.scoreProofingKey === key) return Promise.resolve(false);
+    App.scoreProofingKey = key;
+    return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      const uid = snapshot.user.uid;
+      if (entry.expectedUid && entry.expectedUid !== uid) throw new Error('Authenticated UID changed after the roster was frozen.');
+      return SCORE.registerVerifiedProof(ctx, g.gameId, App.myId, uid);
+    }).then(() => true).catch(() => false).then(ok => {
+      if (App.scoreProofingKey === key) App.scoreProofingKey = null;
+      return ok;
+    });
+  }
+
+  function setupHostScoring() {
+    const g = App.game;
+    if (App.role !== 'host' || !g || !g.gameId || App.scoreSetupPromise) return;
+    const gameId = g.gameId;
+    App.scoreSetupPromise = freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      if (!App.game || App.game.gameId !== gameId) return null;
+      const meEntry = (g.scoreRoster || []).find(p => p.playerId === App.myId);
+      if (!meEntry) throw new Error('Host is missing from frozen human roster.');
+      if (meEntry.expectedUid && meEntry.expectedUid !== snapshot.user.uid) throw new Error('Host UID does not match frozen roster.');
+      meEntry.expectedUid = snapshot.user.uid;
+      return SCORE.createGameRecord(ctx, g, App.lobby && App.lobby.code, TRANSPORT_INFO.mode).then(() => ({ ctx }));
+    }).then(result => {
+      if (!result || !App.game || App.game.gameId !== gameId) return;
+      g.scoreSetup = 'ready';
+      g.scoreEligibility = 'pending';
+      startScoreProofObserver(result.ctx, gameId);
+      publishScoreState();
+      ensureLocalScoreProof();
+    }).catch(() => markScoreCasual(gameId, 'score-setup')).then(() => {
+      App.scoreSetupPromise = null;
+      if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') maybeFinalizeHostScore();
+    });
+  }
+
+  function resumeHostScoring() {
+    const g = App.game;
+    if (App.role !== 'host' || !g) return;
+    if (!g.gameId || !Array.isArray(g.scoreRoster)) return markScoreCasual(g.gameId, 'legacy-game');
+    if (g.scoreSetup !== 'ready') {
+      if (g.scoreSetup !== 'casual') setupHostScoring();
+      return;
+    }
+    const gameId = g.gameId;
+    freshVerifiedScoreUser().then(({ ctx }) => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      startScoreProofObserver(ctx, gameId);
+      ensureLocalScoreProof();
+      if (g.phase === 'ended') maybeFinalizeHostScore();
+    }).catch(() => {
+      if (g.phase === 'ended') markScoreCasual(gameId, 'host-session');
+    });
+  }
+
+  function maybeFinalizeHostScore() {
+    const g = App.game;
+    if (App.role !== 'host' || !g || g.phase !== 'ended' || g.scoreCompletionReady || App.scoreFinalizePromise) return;
+    if (g.scoreSetup === 'pending') return;
+    const evaluated = SCORE.evaluateGameResult(g);
+    if (!evaluated.eligible) {
+      if (g.scoreEligibility !== 'ineligible' || g.scoreReason !== evaluated.reason) {
+        g.scoreEligibility = 'ineligible';
+        g.scoreReason = evaluated.reason;
+        publishScoreState();
+      }
+      return;
+    }
+    const gameId = g.gameId;
+    g.scoreEligibility = 'eligible';
+    App.scoreFinalizePromise = freshVerifiedScoreUser().then(({ ctx }) => SCORE.persistCompletion(ctx, g)).then(saved => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      g.scoreResult = saved.result;
+      g.scoreCompletionReady = true;
+      g.scoreCompletionError = false;
+      publishScoreState();
+    }).catch(() => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      // Δεν απονέμονται ψευδώς πόντοι. Το ίδιο stable gameId επιτρέπει ασφαλές retry σε resume.
+      g.scoreCompletionError = true;
+      publishScoreState();
+    }).then(() => { App.scoreFinalizePromise = null; });
+  }
+
+  function maybeCreditCurrentPlayer() {
+    const g = App.game;
+    if (!g || !g.scoreCompletionReady || g.scoreEligibility !== 'eligible' || !g.scoreResult) return;
+    const result = g.scoreResult;
+    const mine = (g.scoreRoster || []).find(p => p.playerId === App.myId && p.verifiedUid);
+    if (!mine) return;
+    const state = App.scoreCreditState[g.gameId];
+    if (state && (state.status === 'saving' || state.status === 'saved')) return;
+    App.scoreCreditState[g.gameId] = { status: 'saving' };
+    freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      if (snapshot.user.uid !== mine.verifiedUid) throw new Error('Player UID mismatch.');
+      return SCORE.creditSeasonGame(ctx, result, mine.verifiedUid);
+    }).then(saved => {
+      App.scoreCreditState[g.gameId] = { status: 'saved', duplicate: saved.duplicate };
+      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
+    }).catch(() => {
+      App.scoreCreditState[g.gameId] = { status: 'error' };
+      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
+    });
   }
 
   // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
@@ -4289,11 +4765,13 @@ body.game-over #myDash{z-index:auto;}
             gp.connected = gp.isBot ? true : !!(lp && lp.connected);
           });
         } else {
-          App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, token: NET.makeToken() }] };
+          let accountUid = null;
+          try { accountUid = window.firebase && window.firebase.auth().currentUser && window.firebase.auth().currentUser.uid; } catch (e) {}
+          App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, accountUid, token: NET.makeToken() }] };
         }
         if (App.migrating) { App.migrating = false; App.migAt = null; toast('👑 ' + t('nowHost')); }
         saveHostSession();
-        if (App.game) { show('game'); render(); scheduleAuto(); }
+        if (App.game) { show('game'); render(); scheduleAuto(); resumeHostScoring(); }
         else { show('lobby'); renderLobby(); }
       },
       onError(msg, type) {
@@ -4323,6 +4801,7 @@ body.game-over #myDash{z-index:auto;}
         const existing = App.lobby.players.find(p => p.token && p.token === msg.token);
         if (existing) {
           existing.connected = true; existing.clientId = clientId;
+          if (FB_TRANSPORT) existing.accountUid = clientId; // το Firebase Rules-authenticated sender UID
           if (msg.name) existing.name = String(msg.name).slice(0, 14);
           send({ t: 'welcome', playerId: existing.id, token: existing.token, code: App.lobby.code });
           send({ t: 'chatlog', items: App.chat });
@@ -4340,7 +4819,7 @@ body.game-over #myDash{z-index:auto;}
         const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
         let name = String(msg.name || 'Παίκτης').slice(0, 14);
         while (App.lobby.players.some(p => p.name === name)) name += '2';
-        const pl = { id, name, isBot: false, connected: true, clientId, token: NET.makeToken(), pawn: null };
+        const pl = { id, name, isBot: false, connected: true, clientId, accountUid: FB_TRANSPORT ? clientId : null, token: NET.makeToken(), pawn: null };
         App.lobby.players.push(pl);
         send({ t: 'welcome', playerId: id, token: pl.token, code: App.lobby.code });
         send({ t: 'chatlog', items: App.chat });
@@ -4399,7 +4878,7 @@ body.game-over #myDash{z-index:auto;}
     App.net.broadcast({
       t: 'state', state: App.game,
       mig: {
-        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null })) },
+        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null, accountUid: p.accountUid || null })) },
         chat: (App.chat || []).slice(-40),
       },
     });
@@ -4410,15 +4889,21 @@ body.game-over #myDash{z-index:auto;}
   }
 
   function hostStart() {
+    stopScoreProofObserver();
     const spec = App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, pawn: p.pawn, strategy: p.strategy }));
     if (spec.length < 1) return; // v1.2: επιτρέπεται SOLO παιχνίδι (1 άνθρωπος, χωρίς bot)
-    App.game = E.newGame(spec, Date.now() & 0x7fffffff);
+    const scoreRoster = frozenScoreRoster(App.lobby.players);
+    App.game = E.newGame(spec, Date.now() & 0x7fffffff, { scoreRoster });
+    App.scoreSetupPromise = null;
+    App.scoreFinalizePromise = null;
+    App.scoreProofingKey = null;
     App.game.players.forEach(gp => {
       const lp = App.lobby.players.find(x => x.id === gp.id);
       gp.connected = lp.isBot ? true : !!lp.connected;
     });
     afterChange();
     show('game');
+    setupHostScoring();
   }
 
   // Αυτόματο παίξιμο: bots + αποσυνδεδεμένοι
@@ -4481,6 +4966,8 @@ body.game-over #myDash{z-index:auto;}
           if (msg.mig) { App.migLobby = msg.mig.lobby; App.migChat = msg.mig.chat; } // v1.8: προίκα διαδοχής
           if ($('screen-game').classList.contains('hidden')) show('game');
           render(); maybeToastNewLog();
+          ensureLocalScoreProof();
+          maybeCreditCurrentPlayer();
         } else if (msg.t === 'rejected') {
           App.net.close(); show('home'); homeErr(msg.msg);
           localStorage.removeItem(GUEST_KEY);
@@ -4596,7 +5083,7 @@ body.game-over #myDash{z-index:auto;}
     $('playerName').placeholder = t('namePh'); $('joinCode').placeholder = t('codePh');
     set('lblRoom', 'room'); set('btnShare', 'shareBtn'); set('lblPlayers', 'players');
     set('lblPickPawn', 'pickPawn'); set('lblAddBot', 'addBot'); set('btnStart', 'startBtn');
-    set('guestWait', 'guestWait'); set('btnRulesLobby', 'rulesBtn'); set('btnLeaveLobby', 'leave');
+    set('guestWait', 'guestWait'); set('scoreLobbyHint', 'scoreLobbyHint'); set('btnRulesLobby', 'rulesBtn'); set('btnLeaveLobby', 'leave');
     set('lblChat', 'chat'); set('lblLog', 'log');
     const ci = $('chatInput'); if (ci) ci.placeholder = t('chatPh');
     const flag = I.lang === 'el' ? '🇬🇧' : '🇬🇷';
@@ -5707,6 +6194,31 @@ body.game-over #myDash{z-index:auto;}
     $('celOk').onclick = () => { closeOverlay(); render(); };
   }
 
+  function endScoreHtml(g) {
+    const winner = g.rankings && g.rankings[0];
+    const mine = winner && winner.id === App.myId;
+    if (mine && g.scoreCompletionError) {
+      return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+    }
+    if (mine && g.scoreCompletionReady && g.scoreEligibility === 'eligible' && g.scoreResult) {
+      const state = App.scoreCreditState[g.gameId];
+      if (state && state.status === 'saved') {
+        return '<div class="notice" style="margin:12px 0; text-align:center;">' +
+          '<div style="font-size:20px; font-weight:900; color:var(--green);">' + esc(t('scoreVictory', { points: g.scoreResult.awardedPoints })) + '</div>' +
+          '<div style="margin-top:6px;">' + esc(t('scoreFreedom', { age: g.scoreResult.winningAge })) + '</div>' +
+          '<div class="muted" style="margin-top:5px;">' + esc(t('scoreWhy')) + '</div></div>';
+      }
+      if ((state && state.status === 'error') || g.scoreCompletionError) {
+        return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+      }
+      return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scorePending')) + '</div>';
+    }
+    if (g.scoreEligibility === 'ineligible' || g.scoreSetup === 'casual') {
+      return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scoreIneligible')) + '</div>';
+    }
+    return '';
+  }
+
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
@@ -5716,6 +6228,7 @@ body.game-over #myDash{z-index:auto;}
         '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
           (r.bankrupt ? '💥 ' + t('bankruptTag') :
             (r.months !== null ? t('survive', { poss: I.isFemale(r.name) ? 'της' : 'του', d: fmtDur(r.months) }) : t('reached65')))) + '</div></div></div>').join('');
+    html += endScoreHtml(g);
     html += '<div class="acts" style="margin-top:14px;">' +
       '<button class="wildbtn" id="btnStats">' + t('analyticsBtn') + '</button>' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
@@ -5971,7 +6484,11 @@ body.game-over #myDash{z-index:auto;}
     const guestS = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
     const rb = $('resumeBox');
     let rhtml = '';
-    if (hostS && hostS.game && hostS.game.phase === 'playing') rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">' + t('resumeHost', { code: esc(hostS.lobby.code) }) + '</button>';
+    // Ένα ended scored game παραμένει resumable ώστε αποτυχία δικτύου μετά τη νίκη να
+    // μπορεί να επαναλάβει με ασφάλεια το ίδιο idempotent result/aggregate transaction.
+    if (hostS && hostS.game && (hostS.game.phase === 'playing' || (hostS.game.phase === 'ended' && hostS.game.gameId))) {
+      rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">' + t('resumeHost', { code: esc(hostS.lobby.code) }) + '</button>';
+    }
     if (guestS) rhtml += '<button class="primary" id="btnResumeGuest" style="margin-bottom:6px;">' + t('resumeGuest', { code: esc(guestS.code) }) + '</button>';
     rb.innerHTML = rhtml;
     if ($('btnResumeHost')) $('btnResumeHost').onclick = () => { $('btnResumeHost').disabled = true; hostCreate(true); };

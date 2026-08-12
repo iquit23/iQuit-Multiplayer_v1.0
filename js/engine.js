@@ -3,11 +3,11 @@
    Πηγή αλήθειας μηχανικής: IQuit_App.html + IQuit_Fable_Brief.md §4. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./cards.js'));
+    module.exports = factory(require('./cards.js'), require('./scoring.js'));
   } else {
-    root.IQ_ENGINE = factory(root.IQ_CARDS);
+    root.IQ_ENGINE = factory(root.IQ_CARDS, root.IQ_SCORING);
   }
-})(typeof self !== 'undefined' ? self : this, function (CARDS) {
+})(typeof self !== 'undefined' ? self : this, function (CARDS, SCORING) {
   'use strict';
 
   const START_EXPENSES = { 'Φόροι': 200, 'Ενοίκιο': 500, 'Μεταφορικά': 200, 'Διατροφή': 300, 'Ένδυση': 100, 'Ψυχαγωγία': 100, 'Ασφάλεια': 100 };
@@ -82,10 +82,14 @@
   function pname(p) { return (p.isBot ? '🤖 ' : '') + p.name; }
 
   // ---------- Setup ----------
-  function newGame(playersSpec, seed) {
+  function newGame(playersSpec, seed, options) {
     // playersSpec: [{id, name, isBot}]
+    options = options || {};
     const state = {
       v: 1,
+      // Αμετάβλητη ταυτότητα παρτίδας: ταξιδεύει μέσα στο authoritative state και έτσι
+      // επιβιώνει σε JSON save/restore, reconnect και host migration.
+      gameId: options.gameId || SCORING.createGameId(),
       phase: 'playing',
       rngState: (seed | 0) || (Date.now() | 0),
       turn: 0,
@@ -117,6 +121,12 @@
       lastRoll: null,
       log: [], logSeq: 0,
       rankings: null,
+      completedAt: null,
+      seasonId: null,
+      scoreRoster: options.scoreRoster || SCORING.freezeHumanRoster(playersSpec),
+      scoreSetup: options.scoreSetup || 'pending',
+      scoreEligibility: 'pending',
+      scoreCompletionReady: false,
       // v1.13: εκπαιδευτικά hints — ΜΙΑ φορά ανά μηχανισμό για ΟΛΟ το τραπέζι.
       // hintSeen: ποια hints έχουν ήδη εμφανιστεί · hintActive: το τρέχον (το γράφει ο host)
       hintSeen: {}, hintActive: null,
@@ -175,6 +185,10 @@
   function endGame(state) {
     state.phase = 'ended';
     state.rankings = computeRankings(state);
+    // Ο χρόνος ολοκλήρωσης και το season παγώνουν μία φορά στο state. Retry μετά από
+    // refresh ή quarter boundary δεν μπορεί να μεταφέρει το ίδιο gameId σε άλλο season.
+    if (!Number.isFinite(state.completedAt)) state.completedAt = Date.now();
+    if (!state.seasonId) state.seasonId = SCORING.seasonIdForDate(state.completedAt);
     const w = state.rankings[0];
     log(state, w.retiredAge ? 'lg_endRet' : 'lg_endNo', { n: w.name, age: w.retiredAge });
   }

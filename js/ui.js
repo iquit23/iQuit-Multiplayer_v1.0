@@ -8,7 +8,7 @@
   const TRANSPORT_INFO = TPORT.select(location.search);
   const FB_TRANSPORT = TRANSPORT_INFO.mode === 'firebase';
   document.documentElement.dataset.transport = TRANSPORT_INFO.mode; // διαγνωστικό/e2e, χωρίς αλλαγή ροής
-  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N;
+  const E = window.IQ_ENGINE, BOTS = window.IQ_BOTS, NET = FB_TRANSPORT ? window.IQ_NET_FB : window.IQ_NET, CARDS = window.IQ_CARDS, I = window.IQ_I18N, SCORE = window.IQ_SCORING;
   const $ = (id) => document.getElementById(id);
   const fmt = E.fmt;
   const t = I.t;
@@ -61,6 +61,11 @@
     logOpen: localStorage.getItem('iquit_log') !== '0',
     muted: localStorage.getItem('iquit_mute') === '1',
     board3d: localStorage.getItem('iquit_3d') !== null ? localStorage.getItem('iquit_3d') === '1' : (typeof window !== 'undefined' && window.innerWidth >= 900),
+    scoreProofOff: null,
+    scoreProofingKey: null,
+    scoreSetupPromise: null,
+    scoreFinalizePromise: null,
+    scoreCreditState: {},
   };
 
   // ============================================================ ΗΧΟΙ (WebAudio — χωρίς αρχεία)
@@ -281,6 +286,182 @@
     render();
     maybeToastNewLog();
     scheduleAuto();
+    maybeFinalizeHostScore();
+  }
+
+  // ============================================================ V1 SEASONAL SCORING
+  function scoreContext() {
+    if (window.IQ_ACCOUNT && typeof window.IQ_ACCOUNT.enabled === 'function' && !window.IQ_ACCOUNT.enabled(location.search)) {
+      return Promise.reject(new Error('Account scoring is disabled.'));
+    }
+    if (!window.IQ_NET_FB || !window.IQ_NET_FB.authReady) return Promise.reject(new Error('Firebase scoring is unavailable.'));
+    return window.IQ_NET_FB.authReady();
+  }
+
+  function freshVerifiedScoreUser() {
+    return scoreContext().then(ctx => {
+      const refresh = window.IQ_ACCOUNT && window.IQ_ACCOUNT._internals && window.IQ_ACCOUNT._internals.refreshVerifiedUser;
+      if (typeof refresh !== 'function') throw new Error('Verified account refresh is unavailable.');
+      return refresh(ctx).then(snapshot => ({ ctx, snapshot }));
+    });
+  }
+
+  function stopScoreProofObserver() {
+    if (!App.scoreProofOff) return;
+    try { App.scoreProofOff(); } catch (e) {}
+    App.scoreProofOff = null;
+  }
+
+  function publishScoreState() {
+    if (App.role !== 'host' || !App.game) return;
+    saveHostSession();
+    broadcastState();
+    render();
+    if (App.game.phase === 'ended') showEnd();
+    maybeCreditCurrentPlayer();
+  }
+
+  function markScoreCasual(gameId, reason) {
+    if (!App.game || App.game.gameId !== gameId) return;
+    App.game.scoreSetup = 'casual';
+    App.game.scoreEligibility = 'ineligible';
+    App.game.scoreReason = reason || 'score-setup';
+    publishScoreState();
+  }
+
+  function frozenScoreRoster(players) {
+    const uidByPlayer = {};
+    let current = null;
+    try { current = window.firebase && window.firebase.auth().currentUser; } catch (e) {}
+    (players || []).forEach(p => {
+      if (!p || p.isBot) return;
+      if (p.id === App.myId && current && current.uid) uidByPlayer[p.id] = current.uid;
+      else if (FB_TRANSPORT && (p.accountUid || p.clientId)) uidByPlayer[p.id] = p.accountUid || p.clientId;
+    });
+    return SCORE.freezeHumanRoster(players, uidByPlayer);
+  }
+
+  function startScoreProofObserver(ctx, gameId) {
+    stopScoreProofObserver();
+    App.scoreProofOff = SCORE.watchProofs(ctx, gameId, proofs => {
+      const g = App.game;
+      if (!g || g.gameId !== gameId || g.scoreSetup !== 'ready') return;
+      if (!SCORE.mergeRosterProofs(g.scoreRoster, proofs)) return;
+      if (SCORE.allHumansVerified(g.scoreRoster) && g.phase !== 'ended') g.scoreEligibility = 'eligible';
+      publishScoreState();
+      if (g.phase === 'ended') maybeFinalizeHostScore();
+    }, () => {});
+  }
+
+  function ensureLocalScoreProof() {
+    const g = App.game;
+    if (!g || g.scoreSetup !== 'ready' || !g.gameId || !App.myId) return Promise.resolve(false);
+    const entry = (g.scoreRoster || []).find(p => p.playerId === App.myId);
+    if (!entry || entry.verified) return Promise.resolve(!!entry);
+    const key = g.gameId + ':' + App.myId;
+    if (App.scoreProofingKey === key) return Promise.resolve(false);
+    App.scoreProofingKey = key;
+    return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      const uid = snapshot.user.uid;
+      if (entry.expectedUid && entry.expectedUid !== uid) throw new Error('Authenticated UID changed after the roster was frozen.');
+      return SCORE.registerVerifiedProof(ctx, g.gameId, App.myId, uid);
+    }).then(() => true).catch(() => false).then(ok => {
+      if (App.scoreProofingKey === key) App.scoreProofingKey = null;
+      return ok;
+    });
+  }
+
+  function setupHostScoring() {
+    const g = App.game;
+    if (App.role !== 'host' || !g || !g.gameId || App.scoreSetupPromise) return;
+    const gameId = g.gameId;
+    App.scoreSetupPromise = freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      if (!App.game || App.game.gameId !== gameId) return null;
+      const meEntry = (g.scoreRoster || []).find(p => p.playerId === App.myId);
+      if (!meEntry) throw new Error('Host is missing from frozen human roster.');
+      if (meEntry.expectedUid && meEntry.expectedUid !== snapshot.user.uid) throw new Error('Host UID does not match frozen roster.');
+      meEntry.expectedUid = snapshot.user.uid;
+      return SCORE.createGameRecord(ctx, g, App.lobby && App.lobby.code, TRANSPORT_INFO.mode).then(() => ({ ctx }));
+    }).then(result => {
+      if (!result || !App.game || App.game.gameId !== gameId) return;
+      g.scoreSetup = 'ready';
+      g.scoreEligibility = 'pending';
+      startScoreProofObserver(result.ctx, gameId);
+      publishScoreState();
+      ensureLocalScoreProof();
+    }).catch(() => markScoreCasual(gameId, 'score-setup')).then(() => {
+      App.scoreSetupPromise = null;
+      if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') maybeFinalizeHostScore();
+    });
+  }
+
+  function resumeHostScoring() {
+    const g = App.game;
+    if (App.role !== 'host' || !g) return;
+    if (!g.gameId || !Array.isArray(g.scoreRoster)) return markScoreCasual(g.gameId, 'legacy-game');
+    if (g.scoreSetup !== 'ready') {
+      if (g.scoreSetup !== 'casual') setupHostScoring();
+      return;
+    }
+    const gameId = g.gameId;
+    freshVerifiedScoreUser().then(({ ctx }) => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      startScoreProofObserver(ctx, gameId);
+      ensureLocalScoreProof();
+      if (g.phase === 'ended') maybeFinalizeHostScore();
+    }).catch(() => {
+      if (g.phase === 'ended') markScoreCasual(gameId, 'host-session');
+    });
+  }
+
+  function maybeFinalizeHostScore() {
+    const g = App.game;
+    if (App.role !== 'host' || !g || g.phase !== 'ended' || g.scoreCompletionReady || App.scoreFinalizePromise) return;
+    if (g.scoreSetup === 'pending') return;
+    const evaluated = SCORE.evaluateGameResult(g);
+    if (!evaluated.eligible) {
+      if (g.scoreEligibility !== 'ineligible' || g.scoreReason !== evaluated.reason) {
+        g.scoreEligibility = 'ineligible';
+        g.scoreReason = evaluated.reason;
+        publishScoreState();
+      }
+      return;
+    }
+    const gameId = g.gameId;
+    g.scoreEligibility = 'eligible';
+    App.scoreFinalizePromise = freshVerifiedScoreUser().then(({ ctx }) => SCORE.persistCompletion(ctx, g)).then(saved => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      g.scoreResult = saved.result;
+      g.scoreCompletionReady = true;
+      g.scoreCompletionError = false;
+      publishScoreState();
+    }).catch(() => {
+      if (!App.game || App.game.gameId !== gameId) return;
+      // Δεν απονέμονται ψευδώς πόντοι. Το ίδιο stable gameId επιτρέπει ασφαλές retry σε resume.
+      g.scoreCompletionError = true;
+      publishScoreState();
+    }).then(() => { App.scoreFinalizePromise = null; });
+  }
+
+  function maybeCreditCurrentPlayer() {
+    const g = App.game;
+    if (!g || !g.scoreCompletionReady || g.scoreEligibility !== 'eligible' || !g.scoreResult) return;
+    const result = g.scoreResult;
+    const mine = (g.scoreRoster || []).find(p => p.playerId === App.myId && p.verifiedUid);
+    if (!mine) return;
+    const state = App.scoreCreditState[g.gameId];
+    if (state && (state.status === 'saving' || state.status === 'saved')) return;
+    App.scoreCreditState[g.gameId] = { status: 'saving' };
+    freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      if (snapshot.user.uid !== mine.verifiedUid) throw new Error('Player UID mismatch.');
+      return SCORE.creditSeasonGame(ctx, result, mine.verifiedUid);
+    }).then(saved => {
+      App.scoreCreditState[g.gameId] = { status: 'saved', duplicate: saved.duplicate };
+      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
+    }).catch(() => {
+      App.scoreCreditState[g.gameId] = { status: 'error' };
+      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
+    });
   }
 
   // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
@@ -354,11 +535,13 @@
             gp.connected = gp.isBot ? true : !!(lp && lp.connected);
           });
         } else {
-          App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, token: NET.makeToken() }] };
+          let accountUid = null;
+          try { accountUid = window.firebase && window.firebase.auth().currentUser && window.firebase.auth().currentUser.uid; } catch (e) {}
+          App.lobby = { code, players: [{ id: 'p0', name: myName(), isBot: false, connected: true, clientId: null, accountUid, token: NET.makeToken() }] };
         }
         if (App.migrating) { App.migrating = false; App.migAt = null; toast('👑 ' + t('nowHost')); }
         saveHostSession();
-        if (App.game) { show('game'); render(); scheduleAuto(); }
+        if (App.game) { show('game'); render(); scheduleAuto(); resumeHostScoring(); }
         else { show('lobby'); renderLobby(); }
       },
       onError(msg, type) {
@@ -388,6 +571,7 @@
         const existing = App.lobby.players.find(p => p.token && p.token === msg.token);
         if (existing) {
           existing.connected = true; existing.clientId = clientId;
+          if (FB_TRANSPORT) existing.accountUid = clientId; // το Firebase Rules-authenticated sender UID
           if (msg.name) existing.name = String(msg.name).slice(0, 14);
           send({ t: 'welcome', playerId: existing.id, token: existing.token, code: App.lobby.code });
           send({ t: 'chatlog', items: App.chat });
@@ -405,7 +589,7 @@
         const id = 'p' + (App.lobby.players.reduce((m, p) => Math.max(m, +p.id.slice(1)), 0) + 1);
         let name = String(msg.name || 'Παίκτης').slice(0, 14);
         while (App.lobby.players.some(p => p.name === name)) name += '2';
-        const pl = { id, name, isBot: false, connected: true, clientId, token: NET.makeToken(), pawn: null };
+        const pl = { id, name, isBot: false, connected: true, clientId, accountUid: FB_TRANSPORT ? clientId : null, token: NET.makeToken(), pawn: null };
         App.lobby.players.push(pl);
         send({ t: 'welcome', playerId: id, token: pl.token, code: App.lobby.code });
         send({ t: 'chatlog', items: App.chat });
@@ -464,7 +648,7 @@
     App.net.broadcast({
       t: 'state', state: App.game,
       mig: {
-        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null })) },
+        lobby: { code: App.lobby.code, players: App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, strategy: p.strategy || null, connected: p.connected, pawn: p.pawn || null, token: p.token || null, accountUid: p.accountUid || null })) },
         chat: (App.chat || []).slice(-40),
       },
     });
@@ -475,15 +659,21 @@
   }
 
   function hostStart() {
+    stopScoreProofObserver();
     const spec = App.lobby.players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, pawn: p.pawn, strategy: p.strategy }));
     if (spec.length < 1) return; // v1.2: επιτρέπεται SOLO παιχνίδι (1 άνθρωπος, χωρίς bot)
-    App.game = E.newGame(spec, Date.now() & 0x7fffffff);
+    const scoreRoster = frozenScoreRoster(App.lobby.players);
+    App.game = E.newGame(spec, Date.now() & 0x7fffffff, { scoreRoster });
+    App.scoreSetupPromise = null;
+    App.scoreFinalizePromise = null;
+    App.scoreProofingKey = null;
     App.game.players.forEach(gp => {
       const lp = App.lobby.players.find(x => x.id === gp.id);
       gp.connected = lp.isBot ? true : !!lp.connected;
     });
     afterChange();
     show('game');
+    setupHostScoring();
   }
 
   // Αυτόματο παίξιμο: bots + αποσυνδεδεμένοι
@@ -546,6 +736,8 @@
           if (msg.mig) { App.migLobby = msg.mig.lobby; App.migChat = msg.mig.chat; } // v1.8: προίκα διαδοχής
           if ($('screen-game').classList.contains('hidden')) show('game');
           render(); maybeToastNewLog();
+          ensureLocalScoreProof();
+          maybeCreditCurrentPlayer();
         } else if (msg.t === 'rejected') {
           App.net.close(); show('home'); homeErr(msg.msg);
           localStorage.removeItem(GUEST_KEY);
@@ -661,7 +853,7 @@
     $('playerName').placeholder = t('namePh'); $('joinCode').placeholder = t('codePh');
     set('lblRoom', 'room'); set('btnShare', 'shareBtn'); set('lblPlayers', 'players');
     set('lblPickPawn', 'pickPawn'); set('lblAddBot', 'addBot'); set('btnStart', 'startBtn');
-    set('guestWait', 'guestWait'); set('btnRulesLobby', 'rulesBtn'); set('btnLeaveLobby', 'leave');
+    set('guestWait', 'guestWait'); set('scoreLobbyHint', 'scoreLobbyHint'); set('btnRulesLobby', 'rulesBtn'); set('btnLeaveLobby', 'leave');
     set('lblChat', 'chat'); set('lblLog', 'log');
     const ci = $('chatInput'); if (ci) ci.placeholder = t('chatPh');
     const flag = I.lang === 'el' ? '🇬🇧' : '🇬🇷';
@@ -1772,6 +1964,31 @@
     $('celOk').onclick = () => { closeOverlay(); render(); };
   }
 
+  function endScoreHtml(g) {
+    const winner = g.rankings && g.rankings[0];
+    const mine = winner && winner.id === App.myId;
+    if (mine && g.scoreCompletionError) {
+      return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+    }
+    if (mine && g.scoreCompletionReady && g.scoreEligibility === 'eligible' && g.scoreResult) {
+      const state = App.scoreCreditState[g.gameId];
+      if (state && state.status === 'saved') {
+        return '<div class="notice" style="margin:12px 0; text-align:center;">' +
+          '<div style="font-size:20px; font-weight:900; color:var(--green);">' + esc(t('scoreVictory', { points: g.scoreResult.awardedPoints })) + '</div>' +
+          '<div style="margin-top:6px;">' + esc(t('scoreFreedom', { age: g.scoreResult.winningAge })) + '</div>' +
+          '<div class="muted" style="margin-top:5px;">' + esc(t('scoreWhy')) + '</div></div>';
+      }
+      if ((state && state.status === 'error') || g.scoreCompletionError) {
+        return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+      }
+      return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scorePending')) + '</div>';
+    }
+    if (g.scoreEligibility === 'ineligible' || g.scoreSetup === 'casual') {
+      return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scoreIneligible')) + '</div>';
+    }
+    return '';
+  }
+
   function showEnd() {
     const g = App.game;
     if (!g || !g.rankings) return;
@@ -1781,6 +1998,7 @@
         '<div class="muted">' + (r.retiredAge !== null ? t('iquitFree', { age: r.retiredAge }) :
           (r.bankrupt ? '💥 ' + t('bankruptTag') :
             (r.months !== null ? t('survive', { poss: I.isFemale(r.name) ? 'της' : 'του', d: fmtDur(r.months) }) : t('reached65')))) + '</div></div></div>').join('');
+    html += endScoreHtml(g);
     html += '<div class="acts" style="margin-top:14px;">' +
       '<button class="wildbtn" id="btnStats">' + t('analyticsBtn') + '</button>' +
       '<button class="wildbtn" id="btnFeedback">' + t('feedbackBtn') + '</button>' +
@@ -2036,7 +2254,11 @@
     const guestS = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
     const rb = $('resumeBox');
     let rhtml = '';
-    if (hostS && hostS.game && hostS.game.phase === 'playing') rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">' + t('resumeHost', { code: esc(hostS.lobby.code) }) + '</button>';
+    // Ένα ended scored game παραμένει resumable ώστε αποτυχία δικτύου μετά τη νίκη να
+    // μπορεί να επαναλάβει με ασφάλεια το ίδιο idempotent result/aggregate transaction.
+    if (hostS && hostS.game && (hostS.game.phase === 'playing' || (hostS.game.phase === 'ended' && hostS.game.gameId))) {
+      rhtml += '<button class="primary" id="btnResumeHost" style="margin-bottom:6px;">' + t('resumeHost', { code: esc(hostS.lobby.code) }) + '</button>';
+    }
     if (guestS) rhtml += '<button class="primary" id="btnResumeGuest" style="margin-bottom:6px;">' + t('resumeGuest', { code: esc(guestS.code) }) + '</button>';
     rb.innerHTML = rhtml;
     if ($('btnResumeHost')) $('btnResumeHost').onclick = () => { $('btnResumeHost').disabled = true; hostCreate(true); };

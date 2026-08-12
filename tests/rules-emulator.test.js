@@ -12,7 +12,8 @@
    ΚΑΛΥΨΗ: δωμάτια (auth, host authority, slots, ουρές, μεγέθη, GC) + ΛΟΓΑΡΙΑΣΜΟΙ:
    verified claim, unverified/anonymous deny, διπλό username, george/George/GEORGE,
    ξένο users/{uid}, ξένο mapping, ξένο uid στο mapping, αυθαίρετα πεδία, email/emailVerified,
-   ατομικότητα (καμία ορφανή/μισή εγγραφή), επαναληπτική εγγραφή από τον ίδιο ιδιοκτήτη. */
+   ατομικότητα (καμία ορφανή/μισή εγγραφή), επαναληπτική εγγραφή από τον ίδιο ιδιοκτήτη,
+   scoring roster self-proofs, immutable completion και owner-only seasonal aggregates. */
 'use strict';
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
@@ -203,6 +204,62 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
   await ok('+ normalized με κεφαλαία → DENY', assertFails(claim(V('caps'), 'caps', 'CapsName', 'CapsName')));
   await ok('+ username με κενό → DENY', assertFails(claim(V('spacey'), 'spacey', 'a b c', 'a b c')));
   await ok('+ createdAt στο μακρινό μέλλον → DENY', assertFails(claim(V('futu'), 'futu', 'Futu', 'futu', { createdAt: Date.now() + 3600000 })));
+
+  // ==================================================================================
+  // ΑΥΓΟΥΣΤΟΣ 2.2 SCORING: verified self-proofs + immutable result + owner aggregate
+  // ==================================================================================
+  console.log('— Scoring: frozen roster, result ledger και seasonal aggregate');
+  const GAME = '123e4567-e89b-42d3-a456-426614174000';
+  const metaScore = { gameId: GAME, hostUid: 'score-host', roomCode: 'SCOR', transport: 'firebase', humanCount: 2, createdAt: T() };
+  await ok('score meta: verified host δημιουργεί immutable game record → ALLOW',
+    assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/meta').set(metaScore)));
+  await ok('score meta: δεύτερη δημιουργία ίδιου gameId → DENY',
+    assertFails(V('score-host').ref('scoreGames/' + GAME + '/meta').set(metaScore)));
+  await ok('score roster: host παγώνει human slots → ALLOW', (async () => {
+    await assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/roster/p0').set({ human: true, expectedUid: 'score-host' }));
+    await assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/roster/p1').set({ human: true, expectedUid: 'score-guest' }));
+  })());
+  await ok('score roster: guest δεν αλλάζει frozen roster → DENY',
+    assertFails(V('score-guest').ref('scoreGames/' + GAME + '/roster/p1').set({ human: true, expectedUid: 'score-guest' })));
+  await ok('score proof: verified human αποδεικνύει μόνο το δικό του UID → ALLOW', (async () => {
+    await assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/proofs/p0').set({ uid: 'score-host', verifiedAt: T() }));
+    await assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/participants/score-host').set({ playerId: 'p0' }));
+    await assertSucceeds(V('score-guest').ref('scoreGames/' + GAME + '/proofs/p1').set({ uid: 'score-guest', verifiedAt: T() }));
+    await assertSucceeds(V('score-guest').ref('scoreGames/' + GAME + '/participants/score-guest').set({ playerId: 'p1' }));
+  })());
+  await ok('score proof: unverified account → DENY',
+    assertFails(U('score-unverified').ref('scoreGames/' + GAME + '/proofs/p1').set({ uid: 'score-unverified', verifiedAt: T() })));
+  await ok('score proof: verified UID δεν πλαστοπροσωπεί άλλο UID → DENY',
+    assertFails(V('mallory').ref('scoreGames/' + GAME + '/proofs/p1').set({ uid: 'score-guest', verifiedAt: T() })));
+  const completion = {
+    gameId: GAME, seasonId: '2026-Q3', winnerUid: 'score-guest', winnerPlayerId: 'p1',
+    winningAge: 61, awardedPoints: 103, eligible: true, completedAt: T(),
+  };
+  await ok('score completion: verified participant/host γράφει το result μία φορά → ALLOW',
+    assertSucceeds(V('score-host').ref('scoreGames/' + GAME + '/completion').set(completion)));
+  await ok('score completion: ίδιο result/gameId δεύτερη φορά → DENY',
+    assertFails(V('score-host').ref('scoreGames/' + GAME + '/completion').set(completion)));
+  await ok('season aggregate: μόνο ο verified winner ενημερώνει το δικό του row → ALLOW',
+    assertSucceeds(V('score-guest').ref('seasonScores/2026-Q3/score-guest').set({
+      points: 103, wins: 1, gamesPlayed: 1, sumWinningAge: 61, updatedAt: T(),
+      awards: { [GAME]: Object.assign({}, completion, { creditedUid: 'score-guest', won: true }) },
+    })));
+  await ok('season aggregate: άλλος UID δεν γράφει το row του winner → DENY',
+    assertFails(V('mallory').ref('seasonScores/2026-Q3/score-guest').set({
+      points: 103, wins: 1, gamesPlayed: 1, sumWinningAge: 61, updatedAt: T(),
+      awards: { [GAME]: Object.assign({}, completion, { creditedUid: 'score-guest', won: true }) },
+    })));
+  await ok('season aggregate: verified non-winner παίρνει μόνο gamesPlayed → ALLOW',
+    assertSucceeds(V('score-host').ref('seasonScores/2026-Q3/score-host').set({
+      points: 0, wins: 0, gamesPlayed: 1, sumWinningAge: 0, updatedAt: T(),
+      awards: { [GAME]: Object.assign({}, completion, { creditedUid: 'score-host', won: false }) },
+    })));
+  await ok('season aggregate: altered receipt που δεν ταιριάζει με completion → DENY', (async () => {
+    const bad = Object.assign({}, completion, { gameId: '223e4567-e89b-42d3-a456-426614174000', awardedPoints: 999, creditedUid: 'score-guest', won: true });
+    await assertFails(V('score-guest').ref('seasonScores/2026-Q3/score-guest').set({
+      points: 999, wins: 1, gamesPlayed: 1, sumWinningAge: 61, updatedAt: T(), awards: { [bad.gameId]: bad },
+    }));
+  })());
 
   await env.cleanup();
   console.log('\nRULES TESTS: ' + passed + ' passed, ' + failed + ' failed');

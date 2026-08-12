@@ -55,7 +55,7 @@
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.1</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.2</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -117,6 +117,7 @@
     <button class="primary" id="btnStart">🚀 Έναρξη παιχνιδιού</button>
   </div>
   <div id="guestWait" class="muted hidden" style="text-align:center; margin-top:10px;">Περιμένουμε τον host να ξεκινήσει το παιχνίδι…</div>
+  <div class="muted" id="scoreLobbyHint" style="text-align:center; margin-top:10px; font-size:12px;">Για να μετρήσει το παιχνίδι στο seasonal ranking, όλοι οι πραγματικοί παίκτες πρέπει να έχουν επιβεβαιωμένο λογαριασμό.</div>
   <button class="ghost" id="btnRulesLobby" style="width:100%; margin-top:14px; padding:12px;">📜 Κανόνες</button>
   <button class="danger" id="btnLeaveLobby" style="width:100%; margin-top:8px; padding:12px;">Αποχώρηση</button>
 </div>
@@ -170,6 +171,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="js/cards.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/scoring.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/bots.js"></script>
 <script src="js/net.js"></script>
