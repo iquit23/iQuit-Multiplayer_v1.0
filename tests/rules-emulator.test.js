@@ -192,6 +192,8 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
     if (m !== 'alice') throw new Error('χάθηκε το mapping → ' + m);
   })());
   await ok('12δ. ο ίδιος διαβάζει το προφίλ του → ALLOW', assertSucceeds(V('alice').ref('users/alice').once('value')));
+  await ok('12δε. authenticated leaderboard reader διαβάζει μόνο δημόσιο username → ALLOW', assertSucceeds(ANON('leaderboard-reader').ref('users/alice/username').once('value')));
+  await ok('12δστ. authenticated leaderboard reader ΔΕΝ διαβάζει ολόκληρο ξένο profile → DENY', assertFails(ANON('leaderboard-reader').ref('users/alice').once('value')));
   await ok('12ε. δεύτερη διαδοχική idempotent επανεγγραφή → ALLOW', assertSucceeds(claim(V('alice'), 'alice', 'Alice_1', 'alice_1')));
   await ok('12στ. ο κάτοχος ΔΕΝ βάζει ΞΕΝΟ uid στο ΔΙΚΟ του mapping → DENY', assertFails(V('alice').ref('usernames/alice_1').set('mallory')));
   await ok('12ζ. τρίτος ΔΕΝ κάνει «idempotent» επανεγγραφή ξένου mapping → DENY', assertFails(V('mallory').ref('usernames/alice_1').set('alice')));
@@ -260,6 +262,10 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
       points: 999, wins: 1, gamesPlayed: 1, sumWinningAge: 61, updatedAt: T(), awards: { [bad.gameId]: bad },
     }));
   })());
+  await ok('leaderboard: authenticated guest διαβάζει current season aggregates → ALLOW',
+    assertSucceeds(ANON('leaderboard-reader').ref('seasonScores/2026-Q3').once('value')));
+  await ok('leaderboard: πραγματικά unauthenticated client δεν διαβάζει season aggregates → DENY',
+    assertFails(env.unauthenticatedContext().database().ref('seasonScores/2026-Q3').once('value')));
 
   await env.cleanup();
   console.log('\nRULES TESTS: ' + passed + ' passed, ' + failed + ' failed');

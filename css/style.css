@@ -49,7 +49,9 @@ h1,h2,h3{margin:0;}
 .spacer{flex:1;}
 
 /* ---------- HOME ---------- */
-#screen-home{max-width:430px; margin:0 auto; padding:28px 16px;}
+#screen-home{max-width:980px; margin:0 auto; padding:28px 16px;}
+.home-layout{display:grid; grid-template-columns:minmax(0,430px); justify-content:center; gap:18px;}
+.home-main{min-width:0; width:100%;}
 .logo{font-size:44px; font-weight:900; letter-spacing:1px; text-align:center; margin:26px 0 2px;}
 .logo em{color:var(--accent); font-style:normal;}
 .tagline{text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;}
@@ -74,6 +76,34 @@ h1,h2,h3{margin:0;}
 .accbox .acc-msg{margin-top:10px; font-size:12.5px; line-height:1.5; padding:9px 11px; border-radius:9px;
   background:#3a1d20; border:1px solid #5a2a28; color:#f0a8a3;}
 .accbox .acc-msg.ok{background:#1d2f1e; border-color:#2e5a33; color:#a8f0b0;}
+/* Αύγουστος 2.3 — compact seasonal leaderboard. Στο desktop στέκεται δεξιά από το κύριο
+   menu· σε narrow/mobile γίνεται κανονική κάρτα από κάτω, χωρίς squeezed δύο-column layout. */
+.leaderboard-card{min-width:0; background:linear-gradient(155deg,rgba(30,48,80,.92),rgba(21,35,59,.96));
+  border:1px solid var(--line); border-radius:16px; padding:15px 16px; box-shadow:0 14px 36px -28px rgba(0,0,0,.9);}
+.lb-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px;}
+.lb-title{font-size:13px; font-weight:900; letter-spacing:.7px; color:var(--txt);}
+.lb-quarter{font-size:13px; font-weight:800; color:var(--gold); white-space:nowrap;}
+.lb-season{font-size:11px; color:var(--muted); margin:5px 0 12px;}
+.lb-list{border-top:1px solid rgba(143,163,196,.16);}
+.lb-row{display:grid; grid-template-columns:30px minmax(0,1fr) auto; align-items:center; gap:7px;
+  min-height:38px; border-bottom:1px solid rgba(143,163,196,.13); font-size:13px;}
+.lb-row.me{background:rgba(59,130,246,.1); margin:0 -7px; padding:0 7px; border-radius:8px;}
+.lb-rank{font-size:15px; text-align:center; color:var(--muted); font-weight:800;}
+.lb-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700;}
+.lb-score{white-space:nowrap; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums;}
+.lb-self{display:flex; justify-content:space-between; gap:10px; margin-top:12px; padding-top:11px;
+  border-top:1px dashed var(--line); color:var(--txt); font-size:12px;}
+.lb-self-empty,.lb-note{display:block; color:var(--muted); line-height:1.45;}
+.lb-note{font-size:11px; margin-top:11px;}
+.lb-empty{display:flex; flex-direction:column; gap:5px; text-align:center; color:var(--muted);
+  padding:18px 6px 12px; font-size:12px; line-height:1.45;}
+.lb-empty b{color:var(--txt); font-size:13px;}
+.lb-loading,.lb-error{padding:20px 6px 10px; text-align:center; color:var(--muted); font-size:12px; line-height:1.5;}
+.lb-retry{display:block; margin:10px auto 0; padding:8px 12px; font-size:12px;}
+@media(min-width:960px){
+  .home-layout{grid-template-columns:minmax(0,430px) minmax(260px,300px); gap:30px; align-items:start;}
+  .leaderboard-card{margin-top:112px; position:sticky; top:22px;}
+}
 /* v1.27: διακριτική εισαγωγική ενότητα «Τι είναι το I QUIT!» στην αρχική (expandable) */
 .about{margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
 .about > summary{list-style:none; cursor:pointer; padding:13px 14px; font-size:14px; font-weight:700;

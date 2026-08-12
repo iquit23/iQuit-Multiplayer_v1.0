@@ -18,6 +18,13 @@
       // v1.27 SEO: τίτλος σελίδας + εισαγωγική ενότητα «Τι είναι το I QUIT!»
       pageTitle: 'I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού',
       metaDesc: 'Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.',
+      // Αύγουστος 2.3 — Seasonal Leaderboard
+      lbTitle: 'TOP ΠΑΙΚΤΕΣ', lbEnds: 'Λήγει', lbPts: 'pts', lbPoints: 'πόντοι', lbYou: 'Εσύ',
+      lbYouNoWin: 'Δεν έχεις βαθμολογημένη νίκη ακόμη.', lbEmpty: 'Δεν υπάρχουν ακόμη βαθμολογημένες νίκες.',
+      lbBeFirst: 'Γίνε ο πρώτος!', lbAccountNote: 'Χρειάζεται επιβεβαιωμένος λογαριασμός για συμμετοχή.',
+      lbPlayer: 'Παίκτης', lbLoading: 'Φόρτωση κατάταξης…', lbUnavailable: 'Η κατάταξη δεν είναι διαθέσιμη αυτή τη στιγμή.',
+      lbRetry: 'Δοκίμασε ξανά', lbMonthsQ1: 'Ιανουάριος–Μάρτιος', lbMonthsQ2: 'Απρίλιος–Ιούνιος',
+      lbMonthsQ3: 'Ιούλιος–Σεπτέμβριος', lbMonthsQ4: 'Οκτώβριος–Δεκέμβριος',
       // Προαιρετικοί λογαριασμοί — το email δεν εμφανίζεται ποτέ σε άλλους παίκτες
       accTitle: 'Λογαριασμός (προαιρετικός)',
       accSignup: 'Εγγραφή', accLogin: 'Σύνδεση',
@@ -286,6 +293,13 @@
       // v1.27 SEO
       pageTitle: 'I QUIT! — Online Financial Literacy Board Game',
       metaDesc: 'Play I QUIT!, an online financial literacy board game. Learn about saving, investing, loans and financial independence while playing with friends.',
+      // August 2.3 — Seasonal Leaderboard
+      lbTitle: 'TOP PLAYERS', lbEnds: 'Ends', lbPts: 'pts', lbPoints: 'points', lbYou: 'You',
+      lbYouNoWin: 'You do not have a ranked win yet.', lbEmpty: 'No ranked wins yet.',
+      lbBeFirst: 'Be the first!', lbAccountNote: 'A verified account is required to participate.',
+      lbPlayer: 'Player', lbLoading: 'Loading leaderboard…', lbUnavailable: 'The leaderboard is unavailable right now.',
+      lbRetry: 'Try again', lbMonthsQ1: 'January–March', lbMonthsQ2: 'April–June',
+      lbMonthsQ3: 'July–September', lbMonthsQ4: 'October–December',
       // Optional accounts — email is never shown to other players
       accTitle: 'Account (optional)',
       accSignup: 'Sign up', accLogin: 'Log in',

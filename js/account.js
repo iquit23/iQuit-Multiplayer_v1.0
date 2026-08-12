@@ -617,13 +617,13 @@
 
   function mount() {
     if ($('accBox')) return;
-    const home = $('screen-home'), foot = $('lblHomeFoot');
+    const home = $('screen-home'), main = $('homeMain') || home, foot = $('lblHomeFoot');
     if (!home) return;
     const box = document.createElement('div');
     box.id = 'accBox';
     box.className = 'accbox';
-    if (foot && foot.parentNode === home) home.insertBefore(box, foot);
-    else home.appendChild(box);
+    if (foot && foot.parentNode === main) main.insertBefore(box, foot);
+    else main.appendChild(box);
     // Αλλαγή γλώσσας: ξαναχτίζουμε το panel. addEventListener (ΟΧΙ onclick) ώστε να μην
     // αντικατασταθεί ο handler του ui.js — καμία παρέμβαση στην υπάρχουσα λογική.
     ['btnLang', 'btnLangHome'].forEach(function (id) {

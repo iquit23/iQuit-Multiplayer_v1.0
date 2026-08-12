@@ -8,7 +8,10 @@
         ".read": "auth != null && $uid === auth.uid",
         ".write": "auth != null && $uid === auth.uid && auth.token.email_verified === true && (!newData.exists() || newData.parent().parent().child('usernames').child(newData.child('usernameNormalized').val()).val() === auth.uid)",
         ".validate": "newData.hasChildren(['username', 'usernameNormalized', 'createdAt', 'updatedAt'])",
-        "username": { ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 20 && !newData.val().contains(' ')" },
+        "username": {
+          ".read": "auth != null",
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 20 && !newData.val().contains(' ')"
+        },
         "usernameNormalized": { ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 20 && newData.val() === newData.val().toLowerCase() && !newData.val().contains(' ')" },
         "createdAt": { ".validate": "newData.isNumber() && newData.val() > 1700000000000 && newData.val() < (now + 60000)" },
         "updatedAt": { ".validate": "newData.isNumber() && newData.val() > 1700000000000 && newData.val() < (now + 60000)" },

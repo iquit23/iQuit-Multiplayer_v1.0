@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 2.2'), 'εμφανιζόμενη έκδοση Αύγουστος 2.2');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 2.3'), 'εμφανιζόμενη έκδοση Αύγουστος 2.3');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -1120,6 +1120,11 @@ section('Αύγουστος 2.0 Πιόνια — 12 συνολικά, τα 9 π�
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------
 // Τρέχει αυτόματα όταν υπάρχει playwright· αλλιώς παραλείπεται με μήνυμα (όπως τα emulator tests).
 (async () => {
+  section('Αύγουστος 2.3 Seasonal Leaderboard regression A–O');
+  const leaderboardRegression = await require('./leaderboard-regression.test.js').run();
+  passed += leaderboardRegression.passed;
+  failed += leaderboardRegression.failed;
+
   section('Αύγουστος 2.2 Scoring regression A–Z');
   const scoringRegression = await require('./scoring-regression.test.js').run();
   passed += scoringRegression.passed;
