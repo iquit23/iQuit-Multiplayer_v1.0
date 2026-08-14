@@ -52,10 +52,45 @@ h1,h2,h3{margin:0;}
 #screen-home{max-width:980px; margin:0 auto; padding:28px 16px;}
 .home-layout{display:grid; grid-template-columns:minmax(0,430px); justify-content:center; gap:18px;}
 .home-main{min-width:0; width:100%;}
+#btnLangHome{z-index:510;}
 .logo{font-size:44px; font-weight:900; letter-spacing:1px; text-align:center; margin:26px 0 2px;}
 .logo em{color:var(--accent); font-style:normal;}
 .tagline{text-align:center; color:var(--muted); font-size:13px; margin-bottom:26px;}
 .home-label{font-size:12px; color:var(--muted); margin:14px 0 5px; text-transform:uppercase; letter-spacing:.5px;}
+/* Αύγουστος 2.4 — intro ανά πραγματικό page load. Δεν αποθηκεύει dismissal. */
+.intro-overlay{position:fixed; inset:0; z-index:500; display:flex; align-items:flex-start; justify-content:center;
+  overflow-x:hidden; overflow-y:auto; padding:24px; background:rgba(4,9,18,.78);
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);}
+.intro-banner{width:min(560px,100%); margin:auto 0; padding:34px 36px 26px; cursor:pointer;
+  color:var(--txt); background:linear-gradient(150deg,rgba(30,48,80,.99),rgba(15,27,47,.99));
+  border:1px solid rgba(98,130,183,.62); border-radius:18px;
+  box-shadow:0 28px 75px -24px rgba(0,0,0,.95),0 0 0 1px rgba(59,130,246,.08);
+  animation:intro-enter .2s ease-out both;}
+.intro-banner:focus-visible{outline:3px solid rgba(96,165,250,.9); outline-offset:4px;}
+.intro-kicker{margin-bottom:10px; color:#79aaf8; font-size:11px; font-weight:900;
+  letter-spacing:2.2px; text-transform:uppercase;}
+.intro-banner h1{max-width:500px; font-size:25px; line-height:1.25; letter-spacing:-.25px;}
+.intro-copy{margin-top:20px; color:#c7d3e6; font-size:15px; line-height:1.68;}
+.intro-copy p{margin:0 0 14px;}
+.intro-copy .intro-question{margin:20px 0 0; color:var(--txt); font-weight:800;}
+.intro-continue{display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:25px;
+  color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.3px;}
+.intro-continue-arrow{color:#79aaf8; font-size:17px; line-height:1;}
+@keyframes intro-enter{from{opacity:0; transform:scale(.985) translateY(5px);}to{opacity:1; transform:none;}}
+@media(max-width:520px){
+  .intro-overlay{padding:14px;}
+  /* Αύγουστος 2.4 (mobile spacing refinement): το δεξί περιθώριο ήταν οπτικά «σφιχτό» — το CTA
+     είναι flex-end, άρα κόλλαγε στο content edge (μετρημένο κενό 1px) ενώ οι παράγραφοι έχουν
+     φυσικό ragged-right 21-42px. Ανεβάζουμε το οριζόντιο padding και δίνουμε στο CTA δικό του
+     breathing room, ώστε να διαβάζεται ως σκόπιμη ευθυγράμμιση. ΜΟΝΟ ≤520px — desktop άθικτο. */
+  .intro-banner{padding:27px 26px 22px; border-radius:15px;}
+  .intro-banner h1{font-size:21px;}
+  .intro-copy{font-size:14px; line-height:1.6;}
+  .intro-copy .intro-question{margin-top:17px;}
+  .intro-continue{margin-top:20px; padding-right:4px;}
+}
+@media(max-height:520px){.intro-overlay{padding-block:12px;}.intro-banner{margin:0;}}
+@media(prefers-reduced-motion:reduce){.intro-banner{animation:none;}}
 /* Προαιρετικοί λογαριασμοί — το παιχνίδι παραμένει διαθέσιμο και ως guest */
 .accbox{margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 14px;}
 .accbox .acc-head{display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;}
@@ -352,6 +387,12 @@ details.exp summary{cursor:pointer; font-size:13px; color:var(--muted); padding:
 /* ---------- MODAL ---------- */
 #overlay{position:fixed; inset:0; background:rgba(4,9,18,.72); display:flex; align-items:center;
   justify-content:center; padding:16px; z-index:100;}
+/* Αύγουστος 2.5: safe-area για iPhone (notch/home indicator) — μόνο σε mobile πλάτη, ώστε το
+   desktop layout των γρ. 388-393 να μένει ΑΚΡΙΒΩΣ ίδιο. */
+@media(max-width:899px){
+  #overlay{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+           max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}
+}
 /* v1.0 (#7): σε laptop η κάρτα ανοίγει ΑΡΙΣΤΕΡΑ, πάνω από το ταμπλό —
    ώστε να βλέπεις δεξιά τα δικά σου στοιχεία (χαρτοφυλάκιο, δάνεια) όσο αποφασίζεις */
 @media(min-width:900px){
@@ -424,7 +465,8 @@ body.game-over #myDash{z-index:auto;}
 @keyframes celPop{0%{transform:scale(.2); opacity:0;} 100%{transform:scale(1); opacity:1;}}
 @keyframes celShine{0%{background-position:0% center;} 100%{background-position:200% center;}}
 .modal{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
-  max-width:400px; width:100%; max-height:88vh; overflow:auto;}
+  max-width:400px; width:100%; max-height:88vh; overflow-y:auto; overflow-x:hidden;}
+@supports (height:1dvh){ .modal{max-height:min(88vh,88dvh);} }
 .gamecard{border-radius:14px; padding:16px; margin-bottom:14px; border:2px solid; text-align:center;}
 .gamecard .cat{font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;}
 .gamecard .ttl{font-size:17px; font-weight:700; line-height:1.35;}
@@ -457,14 +499,25 @@ body.game-over #myDash{z-index:auto;}
 .choice-list button{width:100%; text-align:left; padding:12px; margin-bottom:8px; background:var(--card2); border:1px solid var(--line);}
 
 /* ---------- TOAST (v0.2: ΚΑΤΩ, για να μην κρύβει το ταμπλό) ---------- */
-#toasts{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:200;
-  display:flex; flex-direction:column; gap:8px; width:min(92vw,420px); pointer-events:none;}
+#toasts{position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+  z-index:200; display:flex; flex-direction:column; gap:8px; width:min(92vw,420px); pointer-events:none;
+  max-width:calc(100vw - 20px);}
 @media(min-width:900px){
   #toasts{left:auto; right:14px; transform:none; width:min(30vw,380px);}
 }
+/* Αύγουστος 2.5: σε μικρή οθόνη τα toasts στοιβάζονταν ψηλά και κάλυπταν την καρτέλα του παίκτη.
+   Compact διαστάσεις + όριο ύψους στη ΣΤΟΙΒΑ (όχι στο μεμονωμένο μήνυμα, ώστε να μην κόβεται
+   κείμενο) — τα παλιότερα κρύβονται από πάνω, το νεότερο μένει πάντα ορατό στο κάτω μέρος. */
+@media(max-width:520px){
+  #toasts{gap:6px; width:min(94vw,420px); max-height:38vh; overflow:hidden;
+    justify-content:flex-end; flex-wrap:nowrap;}
+}
 .toast{background:var(--card2); border:1px solid var(--line); border-left:4px solid var(--accent);
   padding:11px 14px; border-radius:12px; font-size:13px; box-shadow:0 8px 30px rgba(0,0,0,.5);
-  animation:slidein .3s ease;}
+  animation:slidein .3s ease; min-width:0; overflow-wrap:anywhere; line-height:1.45; flex:0 0 auto;}
+@media(max-width:520px){
+  .toast{padding:8px 11px; font-size:12px; border-radius:10px; line-height:1.4;}
+}
 @keyframes slidein{from{opacity:0; transform:translateY(12px)}to{opacity:1; transform:none}}
 
 /* ---------- END ---------- */
@@ -476,14 +529,50 @@ body.game-over #myDash{z-index:auto;}
 
 /* ---------- ΚΑΝΟΝΕΣ & ΕΡΩΤΗΜΑΤΟΛΟΓΙΟ (v0.9) ---------- */
 .modal.wide{max-width:640px;}
-.rulesbox{max-height:68vh; overflow:auto; text-align:left; line-height:1.65; font-size:14px; padding-right:6px;}
+/* Αύγουστος 2.5: dvh για σωστό ύψος με τη δυναμική μπάρα του Safari (με vh fallback από πάνω).
+   Το overflow-x:hidden εγγυάται ότι καμία μακριά επιλογή δεν παράγει οριζόντιο scroll. */
+.rulesbox{max-height:68vh; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;
+  text-align:left; line-height:1.65; font-size:14px; padding-right:6px;}
+@supports (height:1dvh){ .rulesbox{max-height:min(68vh,66dvh);} }
 .rulesbox h2{font-size:20px; margin:0 0 10px; color:var(--gold);}
 .rulesbox h3{font-size:15px; margin:16px 0 6px; color:var(--accent); text-transform:none; letter-spacing:0;}
 .rulesbox p{margin:6px 0;}
 .fbq{margin-bottom:14px;}
 .fbq .q{font-weight:700; font-size:13px; margin-bottom:6px;}
-.fbrow{display:flex; flex-wrap:wrap; gap:4px 10px;}
-.fbopt{display:inline-flex; align-items:center; gap:5px; font-size:13px; background:#0a1320;
-  border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;}
+/* Αύγουστος 2.5 — ΑΙΤΙΑ του mobile bug: ο καθολικός κανόνας «input,select{padding:12px; width:100%}»
+   (γρ. 23) έπιανε ΚΑΙ τα input[type=radio] μέσα στο .fbopt. Το radio γινόταν τεράστιο κουτί που
+   γέμιζε το card και έσπρωχνε το label ΕΞΩ. Εδώ επαναφέρουμε ρητά τις διαστάσεις του radio.
+
+   MOBILE-FIRST με BASELINE τα 320px: οι κανόνες ΧΩΡΙΣ media query είναι ήδη πλήρως σωστοί στη
+   στενότερη συσκευή (iPhone SE 1ης γενιάς) — compact spacing, μηδέν overflow, labels μέσα στα
+   cards, touch target 44px. Τα μεγαλύτερα πλάτη ΠΡΟΣΘΕΤΟΥΝ άνεση με min-width queries· καμία
+   max-width query, ώστε να μην υπάρχει «desktop κανόνας που ακυρώνεται σε mobile».
+   flex-wrap (όχι grid auto-fit): οι ΚΟΝΤΕΣ επιλογές πακετάρονται δίπλα-δίπλα, ενώ μια ΜΕΓΑΛΗ
+   δεν χωράει και πέφτει μόνη της σε δική της γραμμή — αυτόματα, χωρίς fixed widths. */
+.fbrow{display:flex; flex-wrap:wrap; gap:6px; align-items:stretch;}
+.fbopt{flex:1 1 auto; max-width:100%;}
+.fbrow > .fbopt{min-width:min(118px,100%);}   /* @320: 2×118+6 = 242 ≤ 258 διαθέσιμα → ζευγαρώνουν */
+.fbrow.fbscale > .fbopt{flex:1 1 auto; min-width:44px;}
+.fbopt{display:flex; align-items:flex-start; gap:8px; min-width:0; font-size:13px; line-height:1.4;
+  background:#0a1320; border:1px solid var(--line); border-radius:10px;
+  padding:10px; min-height:44px; cursor:pointer; overflow-wrap:anywhere;}
+.fbopt > input[type=radio]{flex:0 0 auto; width:18px; height:18px; min-width:18px; margin:1px 0 0;
+  padding:0; border-radius:50%; accent-color:var(--accent);}
+.fbopt > span{flex:1 1 auto; min-width:0;}
+.fbrow.fbscale .fbopt{justify-content:center; align-items:center; gap:6px; padding:10px 6px;}
 .fbopt:has(input:checked){border-color:var(--accent); background:#12233f;}
-.fbtext,.fbother{width:100%; font-size:16px;}
+.fbopt:focus-within{outline:2px solid var(--accent); outline-offset:2px;}
+.fbtext,.fbother{width:100%; font-size:16px; max-width:100%; box-sizing:border-box;}
+.fbtext{resize:vertical; min-height:64px;}
+/* ≥360px: λίγο περισσότερος αέρας, οι επιλογές παραμένουν 2 ανά γραμμή */
+@media(min-width:360px){
+  .fbrow{gap:8px;}
+  .fbopt{gap:9px; padding:11px 12px;}
+  .fbrow > .fbopt{min-width:min(140px,100%);}
+  .fbrow.fbscale > .fbopt{min-width:52px;}
+  .fbrow.fbscale .fbopt{gap:7px; padding:11px 8px;}
+}
+/* ≥400px (μεγάλα κινητά, tablet, desktop): το πιο ευρύχωρο ελάχιστο πλάτος */
+@media(min-width:400px){
+  .fbrow > .fbopt{min-width:min(150px,100%);}
+}

@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 2.3'), 'εμφανιζόμενη έκδοση Αύγουστος 2.3');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 2.4'), 'εμφανιζόμενη έκδοση Αύγουστος 2.4');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -1117,9 +1117,68 @@ section('Αύγουστος 2.0 Πιόνια — 12 συνολικά, τα 9 π�
   assert(/const MAX_PLAYERS = 5;/.test(uiSrc6), 'το capacity της Αύγουστος 1.9 παραμένει ανέπαφο');
 }
 
+// ---------- 15. Mobile: ερωτηματολόγιο + toasts ----------
+section('Mobile fix — ερωτηματολόγιο & toasts');
+{
+  const uiSrc7 = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+  const cssSrc7 = fs.readFileSync(__dirname + '/../css/style.css', 'utf8');
+
+  // ΑΙΤΙΑ: ο καθολικός κανόνας input{width:100%;padding:12px} έπιανε και τα radio
+  assert(/input,select\{[^}]*width:100%/.test(cssSrc7), 'ο καθολικός κανόνας input{width:100%} υπάρχει ακόμη (δεν τον πειράξαμε)');
+  assert(/\.fbopt > input\[type=radio\]\{[^}]*width:18px/.test(cssSrc7), 'το radio του .fbopt έχει ρητό πλάτος 18px (ουδετεροποιεί τον καθολικό κανόνα)');
+  assert(/\.fbopt > input\[type=radio\]\{[^}]*flex:0 0 auto/.test(cssSrc7), 'το radio δεν συρρικνώνεται/μεγαλώνει (flex:0 0 auto)');
+  assert(/\.fbopt\{[^}]*min-height:44px/.test(cssSrc7), 'touch target ≥44px (iOS guideline)');
+  assert(/\.fbopt\{[^}]*overflow-wrap:anywhere/.test(cssSrc7), 'μεγάλα labels σπάνε αντί να ξεφεύγουν');
+  assert(/\.fbopt > span\{[^}]*min-width:0/.test(cssSrc7), 'το label είναι flex item με min-width:0 (σωστό wrapping)');
+  // responsive: flex-wrap, ΟΧΙ fixed widths
+  assert(/\.fbrow\{display:flex; flex-wrap:wrap/.test(cssSrc7), 'οι επιλογές πακετάρονται με flex-wrap (χωρίς επιβολή 2 στηλών)');
+  // MOBILE-FIRST: baseline = 320px· τα μεγαλύτερα πλάτη ΠΡΟΣΘΕΤΟΥΝ με min-width queries
+  assert(/\.fbrow > \.fbopt\{min-width:min\(118px,100%\);\}/.test(cssSrc7), 'baseline 320px: ελάχιστο πλάτος 118px (2 κοντές επιλογές ζευγαρώνουν στα 258px διαθέσιμα)');
+  assert(/\.fbrow\{display:flex; flex-wrap:wrap; gap:6px/.test(cssSrc7), 'baseline 320px: compact gap 6px');
+  assert(/\.fbopt\{display:flex; align-items:flex-start; gap:8px;[\s\S]{0,200}padding:10px; min-height:44px/.test(cssSrc7), 'baseline 320px: compact padding ΜΕ touch target 44px');
+  assert(/@media\(min-width:360px\)\{[\s\S]*?\.fbrow > \.fbopt\{min-width:min\(140px,100%\)/.test(cssSrc7), '≥360px: περισσότερος αέρας (progressive enhancement)');
+  assert(/@media\(min-width:400px\)\{\s*\.fbrow > \.fbopt\{min-width:min\(150px,100%\)/.test(cssSrc7), '≥400px: το πιο ευρύχωρο ελάχιστο πλάτος');
+  assert(!/@media\(max-width:360px\)/.test(cssSrc7), 'καμία max-width query στο ερωτηματολόγιο (καθαρά mobile-first)');
+  assert(/\.fbrow\.fbscale > \.fbopt\{flex:1 1 auto; min-width:44px;\}/.test(cssSrc7), 'baseline 320px: οι κλίμακες 1-5 χωρούν σε ΜΙΑ γραμμή');
+  // το label μπαίνει σε <span> ώστε να είναι στοχεύσιμο flex item
+  assert(/<label class="fbopt"><input type="radio" name="fb_' \+ q\.id \+ '" value="' \+ esc\(o\[I\.lang\]\) \+ '"><span>/.test(uiSrc7),
+    'τα labels των επιλογών τυλίγονται σε <span> (όχι ανώνυμο text node)');
+  assert(/<div class="fbrow fbscale">/.test(uiSrc7), 'οι κλίμακες 1-N παίρνουν δική τους κλάση .fbscale');
+  // modal: dvh + καθόλου οριζόντιο scroll + safe-area
+  assert(/@supports \(height:1dvh\)\{ \.modal\{max-height:min\(88vh,88dvh\)/.test(cssSrc7), 'modal: dvh με vh fallback');
+  assert(/@supports \(height:1dvh\)\{ \.rulesbox\{max-height:min\(68vh,66dvh\)/.test(cssSrc7), 'ερωτηματολόγιο: dvh με vh fallback');
+  assert(/\.rulesbox\{max-height:68vh; overflow-y:auto; overflow-x:hidden/.test(cssSrc7), 'κάθετο scroll, ΠΟΤΕ οριζόντιο');
+  assert(/env\(safe-area-inset-bottom\)/.test(cssSrc7), 'safe-area handling για iPhone');
+  assert(/#overlay \.modal\{margin-left:6vw/.test(cssSrc7), 'το desktop layout του overlay ΔΕΝ άλλαξε');
+
+  // toasts: compact σε mobile, χωρίς διπλότυπα, ίδια χρονική λογική
+  assert(/@media\(max-width:520px\)\{\s*\.toast\{padding:8px 11px; font-size:12px/.test(cssSrc7), 'compact toast σε μικρή οθόνη');
+  assert(/@media\(max-width:520px\)\{[^}]*max-height:38vh/.test(cssSrc7), 'η ΣΤΟΙΒΑ των toasts έχει όριο ύψους (δεν καλύπτει την καρτέλα)');
+  assert(/\.toast\{[^}]*overflow-wrap:anywhere/.test(cssSrc7), 'μεγάλα μηνύματα κάνουν wrap');
+  assert(/const dup = \[\.\.\.box\.children\]\.find\(c => c\.dataset\.msg === msg\);/.test(uiSrc7), 'dedupe: ίδιο μήνυμα δεν στοιβάζεται δεύτερη φορά');
+  assert(/const max = window\.innerWidth <= 520 \? 2 : 3;/.test(uiSrc7), 'όριο στοίβας 2 σε mobile / 3 σε desktop');
+  assert(/\}, 4200\)\);/.test(uiSrc7), 'η χρονική λογική παραμένει 4200ms');
+  assert(/setTimeout\(\(\) => t\.remove\(\), 400\)/.test(uiSrc7), 'το fade-out παραμένει 400ms');
+
+  // «Δεν υπάρχει εκκρεμής απόφαση»: διορθώνεται στη ΡΙΖΑ, δεν κρύβεται
+  assert(/if \(!pend\) return;\s+\/\/ δεν υπάρχει τι να λυθεί/.test(uiSrc7), 'resolve χωρίς pending ΔΕΝ στέλνεται καθόλου');
+  assert(/if \(App\._resolveSent === key\) return;/.test(uiSrc7), 'δεύτερο tap για την ΙΔΙΑ απόφαση αγνοείται');
+  assert(/App\._resolveTimer = setTimeout\(\(\) => \{ App\._resolveSent = null; \}, 2500\);/.test(uiSrc7), 'το κλείδωμα λύνεται μετά από 2,5s (χαμένο πακέτο → ο παίκτης δεν κολλάει)');
+  assert(/if \(!g\.pending && !App\.localModal\) closeOverlay\(\);/.test(uiSrc7), 'το ξεπερασμένο modal κλείνει και όσο τρέχει animation');
+  const engSrc7 = fs.readFileSync(__dirname + '/../js/engine.js', 'utf8');
+  assert(/if \(!pend\) return err\('Δεν υπάρχει εκκρεμής απόφαση\.'\)/.test(engSrc7),
+    'ο έλεγχος του engine ΠΑΡΑΜΕΝΕΙ (δεν κρύψαμε το μήνυμα — απλώς δεν προκαλείται πια)');
+  assert(/if \(playerId === App\.myId\) toast\('⚠️ ' \+ esc\(r\.error\)\);/.test(uiSrc7), 'η business logic των σφαλμάτων δεν άλλαξε');
+}
+
 // ---------- 11. Layout regression (browser) — ΙΔΙΟΣ runner, όχι δεύτερο σύστημα ----------
 // Τρέχει αυτόματα όταν υπάρχει playwright· αλλιώς παραλείπεται με μήνυμα (όπως τα emulator tests).
 (async () => {
+  section('Αύγουστος 2.4 Intro regression A–M');
+  const introRegression = await require('./intro-regression.test.js').run();
+  passed += introRegression.passed;
+  failed += introRegression.failed;
+
   section('Αύγουστος 2.3 Seasonal Leaderboard regression A–O');
   const leaderboardRegression = await require('./leaderboard-regression.test.js').run();
   passed += leaderboardRegression.passed;

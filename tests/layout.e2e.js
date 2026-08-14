@@ -67,10 +67,22 @@ async function run() {
     await ctx.route('**/peerjs.min.js', r => r.fulfill({ contentType: 'text/javascript', body: PEER_STUB }));
     return ctx;
   }
+
+  // Αύγουστος 2.4 (intro): η αρχική οθόνη ξεκινά με ένα overlay που καλύπτει τα κουμπιά μέχρι να
+  // το κλείσει ο παίκτης. Στα e2e το κλείνουμε μέσω του ΙΔΙΟΥ public API που χρησιμοποιεί το
+  // προϊόν (IQ_INTRO.dismiss) — δεν παρακάμπτουμε ούτε αλλάζουμε τη συμπεριφορά του feature.
+  async function goHome(pg) {
+    await pg.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await pg.evaluate(() => { if (window.IQ_INTRO && window.IQ_INTRO.dismiss) window.IQ_INTRO.dismiss(); });
+    await pg.waitForFunction(() => {
+      const o = document.querySelector('.intro-overlay');
+      return !o || o.classList.contains('hidden') || !o.offsetParent;
+    }, null, { timeout: 5000 });
+  }
   async function newGame(ctx, w, h) {
     const pg = await ctx.newPage();
     await pg.setViewportSize({ width: w, height: h });
-    await pg.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(pg);
     await pg.fill('#playerName', 'Γ');
     await pg.click('#btnCreate');
     await pg.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -314,7 +326,7 @@ async function run() {
       .map(([n, s]) => [n, PROFILES[s].icon]);
     const ctx5 = await newCtx(1280, 900);
     const H = await ctx5.newPage();
-    await H.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(H);
     await H.fill('#playerName', 'Γιώργος');
     await H.click('#btnCreate');
     await H.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -390,7 +402,7 @@ async function run() {
       const ctxT = await newCtx(w, h);
       const T2 = await ctxT.newPage();
       await T2.setViewportSize({ width: w, height: h });
-      await T2.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+      await goHome(T2);
       await T2.fill('#playerName', 'Γιώργος');
       await T2.click('#btnCreate');
       await T2.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -460,7 +472,7 @@ async function run() {
     // 7 + 8) host/guest sync + strategy values ανέπαφα
     const ctxS = await newCtx(1280, 800);
     const S3 = await ctxS.newPage();
-    await S3.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(S3);
     await S3.fill('#playerName', 'Γιώργος');
     await S3.click('#btnCreate');
     await S3.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -510,7 +522,7 @@ async function run() {
       const ctxR = await newCtx(w, h);
       const R = await ctxR.newPage();
       await R.setViewportSize({ width: w, height: h });
-      await R.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+      await goHome(R);
       await R.fill('#playerName', 'Legend');
       await R.click('#btnCreate');
       await R.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -594,7 +606,7 @@ async function run() {
     }));
     const ctxC = await newCtx(1280, 900);
     const C = await ctxC.newPage();
-    await C.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(C);
     await C.fill('#playerName', 'Γιώργος');
     await C.click('#btnCreate');
     await C.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -678,7 +690,7 @@ async function run() {
       const ctxP = await newCtx(w, h, w < 500);
       const P4 = await ctxP.newPage();
       await P4.setViewportSize({ width: w, height: h });
-      await P4.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+      await goHome(P4);
       await P4.fill('#playerName', 'Γ');
       await P4.click('#btnCreate');
       await P4.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -703,7 +715,7 @@ async function run() {
     // D/E/F/G/H/I) λειτουργική συμπεριφορά των νέων πιονιών (desktop)
     const ctxQ = await newCtx(1280, 900);
     const Q = await ctxQ.newPage();
-    await Q.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(Q);
     await Q.fill('#playerName', 'Γιώργος');
     await Q.click('#btnCreate');
     await Q.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -794,7 +806,7 @@ async function run() {
     // I) ΠΡΑΓΜΑΤΙΚΟ reload: το νέο πιόνι επιβιώνει και ξαναδηλώνεται μετά την επανασύνδεση
     const ctxR = await newCtx(1280, 900);
     const R = await ctxR.newPage();
-    await R.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(R);
     await R.fill('#playerName', 'Ρία');
     await R.click('#btnCreate');
     await R.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -806,6 +818,7 @@ async function run() {
     });
     ok(savedSession.inSession === '🦍', 'I: το 🦍 αποθηκεύεται στο host session (save/load)');
     await R.reload();
+    await R.evaluate(() => { if (window.IQ_INTRO && window.IQ_INTRO.dismiss) window.IQ_INTRO.dismiss(); });
     await R.waitForFunction(() => window.IQ_TEST, null, { timeout: 15000 });
     const afterReload = await R.evaluate(() => ({ myPawn: window.IQ_TEST.App.myPawn, ls: localStorage.getItem('iquit_pawn') }));
     ok(afterReload.myPawn === '🦍' && afterReload.ls === '🦍', 'I: μετά από reload το 🦍 διατηρείται (App.myPawn + localStorage)');
@@ -815,7 +828,7 @@ async function run() {
     // άρα χρειάζεται καθαρό context: lobby → επιλογή πιονιού → έναρξη → reload → resume.
     const ctxResume = await newCtx(1280, 900);
     const R2 = await ctxResume.newPage();
-    await R2.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await goHome(R2);
     await R2.fill('#playerName', 'Ρία');
     await R2.click('#btnCreate');
     await R2.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
@@ -829,6 +842,7 @@ async function run() {
     });
     ok(inGame === '🦍', 'I/H: το 🦍 περνά στο game state κατά την έναρξη');
     await R2.reload();
+    await R2.evaluate(() => { if (window.IQ_INTRO && window.IQ_INTRO.dismiss) window.IQ_INTRO.dismiss(); });
     await R2.waitForFunction(() => document.getElementById('btnResumeHost'), null, { timeout: 15000 });
     await R2.evaluate(() => document.getElementById('btnResumeHost').click());
     await R2.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
@@ -842,6 +856,289 @@ async function run() {
     ok(afterResume.pawn === '🦍', 'I: μετά από reload + resume παρτίδας το 🦍 παραμένει στον παίκτη');
     ok(afterResume.onBoard.indexOf('🦍') > -1, 'I: και εξακολουθεί να φαίνεται πάνω στο board');
     await ctxResume.close();
+
+    // ================= ΕΡΩΤΗΜΑΤΟΛΟΓΙΟ: mobile responsive (ΑΙΤΙΑ: input{width:100%} έπιανε τα radio)
+    for (const [w, h, tag] of [[1280, 900, 'desktop 1280'], [768, 1024, 'tablet 768'], [390, 844, 'iPhone 390'], [360, 780, '360'], [320, 700, '320']]) {
+      const ctxF = await newCtx(w, h, w < 500);
+      const F = await ctxF.newPage();
+      await F.setViewportSize({ width: w, height: h });
+      await goHome(F);
+      await F.evaluate(() => window.IQ_UI.showFeedback());
+      await F.waitForTimeout(250);
+      const q = await F.evaluate(() => {
+        const opts = [...document.querySelectorAll('.fbopt')];
+        let outside = 0, tooSmall = 0, fatRadio = 0;
+        opts.forEach(o => {
+          const ob = o.getBoundingClientRect();
+          const sp = o.querySelector('span'), rd = o.querySelector('input[type=radio]');
+          const rb = rd.getBoundingClientRect();
+          if (rb.width > 26 || rb.height > 26) fatRadio++;      // ο καθολικός κανόνας θα έδινε ~100%
+          if (ob.height < 43.5) tooSmall++;                      // touch target iOS
+          if (sp) {
+            const sb = sp.getBoundingClientRect();
+            if (sb.right > ob.right + 1 || sb.left < ob.left - 1 || sb.bottom > ob.bottom + 1) outside++;
+          }
+        });
+        const box = document.querySelector('.rulesbox');
+        const acts = document.querySelector('.modal .acts');
+        const wide = [...opts].filter(o => o.getBoundingClientRect().width > box.clientWidth + 1).length;
+        return {
+          n: opts.length, outside, tooSmall, fatRadio, wide,
+          docOver: Math.round(document.documentElement.scrollWidth) - window.innerWidth,
+          boxScrollX: box.scrollWidth - box.clientWidth,
+          scrollable: box.scrollHeight > box.clientHeight,
+          modalFits: document.querySelector('.modal').getBoundingClientRect().height <= window.innerHeight + 1,
+          actsIn: acts.getBoundingClientRect().bottom <= window.innerHeight + 1,
+          textareas: [...document.querySelectorAll('.fbtext')].every(t => t.getBoundingClientRect().width <= box.clientWidth + 1),
+        };
+      });
+      ok(q.n === 57, tag + ' — ερωτηματολόγιο: όλες οι επιλογές αποδόθηκαν (' + q.n + ')');
+      ok(q.outside === 0, tag + ' — ΚΑΝΕΝΑ label δεν βγαίνει έξω από το card (' + q.outside + ')');
+      ok(q.fatRadio === 0, tag + ' — κανένα radio δεν «φουσκώνει» σε ολόκληρο το card');
+      ok(q.tooSmall === 0, tag + ' — κάθε επιλογή ≥44px touch target');
+      ok(q.wide === 0, tag + ' — καμία επιλογή πλατύτερη από τον γονέα');
+      ok(q.docOver <= 1 && q.boxScrollX === 0, tag + ' — μηδέν οριζόντιο scroll (doc ' + q.docOver + ', box ' + q.boxScrollX + ')');
+      ok(q.scrollable, tag + ' — το ερωτηματολόγιο κάνει ΚΑΘΕΤΟ scroll (14 ερωτήσεις)');
+      ok(q.modalFits && q.actsIn, tag + ' — modal εντός viewport, Αποστολή/Άκυρο προσβάσιμα');
+      ok(q.textareas, tag + ' — το textarea της Q14 δεν ξεπερνά το πλάτος');
+
+      // selected state + όλο το card clickable (κλικ στο ΚΕΙΜΕΝΟ, όχι στο radio)
+      const sel = await F.evaluate(() => {
+        const o = document.querySelectorAll('.fbopt')[1];
+        const sp = o.querySelector('span'), r = sp.getBoundingClientRect();
+        document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).click();
+        const cs = getComputedStyle(o);
+        return { checked: o.querySelector('input').checked, border: cs.borderColor, bg: cs.backgroundColor };
+      });
+      ok(sel.checked, tag + ' — κλικ στο ΚΕΙΜΕΝΟ επιλέγει (όλο το card είναι tappable)');
+      ok(sel.bg !== 'rgb(10, 19, 32)', tag + ' — η επιλεγμένη επιλογή έχει ορατό selected state');
+      await ctxF.close();
+    }
+
+    // πολύ μακρύ label: πρέπει να σπάει μέσα στο card, όχι να ξεφεύγει
+    const ctxL = await newCtx(360, 780, true);
+    const L = await ctxL.newPage();
+    await goHome(L);
+    const longFit = await L.evaluate(() => {
+      window.IQ_UI.showFeedback();
+      const o = document.querySelector('.fbopt'), sp = o.querySelector('span');
+      sp.textContent = 'Πολύ μεγάλη απάντηση με πάρα πολλές λέξεις που κανονικά θα ξεχείλιζε οριζόντια έξω από το κουτί της επιλογής';
+      const ob = o.getBoundingClientRect(), sb = sp.getBoundingClientRect();
+      return { inside: sb.right <= ob.right + 1 && sb.bottom <= ob.bottom + 1, lines: Math.round(sb.height / 18),
+        docOver: Math.round(document.documentElement.scrollWidth) - window.innerWidth };
+    });
+    ok(longFit.inside, 'ΜΑΚΡΥ label: παραμένει ΜΕΣΑ στο card (σπάει σε ' + longFit.lines + ' γραμμές)');
+    ok(longFit.docOver <= 1, 'ΜΑΚΡΥ label: κανένα οριζόντιο overflow σελίδας');
+    await ctxL.close();
+
+    // ================= TOASTS: compact stacking σε mobile + dedupe + καθαρισμός
+    for (const [w, h, tag, maxExpected] of [[390, 844, 'mobile 390', 2], [1280, 900, 'desktop', 3]]) {
+      const ctxT = await newCtx(w, h, w < 500);
+      const TP = await ctxT.newPage();
+      await TP.setViewportSize({ width: w, height: h });
+      await goHome(TP);
+      const st = await TP.evaluate(() => {
+        const T = window.IQ_TEST, box = document.getElementById('toasts');
+        ['📈 Πληθωρισμός 5%: τα μηνιαία έξοδα όλων των παικτών αυξήθηκαν κατά 5%, όπως και όλες οι κάρτες Lifestyle.',
+          '⚠️ Δεν υπάρχει εκκρεμής απόφαση.', '⚠️ Δεν υπάρχει εκκρεμής απόφαση.',
+          '👑 Τρίτο μήνυμα', 'Τέταρτο', 'Πέμπτο'].forEach(m => T.toast(m));
+        const kids = [...box.children], r = box.getBoundingClientRect();
+        return {
+          n: kids.length,
+          dupes: kids.length - new Set(kids.map(k => k.textContent)).size,
+          overlap: kids.some((k, i) => i > 0 && k.getBoundingClientRect().top < kids[i - 1].getBoundingClientRect().bottom - 1),
+          gapOk: kids.every((k, i) => i === 0 || k.getBoundingClientRect().top - kids[i - 1].getBoundingClientRect().bottom >= 4),
+          pct: Math.round(r.height / window.innerHeight * 100),
+          wOk: r.width <= window.innerWidth - 10,
+          clipped: kids.some(k => k.scrollWidth > k.clientWidth + 1 || k.scrollHeight > k.clientHeight + 1),
+          docOver: Math.round(document.documentElement.scrollWidth) - window.innerWidth,
+        };
+      });
+      ok(st.n === maxExpected, tag + ' — η στοίβα περιορίζεται σε ' + maxExpected + ' (βρέθηκαν ' + st.n + ')');
+      ok(st.dupes === 0, tag + ' — κανένα διπλότυπο toast');
+      ok(!st.overlap && st.gapOk, tag + ' — σωστό spacing, καμία επικάλυψη');
+      ok(!st.clipped, tag + ' — κανένα μήνυμα δεν κόβεται (σωστό wrapping)');
+      ok(st.wOk && st.docOver <= 1, tag + ' — σωστό max-width, μηδέν overflow');
+      if (w < 500) ok(st.pct <= 40, tag + ' — τα toasts καλύπτουν μόνο ' + st.pct + '% της οθόνης');
+
+      // cleanup: εξαφανίζονται με την ΥΠΑΡΧΟΥΣΑ χρονική λογική (4200 + 400ms)
+      await TP.waitForTimeout(4900);
+      const left = await TP.evaluate(() => document.getElementById('toasts').children.length);
+      ok(left === 0, tag + ' — τα toasts καθαρίζονται μόνα τους (' + left + ' έμειναν)');
+      await ctxT.close();
+    }
+
+    // ================= «Δεν υπάρχει εκκρεμής απόφαση»: root-cause regression
+    const ctxD = await newCtx(390, 844, true);
+    const D = await ctxD.newPage();
+    await goHome(D);
+    await D.fill('#playerName', 'Δ');
+    await D.click('#btnCreate');
+    await D.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+    await D.evaluate(() => document.getElementById('btnStart').click());
+    await D.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
+    const dbl = await D.evaluate(() => {
+      const T = window.IQ_TEST, out = {};
+      // 1) τριπλό tap στην ΙΔΙΑ απόφαση → μία μόνο ενέργεια φεύγει
+      T.App.game.pending = { type: 'reveal', special: 'inflation', playerId: T.App.myId };
+      let sent = 0;
+      const orig = window.IQ_ENGINE.applyAction;
+      window.IQ_ENGINE.applyAction = function (g, pid, a) { if (a && a.a === 'resolve') sent++; return orig.apply(this, arguments); };
+      T.act({ a: 'resolve', choice: 'ok' }); T.act({ a: 'resolve', choice: 'ok' }); T.act({ a: 'resolve', choice: 'ok' });
+      out.sentForSamePending = sent;
+      // 2) resolve χωρίς καμία απόφαση → ΔΕΝ φεύγει καθόλου (άρα ούτε error toast)
+      T.App.game.pending = null; T.App._resolveSent = null;
+      sent = 0; document.getElementById('toasts').innerHTML = '';
+      T.act({ a: 'resolve', choice: 'ok' });
+      out.sentWithoutPending = sent;
+      out.toasts = document.getElementById('toasts').children.length;
+      // 3) ΝΕΑ απόφαση → ξεκλειδώνει κανονικά
+      T.App.game.pending = { type: 'reveal', special: 'crash', playerId: T.App.myId };
+      sent = 0; T.act({ a: 'resolve', choice: 'ok' });
+      out.newPendingWorks = sent;
+      window.IQ_ENGINE.applyAction = orig;
+      return out;
+    });
+    ok(dbl.sentForSamePending === 1, 'resolve: τριπλό tap στην ίδια κάρτα → 1 ενέργεια (ήταν 3)');
+    ok(dbl.sentWithoutPending === 0 && dbl.toasts === 0, 'resolve χωρίς pending: καμία ενέργεια, ΚΑΝΕΝΑ «Δεν υπάρχει εκκρεμής απόφαση»');
+    ok(dbl.newPendingWorks === 1, 'ΝΕΑ απόφαση ξεκλειδώνει κανονικά (δεν κολλάει ο παίκτης)');
+
+    // stale modal: όσο τρέχει animation χωρίς pending, η παλιά κάρτα ΚΛΕΙΝΕΙ...
+    const stale = await D.evaluate(() => {
+      const T = window.IQ_TEST, ov = document.getElementById('overlay');
+      T.App.localModal = null;
+      ov.classList.remove('hidden');
+      T.App.game.pending = null;
+      T.App.anim = { playerId: T.App.myId, at: 0, to: 3, remaining: 3, phase: 'walk' };
+      T.render();
+      const closed = ov.classList.contains('hidden');
+      // ...αλλά ΤΑ ΠΛΗΡΟΦΟΡΙΑΚΑ dialogs (Κανόνες/Ερωτηματολόγιο) ΔΕΝ κλείνουν
+      ov.classList.remove('hidden'); T.App.localModal = true;
+      T.render();
+      const kept = !ov.classList.contains('hidden');
+      T.App.anim = null; T.App.localModal = null; T.closeOverlay();
+      return { closed, kept };
+    });
+    ok(stale.closed, 'stale modal: η λυμένη κάρτα κλείνει και όσο τρέχει animation');
+    ok(stale.kept, 'stale modal: Κανόνες/Ερωτηματολόγιο ΔΕΝ κλείνουν (App.localModal)');
+    await ctxD.close();
+
+    // ================= INTRO BANNER (Αύγουστος 2.4) — ΠΡΑΓΜΑΤΙΚΗ συμπεριφορά στον browser.
+    // Το tests/intro-regression.test.js καλύπτει source/controller· εδώ ελέγχουμε ό,τι μόνο
+    // ένας browser μπορεί: ορατότητα, overflow, αλλαγή γλώσσας ΕΝΩ είναι ανοιχτό, dismiss με
+    // tap, χρησιμότητα της αρχικής μετά, και ότι ΤΙΠΟΤΑ δεν το ξανανοίγει.
+    // ΠΡΟΣΟΧΗ: δεν χρησιμοποιούμε goHome() εδώ — αυτό ακριβώς το κλείνει.
+    for (const [w, h, tag, touch] of [[1280, 900, 'desktop', false], [430, 932, 'mobile 430', true],
+                                      [390, 844, 'mobile 390', true], [360, 780, 'mobile 360', true],
+                                      [320, 700, 'mobile 320', true], [740, 360, 'landscape 740×360', true]]) {
+      const ctxI = await newCtx(w, h, touch);
+      const N = await ctxI.newPage();
+      await N.setViewportSize({ width: w, height: h });
+      await N.goto('http://localhost:' + PORT + '/');
+      await N.waitForTimeout(350);
+
+      const shown = await N.evaluate(() => {
+        const o = document.getElementById('introOverlay'), bn = document.getElementById('introBanner');
+        const ob = o.getBoundingClientRect(), bb = bn.getBoundingClientRect();
+        return {
+          visible: !o.classList.contains('hidden') && getComputedStyle(o).display !== 'none',
+          aria: o.getAttribute('aria-hidden'),
+          hasCopy: /I QUIT!/.test(bn.innerText) && bn.innerText.length > 80,
+          fitsX: bb.width <= ob.width + 1,
+          docOver: Math.round(document.documentElement.scrollWidth - window.innerWidth),
+          tallOk: bb.height <= window.innerHeight || o.scrollHeight > o.clientHeight,
+          focus: document.activeElement && document.activeElement.id,
+          // ΟΡΙΖΟΝΤΙΟ ΚΕΝΤΡΑΡΙΣΜΑ: τα δύο ΕΞΩΤΕΡΙΚΑ κενά πρέπει να είναι ίσα
+          gapL: Math.round(bb.left),
+          gapR: Math.round(document.documentElement.clientWidth - bb.right),
+          borderVisible: bb.left >= 0 && bb.right <= document.documentElement.clientWidth + 0.5,
+        };
+      });
+      ok(Math.abs(shown.gapL - shown.gapR) <= 2, tag + ' intro: κεντραρισμένο οριζόντια — κενό αριστερά '
+        + shown.gapL + 'px, δεξιά ' + shown.gapR + 'px');
+      ok(shown.borderVisible, tag + ' intro: ολόκληρο το border του card είναι ορατό');
+      ok(shown.visible && shown.aria === 'false', tag + ' intro: εμφανίζεται σε κάθε full page load');
+      ok(shown.hasCopy, tag + ' intro: το κείμενο αποδίδεται');
+      ok(shown.docOver <= 1 && shown.fitsX, tag + ' intro: μηδέν οριζόντιο overflow (' + shown.docOver + 'px)');
+      ok(shown.tallOk, tag + ' intro: όταν δεν χωράει κάθετα, το overlay scrollάρει');
+      ok(shown.focus === 'introBanner', tag + ' intro: το banner παίρνει focus (a11y)');
+
+      // αλλαγή γλώσσας ΕΝΩ είναι ανοιχτό → ενημερώνεται, ΔΕΝ κλείνει
+      const el0 = await N.evaluate(() => document.getElementById('introBanner').innerText);
+      await N.click('#btnLangHome'); await N.waitForTimeout(200);
+      const en = await N.evaluate(() => ({ txt: document.getElementById('introBanner').innerText,
+        open: !document.getElementById('introOverlay').classList.contains('hidden') }));
+      ok(en.open && /financial literacy/i.test(en.txt) && en.txt !== el0, tag + ' intro: EN ενημέρωση χωρίς να κλείσει');
+      await N.click('#btnLangHome'); await N.waitForTimeout(200);
+      ok(/οικονομικού αλφαβητισμού/.test(await N.evaluate(() => document.getElementById('introBanner').innerText)),
+        tag + ' intro: επιστροφή σε EL');
+
+      // dismiss με tap/click ΠΑΝΩ στο banner
+      if (touch) await N.tap('#introBanner'); else await N.click('#introBanner');
+      await N.waitForTimeout(200);
+      const gone = await N.evaluate(() => {
+        const o = document.getElementById('introOverlay'), btn = document.getElementById('btnCreate');
+        const r = btn.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { hidden: o.classList.contains('hidden'), display: getComputedStyle(o).display,
+          aria: o.getAttribute('aria-hidden'), top: top ? (top.id || top.className) : 'null',
+          focus: document.activeElement && document.activeElement.id };
+      });
+      ok(gone.hidden && gone.display === 'none' && gone.aria === 'true', tag + ' intro: κλείνει με ' + (touch ? 'tap' : 'click') + ' στο banner');
+      ok(gone.top === 'btnCreate', tag + ' intro: η αρχική είναι ξανά πλήρως χρησιμοποιήσιμη');
+      ok(gone.focus === 'btnCreate', tag + ' intro: το focus περνά στο επόμενο ενεργό στοιχείο');
+
+      // ΤΙΠΟΤΑ δεν το ξανανοίγει
+      await N.click('#btnLangHome'); await N.waitForTimeout(150);
+      const reopened = await N.evaluate(() => {
+        const isOpen = () => !document.getElementById('introOverlay').classList.contains('hidden');
+        const afterLang = isOpen();
+        window.IQ_INTRO.render();
+        if (window.IQ_INTRO.controller) window.IQ_INTRO.controller.refresh();
+        const afterRender = isOpen();
+        window.IQ_INTRO.mount(document);
+        return { afterLang, afterRender, afterMount: isOpen() };
+      });
+      ok(!reopened.afterLang, tag + ' intro: αλλαγή γλώσσας ΜΕΤΑ το κλείσιμο δεν το ξανανοίγει');
+      ok(!reopened.afterRender, tag + ' intro: internal rerender/refresh δεν το ξανανοίγει');
+      ok(!reopened.afterMount, tag + ' intro: δεύτερο mount() δεν το ξανανοίγει');
+      await ctxI.close();
+    }
+
+    // κάθε ΝΕΟ full load το ξαναδείχνει — χωρίς localStorage/cookie
+    const ctxR3 = await newCtx(390, 844, true);
+    const N2 = await ctxR3.newPage();
+    // ΜΕ e2e params (χρειάζεται το IQ_TEST hook παρακάτω) αλλά ΧΩΡΙΣ goHome, ώστε το intro να φανεί
+    await N2.goto('http://localhost:' + PORT + '/?e2e=1&fast=1&transport=peer');
+    await N2.waitForTimeout(300);
+    await N2.tap('#introBanner'); await N2.waitForTimeout(150);
+    await N2.reload(); await N2.waitForTimeout(600);
+    const persisted = await N2.evaluate(() => ({
+      visible: !document.getElementById('introOverlay').classList.contains('hidden'),
+      keys: Object.keys(localStorage).filter(k => /intro/i.test(k)),
+      cookie: /intro/i.test(document.cookie),
+    }));
+    ok(persisted.visible, 'intro: εμφανίζεται ΞΑΝΑ μετά από reload (κάθε full page load)');
+    ok(persisted.keys.length === 0 && !persisted.cookie, 'intro: κανένα localStorage/cookie για μόνιμο dismissal');
+
+    // δεν επηρεάζει ερωτηματολόγιο / λογαριασμό / παρτίδα
+    const untouched = await N2.evaluate(() => {
+      window.IQ_INTRO.dismiss();
+      window.IQ_UI.showFeedback();
+      const fb = document.querySelectorAll('.fbopt').length;
+      window.IQ_TEST.closeOverlay();
+      return { fb, hasScoring: !!window.IQ_SCORING, hasLb: !!window.IQ_LEADERBOARD, hasAcc: !!window.IQ_ACCOUNT };
+    });
+    ok(untouched.fb === 57, 'intro: το ερωτηματολόγιο λειτουργεί κανονικά μετά το intro');
+    await N2.fill('#playerName', 'Ι');
+    await N2.click('#btnCreate');
+    await N2.waitForFunction(() => /^[A-Z2-9]{4}$/.test(document.getElementById('lobbyCode').textContent), null, { timeout: 15000 });
+    await N2.evaluate(() => document.getElementById('btnStart').click());
+    await N2.waitForFunction(() => window.IQ_TEST && window.IQ_TEST.App.game, null, { timeout: 15000 });
+    const play = await N2.evaluate(() => ({ started: !!window.IQ_TEST.App.game,
+      introHidden: document.getElementById('introOverlay').classList.contains('hidden') }));
+    ok(play.started && play.introHidden, 'intro: η παρτίδα ξεκινά κανονικά και το intro μένει κλειστό');
+    await ctxR3.close();
   } catch (e) {
     failed++;
     console.error('  ✗ FAIL (εξαίρεση): ' + e.message.split('\n')[0]);

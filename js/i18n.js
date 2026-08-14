@@ -18,6 +18,12 @@
       // v1.27 SEO: τίτλος σελίδας + εισαγωγική ενότητα «Τι είναι το I QUIT!»
       pageTitle: 'I QUIT! — Online παιχνίδι οικονομικού αλφαβητισμού',
       metaDesc: 'Παίξε το I QUIT!, ένα online επιτραπέζιο παιχνίδι οικονομικού αλφαβητισμού. Μάθε αποταμίευση, επενδύσεις, δάνεια και οικονομική ανεξαρτησία παίζοντας με φίλους.',
+      // Αύγουστος 2.4 — Welcome / Intro
+      introTitle: 'I QUIT! — Το παιχνίδι οικονομικού αλφαβητισμού.',
+      introBody1: 'Μια προσομοίωση της οικονομικής ζωής, όπου κάθε απόφαση έχει συνέπειες.',
+      introBody2: 'Επένδυσε, δημιούργησε παθητικό εισόδημα και προσπάθησε να αποκτήσεις οικονομική ανεξαρτησία πριν τα 65.',
+      introQuestion: 'Θα καταφέρεις να κάνεις I QUIT! ή οι υποχρεώσεις και τα ρίσκα θα σε κρατήσουν στη δουλειά;',
+      introContinue: 'Πάτησε για συνέχεια',
       // Αύγουστος 2.3 — Seasonal Leaderboard
       lbTitle: 'TOP ΠΑΙΚΤΕΣ', lbEnds: 'Λήγει', lbPts: 'pts', lbPoints: 'πόντοι', lbYou: 'Εσύ',
       lbYouNoWin: 'Δεν έχεις βαθμολογημένη νίκη ακόμη.', lbEmpty: 'Δεν υπάρχουν ακόμη βαθμολογημένες νίκες.',
@@ -293,6 +299,12 @@
       // v1.27 SEO
       pageTitle: 'I QUIT! — Online Financial Literacy Board Game',
       metaDesc: 'Play I QUIT!, an online financial literacy board game. Learn about saving, investing, loans and financial independence while playing with friends.',
+      // August 2.4 — Welcome / Intro
+      introTitle: 'I QUIT! — The financial literacy game.',
+      introBody1: 'A simulation of financial life, where every decision has consequences.',
+      introBody2: 'Invest, build passive income, and try to achieve financial independence before the age of 65.',
+      introQuestion: 'Will you manage to say I QUIT!, or will obligations and risks keep you working?',
+      introContinue: 'Tap to continue',
       // August 2.3 — Seasonal Leaderboard
       lbTitle: 'TOP PLAYERS', lbEnds: 'Ends', lbPts: 'pts', lbPoints: 'points', lbYou: 'You',
       lbYouNoWin: 'You do not have a ranked win yet.', lbEmpty: 'No ranked wins yet.',

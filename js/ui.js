@@ -167,12 +167,25 @@
   function myName() { return ($('playerName').value || '').trim() || 'Παίκτης'; }
   function me() { return App.game && App.game.players.find(p => p.id === App.myId); }
   function toast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast'; t.innerHTML = msg;
     const box = $('toasts');
+    // Αύγουστος 2.5: ΚΑΝΕΝΑ διπλότυπο — αν το ίδιο ακριβώς μήνυμα είναι ήδη ορατό, απλώς
+    // ανανεώνουμε τον χρόνο του αντί να στοιβάξουμε δεύτερο αντίγραφο. Η χρονική λογική
+    // (4,2s + 0,4s fade) παραμένει ΑΚΡΙΒΩΣ η ίδια.
+    const dup = [...box.children].find(c => c.dataset.msg === msg);
+    if (dup) { clearTimeout(+dup.dataset.timer); dup.style.opacity = ''; box.appendChild(dup); armToast(dup); return; }
+    const t = document.createElement('div');
+    t.className = 'toast'; t.innerHTML = msg; t.dataset.msg = msg;
     box.appendChild(t);
-    while (box.children.length > 3) box.removeChild(box.firstChild);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); }, 4200);
+    // σε μικρή οθόνη κρατάμε 2 (αντί 3) ώστε η στοίβα να μην καλύπτει την καρτέλα του παίκτη
+    const max = window.innerWidth <= 520 ? 2 : 3;
+    while (box.children.length > max) box.removeChild(box.firstChild);
+    armToast(t);
+  }
+  function armToast(t) {
+    t.dataset.timer = String(setTimeout(() => {
+      t.style.opacity = '0'; t.style.transition = 'opacity .4s';
+      setTimeout(() => t.remove(), 400);
+    }, 4200));
   }
   function homeErr(msg) { const e = $('homeErr'); e.textContent = msg; e.style.display = 'block'; }
 
@@ -263,6 +276,21 @@
   // ============================================================ ACTIONS (κοινό μονοπάτι host/guest)
   function act(action) {
     if (App.role === 'tour') return; // v1.15: στην Ξενάγηση τίποτα δεν εκτελείται
+    // Αύγουστος 2.5 — ΑΙΤΙΑ του «⚠️ Δεν υπάρχει εκκρεμής απόφαση»: το κουμπί μιας κάρτας
+    // μπορούσε να σταλεί ΔΕΥΤΕΡΗ φορά για την ΙΔΙΑ απόφαση. Στον guest το παράθυρο είναι
+    // ολόκληρο το network round-trip (σε 4G εύκολα 300-800ms): το πρώτο tap φεύγει, η κάρτα
+    // μένει ανοιχτή μέχρι να γυρίσει το νέο state, ο παίκτης ξαναπατά, ο host δέχεται resolve
+    // χωρίς pending και απαντά με σφάλμα. Δεν κρύβουμε το μήνυμα — δεν στέλνουμε τη 2η ενέργεια.
+    if (action && action.a === 'resolve') {
+      const pend = App.game && App.game.pending;
+      if (!pend) return;                                     // δεν υπάρχει τι να λυθεί
+      const key = pend.type + ':' + (pend.cardId || pend.special || '') + ':' + pend.playerId;
+      if (App._resolveSent === key) return;                  // ήδη στάλθηκε για ΑΥΤΗ την απόφαση
+      App._resolveSent = key;
+      // ασφαλιστική απελευθέρωση: αν η ενέργεια χαθεί στο δίκτυο, ο παίκτης δεν κλειδώνει έξω
+      clearTimeout(App._resolveTimer);
+      App._resolveTimer = setTimeout(() => { App._resolveSent = null; }, 2500);
+    }
     if (App.role === 'guest') { App.net.act(action); return; }
     applyAs(App.myId, action);
   }
@@ -894,11 +922,13 @@
       if (q.text) {
         html += '<textarea class="fbtext" data-q="' + q.id + '" rows="2" maxlength="300"></textarea>';
       } else if (q.scale) {
-        html += '<div class="fbrow">';
-        for (let v = 1; v <= q.scale; v++) html += '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + v + '"> ' + v + '</label>';
+        // Αύγουστος 2.5: το label μπαίνει σε <span> ώστε να είναι ΚΑΝΟΝΙΚΟ flex item (min-width:0,
+        // σωστό wrapping) αντί για ανώνυμο text node που δεν μπορεί να στοχευθεί από το CSS.
+        html += '<div class="fbrow fbscale">';
+        for (let v = 1; v <= q.scale; v++) html += '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + v + '"><span>' + v + '</span></label>';
         html += '</div>';
       } else {
-        html += '<div class="fbrow">' + q.opts.map(o => '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + esc(o[I.lang]) + '"> ' + esc(o[I.lang]) + '</label>').join('') + '</div>';
+        html += '<div class="fbrow">' + q.opts.map(o => '<label class="fbopt"><input type="radio" name="fb_' + q.id + '" value="' + esc(o[I.lang]) + '"><span>' + esc(o[I.lang]) + '</span></label>').join('') + '</div>';
         if (q.other) html += '<input class="fbother" data-q="' + q.id + '_other" placeholder="…" maxlength="120" style="margin-top:4px;">';
       }
       html += '</div>';
@@ -1058,6 +1088,12 @@
       renderBoard(g);
       renderCenter(g, g.pending ? g.pending.playerId : g.players[g.turn].id);
       renderHint(g); // κρύβεται όσο κινείται το πιόνι
+      // Αύγουστος 2.5 — 2η ΑΙΤΙΑ του ίδιου σφάλματος: αυτό το early return παρακάμπτει το
+      // renderModal(), οπότε αν η απόφαση έχει ΗΔΗ λυθεί και ξεκινήσει animation (π.χ. ζαριά
+      // bot αμέσως μετά), η κάρτα έμενε ανοιχτή με ενεργά κουμπιά → επόμενο tap = resolve
+      // χωρίς pending. Κλείνουμε το ΞΕΠΕΡΑΣΜΕΝΟ modal του παιχνιδιού· τα πληροφοριακά
+      // dialogs (Κανόνες/Ερωτηματολόγιο/Αναλυτικά) φυλάσσονται από το App.localModal.
+      if (!g.pending && !App.localModal) closeOverlay();
       return;
     }
     $('gameCode').textContent = App.lobby ? App.lobby.code : (JSON.parse(localStorage.getItem(GUEST_KEY) || '{}').code || '');
@@ -2267,6 +2303,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay };
   init();
 })();
