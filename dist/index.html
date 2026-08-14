@@ -637,7 +637,7 @@ body.game-over #myDash{z-index:auto;}
   <div class="home-label" id="lblNew">Νέο παιχνίδι</div>
   <button class="primary" id="btnCreate">🎲 Δημιουργία δωματίου</button>
   <!-- v1.5: ένδειξη έκδοσης (κανόνας Γιώργου: Μήνας x.y — νέος μήνας ⇒ 1.1, αλλιώς +0.1) -->
-  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.4</div>
+  <div class="muted" id="verLabel" style="text-align:center; font-size:11px; margin:4px 0 8px; letter-spacing:.4px;">IQUIT — Αύγουστος 2.5</div>
   <button class="premium" id="btnPremium"><span class="pm-ico">🧠</span><span class="pm-txt"><span class="pm-main">ADVANCED MODE</span><span class="pm-sub">Coming Soon</span></span></button>
 
   <div class="home-label" id="lblJoin">Μπες σε δωμάτιο</div>
@@ -2333,6 +2333,62 @@ body.game-over #myDash{z-index:auto;}
     }, Promise.resolve()).then(function () { return out; });
   }
 
+  /* ---------- ΓΝΩΣΤΕΣ LEGACY ΧΑΜΕΝΕΣ ΝΙΚΕΣ (ΠΡΟΣΩΡΙΝΟ — αφαιρέσιμο με μία λίστα) ----------
+     Καταχωρούνται ΜΟΝΟ περιπτώσεις με authoritative evidence από production export. Ο πίνακας
+     ΔΕΝ δίνει πόντους· δίνει μόνο «ξέρω ότι αυτό το uid έχει αυτό το legacy gameId να ελέγξει».
+     Οι αναμενόμενες τιμές είναι ΕΠΙΠΛΕΟΝ φράχτης: αν το αποθηκευμένο completion δεν συμφωνεί
+     ακριβώς, δεν γίνεται τίποτα. Όταν επιβεβαιωθεί η πίστωση, αδειάζει ο πίνακας. */
+  const KNOWN_LEGACY_RECOVERY = [
+    {
+      uid: 'X7wNB2CKamTO8GeyyKZXoMQs2Q62',      // ManosMicha
+      gameId: '4964d37c-1309-48be-a8b4-670d6802da63',
+      winningAge: 57,
+      awardedPoints: 107,                        // === calculateVictoryScore(57)
+    },
+  ];
+
+  function knownLegacyEntriesFor(uid) {
+    return KNOWN_LEGACY_RECOVERY.filter(function (e) { return e && e.uid === uid; });
+  }
+
+  // Αυτόματη ανάκτηση γνωστών legacy νικών. Κάθε εγγραφή περνά ΞΑΝΑ από πλήρη επαλήθευση
+  // πάνω στα ΑΠΟΘΗΚΕΥΜΕΝΑ δεδομένα — ο πίνακας δεν είναι ποτέ πηγή αλήθειας για τιμές.
+  function autoRecoverKnownLegacy(ctx, uid, options) {
+    options = options || {};
+    const entries = knownLegacyEntriesFor(uid);
+    const out = { checked: entries.length, verified: [], rejected: [], report: null, points: 0, recovered: 0 };
+    if (!entries.length || !ctx || !ctx.db || !uid) return Promise.resolve(out);
+    return entries.reduce(function (chain, e) {
+      return chain.then(function () {
+        // Ο πίνακας δηλώνει awardedPoints· η ΦΟΡΜΟΥΛΑ παραμένει η μόνη αυθεντία.
+        if (e.awardedPoints !== calculateVictoryScore(e.winningAge)) {
+          out.rejected.push({ gameId: e.gameId, reason: 'map-points-not-canonical' });
+          return null;
+        }
+        return planLegacySeed(ctx, uid, e.gameId).then(function (row) {
+          if (!row.uidMatch) { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'not-winner' }); return null; }
+          if (!row.eligible) { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'ineligible' }); return null; }
+          if (row.winningAge !== e.winningAge || row.awardedPoints !== e.awardedPoints) {
+            out.rejected.push({ gameId: e.gameId, reason: 'stored-completion-mismatch' });
+            return null;
+          }
+          if (row.action === 'CONFLICT') { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'conflict' }); return null; }
+          out.verified.push(e.gameId);
+          return null;
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      if (!out.verified.length) return out;
+      // Η πίστωση γίνεται ΜΟΝΟ μέσω του canonical seed → recoverMissedAwards.
+      return seedLegacyGamesForCurrentUser(ctx, uid, out.verified, options).then(function (rep) {
+        out.report = rep;
+        out.points = rep.points;
+        out.recovered = rep.recovered;
+        return out;
+      });
+    });
+  }
+
   // Bounded παράθυρο σεζόν: τρέχουσα + τις προηγούμενες N (default 1 → ~6 μήνες).
   function recentSeasonIds(date, back) {
     const d = date instanceof Date ? date : new Date(date || Date.now());
@@ -2354,6 +2410,9 @@ body.game-over #myDash{z-index:auto;}
     listUserGameIds: listUserGameIds,
     recoverMissedAwards: recoverMissedAwards,
     recentSeasonIds: recentSeasonIds,
+    KNOWN_LEGACY_RECOVERY: KNOWN_LEGACY_RECOVERY,
+    knownLegacyEntriesFor: knownLegacyEntriesFor,
+    autoRecoverKnownLegacy: autoRecoverKnownLegacy,
     planLegacySeed: planLegacySeed,
     seedLegacyGameForCurrentUser: seedLegacyGameForCurrentUser,
     seedLegacyGamesForCurrentUser: seedLegacyGamesForCurrentUser,
@@ -5725,10 +5784,21 @@ body.game-over #myDash{z-index:auto;}
     return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
       const uid = snapshot && snapshot.user && snapshot.user.uid;
       if (!uid) return null;
-      return SCORE.listUserGameIds(ctx, uid, 40).then(ids => {
-        if (!ids.length) return null;
-        // Bounded παράθυρο: τρέχουσα + προηγούμενη σεζόν.
-        return SCORE.recoverMissedAwards(ctx, uid, ids, { seasons: SCORE.recentSeasonIds(Date.now(), 1) });
+      // 1) ΓΝΩΣΤΕΣ legacy χαμένες νίκες (προσωρινός πίνακας) — seed + canonical recovery,
+      //    ώστε ο παίκτης να μη χρειάζεται ΚΑΜΙΑ ενέργεια. Επαληθεύεται ξανά από τα δεδομένα.
+      return SCORE.autoRecoverKnownLegacy(ctx, uid).then(known => {
+        if (known && known.rejected.length) scoreDiag('known-legacy', { stage: 'rejected', items: known.rejected });
+        // 2) Ό,τι είναι ήδη στο index του παίκτη (κανονικός μηχανισμός από εδώ και πέρα).
+        return SCORE.listUserGameIds(ctx, uid, 40).then(ids => {
+          if (!ids.length) return known && known.points ? { points: known.points, wins: known.recovered, recovered: [], skipped: [], conflicts: [], errors: 0 } : null;
+          return SCORE.recoverMissedAwards(ctx, uid, ids, { seasons: SCORE.recentSeasonIds(Date.now(), 1) })
+            .then(out => {
+              // Το γνωστό legacy μπορεί να πιστώθηκε ήδη στο βήμα 1· τα receipts εμποδίζουν διπλή μέτρηση,
+              // οπότε εδώ απλώς αθροίζουμε ό,τι ΟΝΤΩΣ πιστώθηκε για το μήνυμα.
+              if (known && known.points) { out.points += known.points; out.wins += known.recovered; }
+              return out;
+            });
+        });
       });
     }).then(out => {
       if (!out) return null;
@@ -7582,7 +7652,7 @@ body.game-over #myDash{z-index:auto;}
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE, SCORE };
   init();
 })();
 

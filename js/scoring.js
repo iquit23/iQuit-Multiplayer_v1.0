@@ -480,6 +480,62 @@
     }, Promise.resolve()).then(function () { return out; });
   }
 
+  /* ---------- ΓΝΩΣΤΕΣ LEGACY ΧΑΜΕΝΕΣ ΝΙΚΕΣ (ΠΡΟΣΩΡΙΝΟ — αφαιρέσιμο με μία λίστα) ----------
+     Καταχωρούνται ΜΟΝΟ περιπτώσεις με authoritative evidence από production export. Ο πίνακας
+     ΔΕΝ δίνει πόντους· δίνει μόνο «ξέρω ότι αυτό το uid έχει αυτό το legacy gameId να ελέγξει».
+     Οι αναμενόμενες τιμές είναι ΕΠΙΠΛΕΟΝ φράχτης: αν το αποθηκευμένο completion δεν συμφωνεί
+     ακριβώς, δεν γίνεται τίποτα. Όταν επιβεβαιωθεί η πίστωση, αδειάζει ο πίνακας. */
+  const KNOWN_LEGACY_RECOVERY = [
+    {
+      uid: 'X7wNB2CKamTO8GeyyKZXoMQs2Q62',      // ManosMicha
+      gameId: '4964d37c-1309-48be-a8b4-670d6802da63',
+      winningAge: 57,
+      awardedPoints: 107,                        // === calculateVictoryScore(57)
+    },
+  ];
+
+  function knownLegacyEntriesFor(uid) {
+    return KNOWN_LEGACY_RECOVERY.filter(function (e) { return e && e.uid === uid; });
+  }
+
+  // Αυτόματη ανάκτηση γνωστών legacy νικών. Κάθε εγγραφή περνά ΞΑΝΑ από πλήρη επαλήθευση
+  // πάνω στα ΑΠΟΘΗΚΕΥΜΕΝΑ δεδομένα — ο πίνακας δεν είναι ποτέ πηγή αλήθειας για τιμές.
+  function autoRecoverKnownLegacy(ctx, uid, options) {
+    options = options || {};
+    const entries = knownLegacyEntriesFor(uid);
+    const out = { checked: entries.length, verified: [], rejected: [], report: null, points: 0, recovered: 0 };
+    if (!entries.length || !ctx || !ctx.db || !uid) return Promise.resolve(out);
+    return entries.reduce(function (chain, e) {
+      return chain.then(function () {
+        // Ο πίνακας δηλώνει awardedPoints· η ΦΟΡΜΟΥΛΑ παραμένει η μόνη αυθεντία.
+        if (e.awardedPoints !== calculateVictoryScore(e.winningAge)) {
+          out.rejected.push({ gameId: e.gameId, reason: 'map-points-not-canonical' });
+          return null;
+        }
+        return planLegacySeed(ctx, uid, e.gameId).then(function (row) {
+          if (!row.uidMatch) { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'not-winner' }); return null; }
+          if (!row.eligible) { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'ineligible' }); return null; }
+          if (row.winningAge !== e.winningAge || row.awardedPoints !== e.awardedPoints) {
+            out.rejected.push({ gameId: e.gameId, reason: 'stored-completion-mismatch' });
+            return null;
+          }
+          if (row.action === 'CONFLICT') { out.rejected.push({ gameId: e.gameId, reason: row.reason || 'conflict' }); return null; }
+          out.verified.push(e.gameId);
+          return null;
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      if (!out.verified.length) return out;
+      // Η πίστωση γίνεται ΜΟΝΟ μέσω του canonical seed → recoverMissedAwards.
+      return seedLegacyGamesForCurrentUser(ctx, uid, out.verified, options).then(function (rep) {
+        out.report = rep;
+        out.points = rep.points;
+        out.recovered = rep.recovered;
+        return out;
+      });
+    });
+  }
+
   // Bounded παράθυρο σεζόν: τρέχουσα + τις προηγούμενες N (default 1 → ~6 μήνες).
   function recentSeasonIds(date, back) {
     const d = date instanceof Date ? date : new Date(date || Date.now());
@@ -501,6 +557,9 @@
     listUserGameIds: listUserGameIds,
     recoverMissedAwards: recoverMissedAwards,
     recentSeasonIds: recentSeasonIds,
+    KNOWN_LEGACY_RECOVERY: KNOWN_LEGACY_RECOVERY,
+    knownLegacyEntriesFor: knownLegacyEntriesFor,
+    autoRecoverKnownLegacy: autoRecoverKnownLegacy,
     planLegacySeed: planLegacySeed,
     seedLegacyGameForCurrentUser: seedLegacyGameForCurrentUser,
     seedLegacyGamesForCurrentUser: seedLegacyGamesForCurrentUser,

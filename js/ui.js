@@ -582,10 +582,21 @@
     return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
       const uid = snapshot && snapshot.user && snapshot.user.uid;
       if (!uid) return null;
-      return SCORE.listUserGameIds(ctx, uid, 40).then(ids => {
-        if (!ids.length) return null;
-        // Bounded παράθυρο: τρέχουσα + προηγούμενη σεζόν.
-        return SCORE.recoverMissedAwards(ctx, uid, ids, { seasons: SCORE.recentSeasonIds(Date.now(), 1) });
+      // 1) ΓΝΩΣΤΕΣ legacy χαμένες νίκες (προσωρινός πίνακας) — seed + canonical recovery,
+      //    ώστε ο παίκτης να μη χρειάζεται ΚΑΜΙΑ ενέργεια. Επαληθεύεται ξανά από τα δεδομένα.
+      return SCORE.autoRecoverKnownLegacy(ctx, uid).then(known => {
+        if (known && known.rejected.length) scoreDiag('known-legacy', { stage: 'rejected', items: known.rejected });
+        // 2) Ό,τι είναι ήδη στο index του παίκτη (κανονικός μηχανισμός από εδώ και πέρα).
+        return SCORE.listUserGameIds(ctx, uid, 40).then(ids => {
+          if (!ids.length) return known && known.points ? { points: known.points, wins: known.recovered, recovered: [], skipped: [], conflicts: [], errors: 0 } : null;
+          return SCORE.recoverMissedAwards(ctx, uid, ids, { seasons: SCORE.recentSeasonIds(Date.now(), 1) })
+            .then(out => {
+              // Το γνωστό legacy μπορεί να πιστώθηκε ήδη στο βήμα 1· τα receipts εμποδίζουν διπλή μέτρηση,
+              // οπότε εδώ απλώς αθροίζουμε ό,τι ΟΝΤΩΣ πιστώθηκε για το μήνυμα.
+              if (known && known.points) { out.points += known.points; out.wins += known.recovered; }
+              return out;
+            });
+        });
       });
     }).then(out => {
       if (!out) return null;
@@ -2439,6 +2450,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE, SCORE };
   init();
 })();

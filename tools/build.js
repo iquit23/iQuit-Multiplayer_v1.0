@@ -9,11 +9,11 @@ let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 // ΠΡΟΣΟΧΗ: replacement ΩΣ FUNCTION — αλλιώς χαρακτήρες όπως $' μέσα στον κώδικα
 // (π.χ. το πιόνι '$') ερμηνεύονται ως ειδικά patterns του String.replace και καταστρέφουν το output.
-html = html.replace('<link rel="stylesheet" href="css/style.css?v=2.4">', () => '<style>\n' + css + '\n</style>');
+html = html.replace('<link rel="stylesheet" href="css/style.css?v=2.5">', () => '<style>\n' + css + '\n</style>');
 
 for (const f of ['cards.js', 'i18n.js', 'intro.js', 'scoring.js', 'leaderboard.js', 'engine.js', 'bots.js', 'net.js', 'net-fb.js', 'transport.js', 'account.js', 'ui.js']) {
   const js = fs.readFileSync(path.join(root, 'js', f), 'utf8');
-  html = html.replace('<script src="js/' + f + '?v=2.4"></script>', () => '<script>\n' + js + '\n</script>');
+  html = html.replace('<script src="js/' + f + '?v=2.5"></script>', () => '<script>\n' + js + '\n</script>');
 }
 
 // v0.7: το board art γίνεται inline data-URI ώστε το dist να παραμένει ΕΝΑ αρχείο

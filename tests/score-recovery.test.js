@@ -392,8 +392,134 @@ async function run(options) {
       'λείπει ο φραγμός πριν από κάθε εγγραφή');
   });
 
+  /* ---------- ΓΝΩΣΤΗ LEGACY ΠΕΡΙΠΤΩΣΗ: ManosMicha (KA–KK) ---------- */
+
+  const MM_UID = 'X7wNB2CKamTO8GeyyKZXoMQs2Q62';
+  const MM_GAME = '4964d37c-1309-48be-a8b4-670d6802da63';
+  const MM_SEASON = '2026-Q3';
+  function mmGame(over) {
+    const c = Object.assign({
+      gameId: MM_GAME, seasonId: MM_SEASON, winnerUid: MM_UID, winnerPlayerId: 'p0',
+      winningAge: 57, awardedPoints: 107, eligible: true, completedAt: Date.UTC(2026, 7, 10),
+    }, over || {});
+    return {
+      meta: { gameId: MM_GAME, hostUid: MM_UID, roomCode: 'ZZZZ', transport: 'firebase', humanCount: 1, createdAt: 1 },
+      roster: { p0: { human: true, expectedUid: MM_UID } },
+      proofs: { p0: { uid: c.winnerUid, verifiedAt: 1 } },
+      participants: { [c.winnerUid]: { playerId: 'p0' } },
+      completion: c,
+    };
+  }
+  const mmWorld = function (over, season) { return world({ [MM_GAME]: mmGame(over) }, season || {}); };
+
+  await test('KA', 'ManosMicha: γνωστό legacy game → seed + ανάκτηση +107 αυτόματα', async function () {
+    const db = makeDb(mmWorld(), { authUid: MM_UID });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    assert(out.checked === 1 && out.verified.length === 1, 'δεν επαληθεύτηκε: ' + JSON.stringify(out));
+    assert(out.recovered === 1 && out.points === 107, 'λάθος πίστωση: ' + JSON.stringify(out));
+    const agg = db._get('seasonScores/' + MM_SEASON + '/' + MM_UID);
+    assert(agg.points === 107 && agg.wins === 1 && agg.gamesPlayed === 1, 'λάθος aggregate: ' + JSON.stringify(agg));
+    assert(agg.awards[MM_GAME].creditedUid === MM_UID && agg.awards[MM_GAME].won === true, 'λάθος receipt');
+    assert(db._get('userGames/' + MM_UID + '/' + MM_GAME), 'δεν γράφτηκε index entry');
+  });
+
+  await test('KB', 'ManosMicha: 2ο login → +0', async function () {
+    const db = makeDb(mmWorld(), { authUid: MM_UID });
+    const ctx = { db: db, uid: MM_UID };
+    await S.autoRecoverKnownLegacy(ctx, MM_UID);
+    const second = await S.autoRecoverKnownLegacy(ctx, MM_UID);
+    assert(second.points === 0 && second.recovered === 0, '2ο login πίστωσε ξανά: ' + JSON.stringify(second));
+    const agg = db._get('seasonScores/' + MM_SEASON + '/' + MM_UID);
+    assert(agg.points === 107 && agg.wins === 1 && agg.gamesPlayed === 1, 'ΔΙΠΛΟΜΕΤΡΗΣΗ: ' + JSON.stringify(agg));
+  });
+
+  await test('KC', 'ManosMicha: 3ο και 10ο login → +0, aggregate σταθερό', async function () {
+    const db = makeDb(mmWorld(), { authUid: MM_UID });
+    const ctx = { db: db, uid: MM_UID };
+    for (let i = 0; i < 10; i++) await S.autoRecoverKnownLegacy(ctx, MM_UID);
+    const agg = db._get('seasonScores/' + MM_SEASON + '/' + MM_UID);
+    assert(agg.points === 107 && agg.wins === 1 && agg.gamesPlayed === 1, '10 logins διπλομέτρησαν: ' + JSON.stringify(agg));
+    assert(Object.keys(agg.awards).length === 1, 'πολλαπλά receipts');
+  });
+
+  await test('KD', 'ΑΛΛΟΣ χρήστης δεν μπορεί να χρησιμοποιήσει το mapping', async function () {
+    const db = makeDb(mmWorld(), { authUid: ME });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: ME }, ME);
+    assert(out.checked === 0 && out.points === 0, 'το mapping ίσχυσε για άλλο uid: ' + JSON.stringify(out));
+    assert(!db._get('seasonScores/' + MM_SEASON + '/' + ME), 'γράφτηκαν πόντοι σε άλλο χρήστη');
+    assert(!db._get('seasonScores/' + MM_SEASON + '/' + MM_UID), 'γράφτηκαν πόντοι στον ManosMicha από τρίτον');
+  });
+
+  await test('KE', 'winnerUid mismatch στο αποθηκευμένο completion → απόρριψη', async function () {
+    const db = makeDb(mmWorld({ winnerUid: 'someone-else' }), { authUid: MM_UID });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    assert(out.verified.length === 0 && out.points === 0, 'πιστώθηκε παρά το mismatch');
+    assert(out.rejected.length === 1, 'δεν καταγράφηκε απόρριψη: ' + JSON.stringify(out));
+    assert(!db._get('seasonScores/' + MM_SEASON + '/' + MM_UID), 'γράφτηκαν πόντοι');
+  });
+
+  await test('KF', 'points/age mismatch με τον πίνακα → απόρριψη', async function () {
+    // Το αποθηκευμένο completion λέει άλλη ηλικία από τον πίνακα (57)
+    const db = makeDb(mmWorld({ winningAge: 40, awardedPoints: 124 }), { authUid: MM_UID });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    assert(out.verified.length === 0 && out.rejected[0].reason === 'stored-completion-mismatch',
+      'δεν απορρίφθηκε το mismatch: ' + JSON.stringify(out));
+    assert(!db._get('seasonScores/' + MM_SEASON + '/' + MM_UID), 'γράφτηκαν πόντοι');
+  });
+
+  await test('KG', 'λείπει completion → ασφαλές skip', async function () {
+    const g = mmGame(); delete g.completion;
+    const db = makeDb(world({ [MM_GAME]: g }), { authUid: MM_UID });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    assert(out.verified.length === 0 && out.points === 0, 'πιστώθηκε χωρίς completion');
+    assert(out.rejected[0].reason === 'no-completion', 'λάθος αιτιολογία: ' + out.rejected[0].reason);
+  });
+
+  await test('KH', 'ήδη πιστωμένο πριν το login → no-op', async function () {
+    const receipt = Object.assign({}, mmGame().completion, { creditedUid: MM_UID, won: true });
+    const pre = { [MM_SEASON]: { [MM_UID]: { points: 107, wins: 1, gamesPlayed: 1, sumWinningAge: 57, updatedAt: 1, awards: { [MM_GAME]: receipt } } } };
+    const db = makeDb(mmWorld(null, pre), { authUid: MM_UID });
+    const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    assert(out.points === 0 && out.recovered === 0, 'ξαναπίστωσε ήδη πιστωμένο');
+    const agg = db._get('seasonScores/' + MM_SEASON + '/' + MM_UID);
+    assert(agg.points === 107 && agg.wins === 1, 'αλλοιώθηκε το aggregate');
+  });
+
+  await test('KI', 'το leaderboard row αντικατοπτρίζει το νέο σύνολο', async function () {
+    const pre = { [MM_SEASON]: { [MM_UID]: { points: 50, wins: 1, gamesPlayed: 1, sumWinningAge: 60, updatedAt: 1, awards: { 'other-id': { gameId: 'other-id' } } } } };
+    const db = makeDb(mmWorld(null, pre), { authUid: MM_UID });
+    await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
+    const row = db._get('seasonScores/' + MM_SEASON + '/' + MM_UID);
+    assert(row.points === 157 && row.wins === 2 && row.gamesPlayed === 2, 'λάθος σύνολο: ' + JSON.stringify(row));
+    assert(typeof row.updatedAt === 'number' && row.updatedAt > 1700000000000, 'λάθος updatedAt');
+  });
+
+  await test('KJ', 'network failure → δεν σπάει τίποτα, παραμένει επαναλήψιμο', async function () {
+    const bad = makeDb(mmWorld(), { authUid: MM_UID, failReads: { ['scoreGames/' + MM_GAME]: 'NETWORK' } });
+    const out = await S.autoRecoverKnownLegacy({ db: bad, uid: MM_UID }, MM_UID);
+    assert(out.points === 0 && out.verified.length === 0, 'πιστώθηκε παρά το σφάλμα');
+    assert(!bad._get('seasonScores/' + MM_SEASON + '/' + MM_UID), 'γράφτηκαν πόντοι');
+    const good = makeDb(mmWorld(), { authUid: MM_UID });
+    const retry = await S.autoRecoverKnownLegacy({ db: good, uid: MM_UID }, MM_UID);
+    assert(retry.points === 107, 'το retry δεν πέτυχε');
+  });
+
+  await test('KK', 'ο πίνακας είναι ρητός, ελάχιστος και αφαιρέσιμος — καμία χειροκίνητη πίστωση', function () {
+    const map = S.KNOWN_LEGACY_RECOVERY;
+    assert(Array.isArray(map) && map.length === 1, 'ο πίνακας πρέπει να έχει ΜΟΝΟ την επιβεβαιωμένη περίπτωση');
+    assert(map[0].uid === MM_UID && map[0].gameId === MM_GAME, 'λάθος εγγραφή');
+    assert(map[0].awardedPoints === S.calculateVictoryScore(map[0].winningAge), 'ο πίνακας δεν συμφωνεί με τη φόρμουλα');
+    const src = fs.readFileSync(__dirname + '/../js/scoring.js', 'utf8');
+    assert(/return seedLegacyGamesForCurrentUser\(ctx, uid, out\.verified, options\)/.test(src),
+      'το auto-recovery πρέπει να περνά από το canonical seed → recovery');
+    assert(!/points\s*\+=\s*107/.test(src), 'βρέθηκε χειροκίνητη πίστωση 107!');
+    const ui = fs.readFileSync(__dirname + '/../js/ui.js', 'utf8');
+    assert(/SCORE\.autoRecoverKnownLegacy\(ctx, uid\)/.test(ui), 'το login flow δεν καλεί το auto-recovery');
+    assert(!/4964d37c/.test(ui), 'το gameId δεν πρέπει να είναι hardcoded στο UI');
+  });
+
   if (!options.silent) {
-    console.log('\n' + (failed === 0 ? '✅' : '❌') + ' Score recovery + legacy seed: ' + passed + ' passed, ' + failed + ' failed');
+    console.log('\n' + (failed === 0 ? '✅' : '❌') + ' Score recovery + legacy + known-legacy: ' + passed + ' passed, ' + failed + ' failed');
   }
   return { passed: passed, failed: failed, results: results };
 }
