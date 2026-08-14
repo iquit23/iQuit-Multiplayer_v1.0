@@ -281,6 +281,19 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
       points: 999, wins: 1, gamesPlayed: 2, sumWinningAge: 61, updatedAt: T(), awards: tampered,
     }));
   })());
+  // Αύγουστος 2.5 — per-user index για το in-app self-repair
+  await ok('userGames: ο ΙΔΙΟΣ γράφει index για παιχνίδι όπου είναι participant → ALLOW',
+    assertSucceeds(V('score-guest').ref('userGames/score-guest/' + GAME).set(T())));
+  await ok('userGames: ΤΡΙΤΟΣ δεν γράφει στο index άλλου χρήστη → DENY',
+    assertFails(V('mallory').ref('userGames/score-guest/' + GAME).set(T())));
+  await ok('userGames: ΤΡΙΤΟΣ δεν διαβάζει το index άλλου χρήστη → DENY',
+    assertFails(V('mallory').ref('userGames/score-guest').once('value')));
+  await ok('userGames: ο ΙΔΙΟΣ διαβάζει το δικό του index → ALLOW',
+    assertSucceeds(V('score-guest').ref('userGames/score-guest').once('value')));
+  await ok('userGames: index για παιχνίδι ΧΩΡΙΣ αποδεδειγμένη συμμετοχή → DENY',
+    assertFails(V('mallory').ref('userGames/mallory/' + GAME).set(T())));
+  await ok('scoreGames: ΔΕΝ γίνεται enumeration ολόκληρου του κόμβου → DENY',
+    assertFails(V('score-guest').ref('scoreGames').once('value')));
   await ok('leaderboard: authenticated guest διαβάζει current season aggregates → ALLOW',
     assertSucceeds(ANON('leaderboard-reader').ref('seasonScores/2026-Q3').once('value')));
   await ok('leaderboard: πραγματικά unauthenticated client δεν διαβάζει season aggregates → DENY',

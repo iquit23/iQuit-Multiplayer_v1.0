@@ -123,6 +123,15 @@
       }
     },
 
+    "userGames": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$gameId": {
+          ".write": "auth != null && auth.uid === $uid && auth.token.email_verified === true && !data.exists() && $gameId.matches(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) && root.child('scoreGames').child($gameId).child('participants').child(auth.uid).exists()",
+          ".validate": "newData.isNumber() && newData.val() > 1700000000000 && newData.val() < (now + 60000)"
+        }
+      }
+    },
     "rooms": {
       "$code": {
         ".validate": "$code.matches(/^[A-Z2-9]{4}$/)",

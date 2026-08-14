@@ -1179,6 +1179,16 @@ section('Mobile fix — ερωτηματολόγιο & toasts');
   passed += introRegression.passed;
   failed += introRegression.failed;
 
+  section('Αύγουστος 2.5 In-app self-repair χαμένων νικών A–N');
+  const recovery = await require('./score-recovery.test.js').run();
+  passed += recovery.passed;
+  failed += recovery.failed;
+
+  section('Αύγουστος 2.5 Recovery detector για χαμένα awards A–M');
+  const backfill = await require('./score-backfill.test.js').run();
+  passed += backfill.passed;
+  failed += backfill.failed;
+
   section('Αύγουστος 2.5 Scoring persistence & partial repair A–P');
   const scorePersistence = await require('./scoring-persistence.test.js').run();
   passed += scorePersistence.passed;

@@ -36,6 +36,10 @@
   // συναρτήσεις (π.χ. hostCreate) — καμία έκθεση στο production App namespace.
   const E2E = new URLSearchParams(location.search).get('e2e') === '1';
   const SCORE_DEBUG = /[?&]scoredebug=1/.test(location.search);
+  // Αύγουστος 2.5 — ΜΕΤΑΒΑΤΙΚΟ legacy recovery. Κρυφό: μόνο τοπικά ή με ρητό ?recovery=1.
+  // Δεν είναι ποτέ ορατό σε κανονικό επισκέπτη και αφαιρείται με μία γραμμή όταν τελειώσει.
+  const RECOVERY_MODE = /[?&]recovery=1/.test(location.search) ||
+    /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const BOT_DELAY = FAST ? 900 : 5200, DISCO_DELAY = FAST ? 3000 : 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
   const HB_MS = FAST ? 1200 : 5000;          // κάθε πότε «χτυπά» ο host
   const HB_LOST_MS = FAST ? 4000 : 15000;    // πόση σιωπή = χαμένος host
@@ -69,6 +73,7 @@
     scoreCreditState: {},
     scoreDiag: [],            // Αύγουστος 2.5: δομημένη εσωτερική διάγνωση σταδίων
     scoreRetryTimer: null,
+    scoreRecoveryDone: false,   // self-repair: μία φορά ανά session
   };
 
   // ============================================================ ΗΧΟΙ (WebAudio — χωρίς αρχεία)
@@ -395,7 +400,11 @@
     return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
       const uid = snapshot.user.uid;
       if (entry.expectedUid && entry.expectedUid !== uid) throw new Error('Authenticated UID changed after the roster was frozen.');
-      return SCORE.registerVerifiedProof(ctx, g.gameId, App.myId, uid);
+      return SCORE.registerVerifiedProof(ctx, g.gameId, App.myId, uid).then(() =>
+        // Αύγουστος 2.5: ελάχιστο per-user index — ΜΟΝΟ ο ίδιος γράφει, και μόνο αφού
+        // υπάρχει αποδεδειγμένη συμμετοχή. Χωρίς αυτό, ο παίκτης δεν έχει κανέναν τρόπο
+        // να εντοπίσει αργότερα τα δικά του παιχνίδια (δεν υπάρχει read στο scoreGames root).
+        SCORE.registerUserGame(ctx, uid, g.gameId, Date.now()));
     }).then(() => true).catch(() => false).then(ok => {
       if (App.scoreProofingKey === key) App.scoreProofingKey = null;
       return ok;
@@ -514,6 +523,84 @@
         if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') showEnd();
         scheduleScoreRetry(gameId);
       });
+  }
+
+  // Μικρό, ελεγχόμενο panel legacy ανάκτησης. Εμφανίζεται ΜΟΝΟ σε recovery mode ΚΑΙ μόνο
+  // αφού επιβεβαιωθεί verified λογαριασμός — δεν υπάρχει δημόσιο «recover arbitrary gameId».
+  function initLegacyRecoveryPanel() {
+    if (!RECOVERY_MODE) return;
+    const host = $('resumeBox');
+    if (!host || $('recPanel')) return;
+    freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      const uid = snapshot && snapshot.user && snapshot.user.uid;
+      if (!uid || $('recPanel')) return;
+      const box = document.createElement('div');
+      box.id = 'recPanel';
+      box.className = 'card';
+      box.style.cssText = 'margin-top:10px; text-align:left;';
+      box.innerHTML = '<div style="font-weight:800; margin-bottom:4px;">' + esc(t('recTitle')) + '</div>' +
+        '<div class="muted" style="margin-bottom:8px;">' + esc(t('recHint')) + '</div>' +
+        '<textarea id="recIds" rows="3" style="width:100%; font-size:13px;"></textarea>' +
+        '<div style="display:flex; gap:6px; margin-top:8px;">' +
+        '<button class="ghost" id="recDry" style="flex:1;">' + esc(t('recDry')) + '</button>' +
+        '<button class="buy" id="recGo" style="flex:1;">' + esc(t('recApply')) + '</button></div>' +
+        '<div id="recOut" class="muted" style="margin-top:8px; white-space:pre-wrap;"></div>';
+      host.appendChild(box);
+      const ids = () => ($('recIds').value || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).slice(0, 100);
+      const run = (dryRun) => {
+        const list = ids();
+        if (!list.length) { $('recOut').textContent = t('recNone'); return; }
+        $('recDry').disabled = $('recGo').disabled = true;
+        $('recOut').textContent = '…';
+        SCORE.seedLegacyGamesForCurrentUser(ctx, uid, list, { dryRun: dryRun })
+          .then(rep => {
+            $('recOut').textContent = rep.rows.map(r =>
+              r.gameId.slice(0, 8) + '… → ' + r.action +
+              (r.awardedPoints ? ' (' + r.awardedPoints + 'π, ηλικία ' + r.winningAge + ')' : '') +
+              (r.reason ? ' · ' + r.reason : '')).join('\n') +
+              '\n— ' + (dryRun ? 'DRY RUN, καμία εγγραφή' : 'ανακτήθηκαν ' + rep.recovered + ' (' + rep.points + ' πόντοι)');
+            scoreDiag('legacy-seed', { stage: dryRun ? 'dry-run' : 'apply', recovered: rep.recovered,
+              points: rep.points, conflicts: rep.conflicts, skipped: rep.skipped });
+            if (!dryRun && rep.points > 0) toast(t(rep.recovered === 1 ? 'scoreRecovered1' : 'scoreRecovered', { points: rep.points, wins: rep.recovered }));
+          })
+          .catch(() => { $('recOut').textContent = t('recNone'); })
+          .then(() => { $('recDry').disabled = $('recGo').disabled = false; });
+      };
+      $('recDry').onclick = () => run(true);
+      $('recGo').onclick = () => run(false);
+    }).catch(() => {});
+  }
+
+  // Αύγουστος 2.5 — SELF-REPAIR παλιών, μη πιστωμένων νικών.
+  // Τρέχει το πολύ ΜΙΑ φορά ανά session, ΜΟΝΟ για τον συνδεδεμένο verified χρήστη και ΜΟΝΟ
+  // πάνω σε authoritative evidence (immutable completion + proof + participant).
+  // Δεν μπλοκάρει ποτέ login/gameplay: κάθε σφάλμα καταγράφεται σιωπηλά και ξαναδοκιμάζεται
+  // στην επόμενη φόρτωση.
+  function maybeRecoverMissedAwards() {
+    if (App.scoreRecoveryDone) return Promise.resolve(null);
+    App.scoreRecoveryDone = true;
+    return freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
+      const uid = snapshot && snapshot.user && snapshot.user.uid;
+      if (!uid) return null;
+      return SCORE.listUserGameIds(ctx, uid, 40).then(ids => {
+        if (!ids.length) return null;
+        // Bounded παράθυρο: τρέχουσα + προηγούμενη σεζόν.
+        return SCORE.recoverMissedAwards(ctx, uid, ids, { seasons: SCORE.recentSeasonIds(Date.now(), 1) });
+      });
+    }).then(out => {
+      if (!out) return null;
+      scoreDiag('recovery', { stage: 'recovery', recovered: out.recovered.length, points: out.points,
+        skipped: out.skipped.length, conflicts: out.conflicts.length, errors: out.errors });
+      if (out.points > 0) {
+        toast(t(out.wins === 1 ? 'scoreRecovered1' : 'scoreRecovered', { points: out.points, wins: out.wins }));
+      }
+      return out;
+    }).catch(err => {
+      // Δικτυακή/permission αποτυχία: ΔΕΝ ενοχλούμε τον παίκτη — ξαναδοκιμάζουμε αργότερα.
+      App.scoreRecoveryDone = false;
+      scoreDiag('recovery', { stage: 'recovery-failed', message: (err && err.message) || '' });
+      return null;
+    });
   }
 
   // Αύγουστος 2.5 — δομημένη ΕΣΩΤΕΡΙΚΗ διάγνωση (ΠΟΤΕ δεν φτάνει στον παίκτη ως τεχνικό κείμενο).
@@ -2190,6 +2277,9 @@
 
   function init() {
     initTurnSetupPanel(); // v1.22: ενεργό ΜΟΝΟ με ?turnsetup=1 — αλλιώς no-op
+    // Αύγουστος 2.5: self-repair παλιών μη πιστωμένων νικών, αφού «κατακάτσει» το auth.
+    // Αν δεν υπάρχει verified χρήστης, αποτυγχάνει σιωπηλά και δεν επηρεάζει τίποτα.
+    setTimeout(() => { maybeRecoverMissedAwards(); initLegacyRecoveryPanel(); }, 2500);
     $('playerName').value = localStorage.getItem(NAME_KEY) || '';
     $('playerName').addEventListener('input', () => localStorage.setItem(NAME_KEY, $('playerName').value));
     $('joinCode').addEventListener('input', () => { $('joinCode').value = $('joinCode').value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
@@ -2349,6 +2439,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE };
   init();
 })();

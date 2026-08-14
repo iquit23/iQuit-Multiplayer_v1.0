@@ -11,6 +11,8 @@
   'use strict';
 
   const MIN_WINNING_AGE = 25;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const SEASON_RE = /^[0-9]{4}-Q[1-4]$/;
   const MAX_WINNING_AGE = 64;
 
   function bytesToUuid(bytes) {
@@ -278,10 +280,230 @@
       });
   }
 
+  /* ---------- Αύγουστος 2.5: self-repair παλιών, μη πιστωμένων νικών ----------
+     ΜΟΝΑΔΙΚΗ πηγή αλήθειας για το «τι είναι αξιόπιστο completion». Τη χρησιμοποιούν ΚΑΙ ο
+     in-app recovery ΚΑΙ το offline tools/score-backfill.js — καμία δεύτερη υλοποίηση. */
+  function inspectStoredCompletion(gameId, game) {
+    const c = game && game.completion;
+    const problems = [];
+    if (!c) return { status: 'no-completion', problems: ['λείπει το completion'] };
+    if (!UUID_RE.test(String(gameId))) problems.push('μη έγκυρο gameId');
+    if (c.gameId !== gameId) problems.push('completion.gameId ≠ path gameId');
+    if (c.eligible !== true) problems.push('eligible !== true');
+    if (!SEASON_RE.test(String(c.seasonId || ''))) problems.push('μη έγκυρο seasonId');
+    if (!c.winnerUid || typeof c.winnerUid !== 'string') problems.push('λείπει winnerUid');
+    if (!c.winnerPlayerId) problems.push('λείπει winnerPlayerId');
+    if (typeof c.winningAge !== 'number' || Math.floor(c.winningAge) !== c.winningAge) problems.push('winningAge δεν είναι ακέραιος');
+    const expected = calculateVictoryScore(c.winningAge);
+    if (!expected) problems.push('winningAge εκτός επιτρεπτού εύρους');
+    else if (c.awardedPoints !== expected) problems.push('awardedPoints ' + c.awardedPoints + ' ≠ 164−' + c.winningAge + ' = ' + expected);
+    const proof = game.proofs && game.proofs[c.winnerPlayerId];
+    if (!proof || !proof.uid) problems.push('λείπει proof για ' + c.winnerPlayerId);
+    else if (proof.uid !== c.winnerUid) problems.push('winnerUid ≠ proofs/' + c.winnerPlayerId + '.uid');
+    const participant = game.participants && game.participants[c.winnerUid];
+    if (!participant) problems.push('λείπει participants/<winnerUid>');
+    else if (participant.playerId !== c.winnerPlayerId) problems.push('participants/<winnerUid>.playerId ≠ winnerPlayerId');
+    return { status: problems.length ? 'invalid' : 'valid', problems: problems, completion: c };
+  }
+
+  function receiptMismatch(receipt, c, uid) {
+    const diffs = [];
+    if (receipt.gameId !== c.gameId) diffs.push('gameId');
+    if (receipt.seasonId !== c.seasonId) diffs.push('seasonId');
+    if (receipt.winnerUid !== c.winnerUid) diffs.push('winnerUid');
+    if (receipt.winningAge !== c.winningAge) diffs.push('winningAge');
+    if (receipt.awardedPoints !== c.awardedPoints) diffs.push('awardedPoints');
+    if (receipt.creditedUid !== uid) diffs.push('creditedUid');
+    return diffs;
+  }
+
+  // Ελάχιστο per-user index. Ο ΙΔΙΟΣ ο παίκτης το γράφει, και μόνο για παιχνίδι στο οποίο
+  // έχει ήδη αποδεδειγμένη συμμετοχή (participants/<uid>) — δεν ανοίγει τίποτα σε τρίτους.
+  function registerUserGame(ctx, uid, gameId, completedAt) {
+    if (!ctx || !ctx.db || !uid || !gameId) return Promise.resolve(false);
+    return transactionCreate(ctx.db.ref('userGames/' + uid + '/' + gameId), Number(completedAt) || Date.now())
+      .then(function (r) { return !!r; }).catch(function () { return false; });
+  }
+
+  function readOnce(ctx, path) {
+    const ref = ctx.db.ref(path);
+    return ref.once('value').then(function (snap) { return (snap && snap.val) ? snap.val() : null; });
+  }
+
+  function listUserGameIds(ctx, uid, limit) {
+    if (!ctx || !ctx.db || !uid) return Promise.resolve([]);
+    return readOnce(ctx, 'userGames/' + uid).then(function (index) {
+      if (!index || typeof index !== 'object') return [];
+      // Bounded: τα πιο ΠΡΟΣΦΑΤΑ πρώτα, με σκληρό όριο — κανένα unbounded scan.
+      return Object.keys(index)
+        .filter(function (id) { return UUID_RE.test(id); })
+        .sort(function (a, b) { return (Number(index[b]) || 0) - (Number(index[a]) || 0); })
+        .slice(0, Math.max(1, Math.min(limit || 40, 100)));
+    }).catch(function () { return []; });
+  }
+
+  // Self-repair: ΜΟΝΟ για τον ίδιο τον συνδεδεμένο χρήστη, ΜΟΝΟ με authoritative evidence,
+  // και η πίστωση γίνεται από την ΙΔΙΑ creditSeasonGame που χρησιμοποιεί το live παιχνίδι.
+  function recoverMissedAwards(ctx, uid, gameIds, options) {
+    options = options || {};
+    const seasons = options.seasons && options.seasons.length ? options.seasons : null;
+    const out = { recovered: [], skipped: [], conflicts: [], points: 0, wins: 0, errors: 0 };
+    if (!ctx || !ctx.db || !uid || !Array.isArray(gameIds) || !gameIds.length) return Promise.resolve(out);
+    return gameIds.reduce(function (chain, gameId) {
+      return chain.then(function () {
+        return readOnce(ctx, 'scoreGames/' + gameId).then(function (game) {
+          const check = inspectStoredCompletion(gameId, game);
+          if (check.status !== 'valid') {
+            out.skipped.push({ gameId: gameId, reason: check.problems[0] || check.status });
+            return null;
+          }
+          const c = check.completion;
+          // Ο χρήστης ΔΕΝ μπορεί να ανακτήσει ξένο σκορ: πρέπει να είναι ο ίδιος ο νικητής.
+          if (c.winnerUid !== uid) { out.skipped.push({ gameId: gameId, reason: 'not-winner' }); return null; }
+          if (seasons && seasons.indexOf(c.seasonId) === -1) { out.skipped.push({ gameId: gameId, reason: 'out-of-range-season' }); return null; }
+          return readOnce(ctx, 'seasonScores/' + c.seasonId + '/' + uid).then(function (aggregate) {
+            const receipt = aggregate && aggregate.awards ? aggregate.awards[gameId] : null;
+            if (receipt) {
+              const diffs = receiptMismatch(receipt, c, uid);
+              if (diffs.length) out.conflicts.push({ gameId: gameId, reason: 'receipt-mismatch: ' + diffs.join(',') });
+              else out.skipped.push({ gameId: gameId, reason: 'already-credited' });
+              return null;
+            }
+            return creditSeasonGame(ctx, c, uid).then(function (saved) {
+              if (saved.duplicate) { out.skipped.push({ gameId: gameId, reason: 'already-credited' }); return null; }
+              out.recovered.push({ gameId: gameId, seasonId: c.seasonId, points: c.awardedPoints, winningAge: c.winningAge });
+              out.points += c.awardedPoints;
+              out.wins += 1;
+              return null;
+            });
+          });
+        }).catch(function (e) {
+          out.errors++;
+          out.skipped.push({ gameId: gameId, reason: 'error: ' + ((e && e.message) || 'unknown') });
+          return null;
+        });
+      });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
+  /* ---------- LEGACY SEEDING (μεταβατικό· αφαιρείται χωρίς συνέπειες) ----------
+     Παλιές νίκες που έγιναν ΠΡΙΝ υπάρξει το userGames index δεν είναι discoverable. Εδώ ο
+     ΙΔΙΟΣ ο verified νικητής συνδέει ένα legacy gameId στο ΔΙΚΟ του index και μετά αφήνει την
+     canonical recoverMissedAwards να αποφασίσει αν υπάρχει πραγματικό recoverable award.
+     ΚΑΜΙΑ χειροκίνητη αριθμητική πόντων — το seed δίνει ΜΟΝΟ «δικαίωμα ανακάλυψης». */
+
+  // Read-only σχέδιο για ΕΝΑ gameId. Δεν γράφει ΤΙΠΟΤΑ — το χρησιμοποιεί και το dry-run.
+  function planLegacySeed(ctx, uid, gameId) {
+    const row = {
+      gameId: gameId, uidMatch: false, eligible: false, winningAge: null, awardedPoints: null,
+      seasonId: null, hasIndex: false, hasAward: false, action: 'SKIP', reason: null,
+    };
+    if (!UUID_RE.test(String(gameId || ''))) { row.reason = 'invalid-gameId'; return Promise.resolve(row); }
+    if (!ctx || !ctx.db || !uid) { row.reason = 'no-context'; return Promise.resolve(row); }
+    return readOnce(ctx, 'scoreGames/' + gameId).then(function (game) {
+      const check = inspectStoredCompletion(gameId, game);
+      if (check.status === 'no-completion') { row.reason = 'no-completion'; return row; }
+      if (check.status === 'invalid') { row.action = 'CONFLICT'; row.reason = check.problems[0]; return row; }
+      const c = check.completion;
+      row.eligible = true;
+      row.winningAge = c.winningAge;
+      row.awardedPoints = c.awardedPoints;
+      row.seasonId = c.seasonId;
+      // Η ΜΟΝΗ απόδειξη ιδιοκτησίας: ο winnerUid του immutable completion, ήδη
+      // διασταυρωμένος με proofs/<winnerPlayerId>.uid και participants/<winnerUid>.
+      row.uidMatch = (c.winnerUid === uid);
+      if (!row.uidMatch) { row.reason = 'not-winner'; return row; }
+      return readOnce(ctx, 'userGames/' + uid + '/' + gameId).then(function (idx) {
+        row.hasIndex = idx !== null && idx !== undefined;
+        return readOnce(ctx, 'seasonScores/' + c.seasonId + '/' + uid).then(function (agg) {
+          const receipt = agg && agg.awards ? agg.awards[gameId] : null;
+          row.hasAward = !!receipt;
+          if (receipt) {
+            const diffs = receiptMismatch(receipt, c, uid);
+            if (diffs.length) { row.action = 'CONFLICT'; row.reason = 'receipt-mismatch: ' + diffs.join(','); }
+            else { row.action = 'ALREADY_CREDITED'; }
+            return row;
+          }
+          row.action = row.hasIndex ? 'WOULD_RECOVER' : 'WOULD_SEED';
+          return row;
+        });
+      });
+    }).catch(function (e) {
+      row.action = 'SKIP'; row.reason = 'error: ' + ((e && e.message) || 'unknown');
+      return row;
+    });
+  }
+
+  // Ένα gameId: σχέδιο → (αν όχι dry-run) index entry → ΚΑΝΟΝΙΚΟ recovery.
+  function seedLegacyGameForCurrentUser(ctx, uid, gameId, options) {
+    options = options || {};
+    return planLegacySeed(ctx, uid, gameId).then(function (row) {
+      if (options.dryRun) return row;
+      if (row.action !== 'WOULD_SEED' && row.action !== 'WOULD_RECOVER') return row;
+      return registerUserGame(ctx, uid, gameId, Date.now()).then(function () {
+        row.seeded = !row.hasIndex;
+        // Η πίστωση ΔΕΝ γίνεται εδώ: την αναλαμβάνει αυτούσια η canonical recovery.
+        return recoverMissedAwards(ctx, uid, [gameId]).then(function (rec) {
+          if (rec.recovered.length) {
+            row.action = 'RECOVERED';
+            row.recoveredPoints = rec.recovered[0].points;
+          } else if (rec.conflicts.length) {
+            row.action = 'CONFLICT'; row.reason = rec.conflicts[0].reason;
+          } else {
+            row.action = 'ALREADY_CREDITED';
+            row.reason = (rec.skipped[0] && rec.skipped[0].reason) || 'already-credited';
+          }
+          return row;
+        });
+      });
+    });
+  }
+
+  function seedLegacyGamesForCurrentUser(ctx, uid, gameIds, options) {
+    options = options || {};
+    const out = { dryRun: !!options.dryRun, rows: [], seeded: 0, alreadyIndexed: 0,
+      alreadyCredited: 0, recovered: 0, points: 0, skipped: 0, conflicts: 0, errors: 0 };
+    const ids = Array.isArray(gameIds) ? gameIds.slice(0, 100) : [];
+    return ids.reduce(function (chain, gameId) {
+      return chain.then(function () {
+        return seedLegacyGameForCurrentUser(ctx, uid, gameId, options).then(function (row) {
+          out.rows.push(row);
+          if (row.hasIndex) out.alreadyIndexed++;
+          if (row.seeded) out.seeded++;
+          if (row.action === 'RECOVERED') { out.recovered++; out.points += row.recoveredPoints || 0; }
+          else if (row.action === 'ALREADY_CREDITED') out.alreadyCredited++;
+          else if (row.action === 'CONFLICT') out.conflicts++;
+          else if (row.action === 'SKIP') { out.skipped++; if (/^error:/.test(row.reason || '')) out.errors++; }
+          return null;
+        });
+      });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
+  // Bounded παράθυρο σεζόν: τρέχουσα + τις προηγούμενες N (default 1 → ~6 μήνες).
+  function recentSeasonIds(date, back) {
+    const d = date instanceof Date ? date : new Date(date || Date.now());
+    const list = [];
+    let y = d.getUTCFullYear(), q = Math.floor(d.getUTCMonth() / 3) + 1;
+    for (let i = 0; i <= (typeof back === 'number' ? back : 1); i++) {
+      list.push(y + '-Q' + q);
+      q -= 1; if (q < 1) { q = 4; y -= 1; }
+    }
+    return list;
+  }
+
   return {
     MIN_WINNING_AGE: MIN_WINNING_AGE,
     stageError: stageError,
     ensureResultPersisted: ensureResultPersisted,
+    inspectStoredCompletion: inspectStoredCompletion,
+    registerUserGame: registerUserGame,
+    listUserGameIds: listUserGameIds,
+    recoverMissedAwards: recoverMissedAwards,
+    recentSeasonIds: recentSeasonIds,
+    planLegacySeed: planLegacySeed,
+    seedLegacyGameForCurrentUser: seedLegacyGameForCurrentUser,
+    seedLegacyGamesForCurrentUser: seedLegacyGamesForCurrentUser,
     MAX_WINNING_AGE: MAX_WINNING_AGE,
     createGameId: createGameId,
     calculateVictoryScore: calculateVictoryScore,
