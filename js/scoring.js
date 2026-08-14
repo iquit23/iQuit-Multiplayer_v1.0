@@ -241,8 +241,47 @@
     });
   }
 
+  // Αύγουστος 2.5 — «ensure persisted» αντί για «all-or-nothing πρώτη προσπάθεια».
+  // Κάθε σφάλμα φέρει .stage ώστε να ξέρουμε ΠΟΥ έσπασε (auth/completion/season-credit),
+  // χωρίς να εμφανίζεται τεχνική λεπτομέρεια στον παίκτη.
+  function stageError(stage, err) {
+    const e = (err instanceof Error) ? err : new Error(String((err && err.message) || err || 'unknown'));
+    e.stage = e.stage || stage;
+    if (err && err.code && !e.code) e.code = err.code;
+    if (/permission|denied/i.test(e.message || '') || e.code === 'PERMISSION_DENIED') e.permission = true;
+    return e;
+  }
+
+  // Επαναλήψιμη, idempotent ολοκλήρωση:
+  //  1) completion: δημιουργείται αν λείπει· αν ΥΠΑΡΧΕΙ και ταιριάζει, ΔΕΝ είναι αποτυχία.
+  //  2) seasonal aggregate: γράφεται ακριβώς μία φορά ανά gameId (award receipt = ο φύλακας).
+  // Έτσι το partial state «completion ✓ / aggregate ✗» επισκευάζεται σε κάθε επόμενη κλήση.
+  function ensureResultPersisted(ctx, game, uid) {
+    if (!ctx || !ctx.db) return Promise.reject(stageError('context', new Error('Missing score context.')));
+    if (!uid) return Promise.reject(stageError('context', new Error('Missing credited uid.')));
+    return Promise.resolve()
+      .then(function () { return persistCompletion(ctx, game); })
+      .catch(function (e) { throw stageError('completion', e); })
+      .then(function (saved) {
+        return creditSeasonGame(ctx, saved.result, uid)
+          .catch(function (e) { throw stageError('season-credit', e); })
+          .then(function (credit) {
+            return {
+              stage: 'done',
+              completion: saved.result,
+              completionExisted: saved.duplicate,
+              awarded: credit.awarded,
+              duplicate: credit.duplicate,
+              aggregate: credit.aggregate,
+            };
+          });
+      });
+  }
+
   return {
     MIN_WINNING_AGE: MIN_WINNING_AGE,
+    stageError: stageError,
+    ensureResultPersisted: ensureResultPersisted,
     MAX_WINNING_AGE: MAX_WINNING_AGE,
     createGameId: createGameId,
     calculateVictoryScore: calculateVictoryScore,

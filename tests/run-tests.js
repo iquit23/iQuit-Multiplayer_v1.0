@@ -1179,6 +1179,11 @@ section('Mobile fix — ερωτηματολόγιο & toasts');
   passed += introRegression.passed;
   failed += introRegression.failed;
 
+  section('Αύγουστος 2.5 Scoring persistence & partial repair A–P');
+  const scorePersistence = await require('./scoring-persistence.test.js').run();
+  passed += scorePersistence.passed;
+  failed += scorePersistence.failed;
+
   section('Αύγουστος 2.3 Seasonal Leaderboard regression A–O');
   const leaderboardRegression = await require('./leaderboard-regression.test.js').run();
   passed += leaderboardRegression.passed;

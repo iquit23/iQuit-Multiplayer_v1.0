@@ -262,6 +262,25 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
       points: 999, wins: 1, gamesPlayed: 1, sumWinningAge: 61, updatedAt: T(), awards: { [bad.gameId]: bad },
     }));
   })());
+  // Αύγουστος 2.5 — ΤΟ PRODUCTION BUG: το RTDB transaction γράφει ΟΛΟΚΛΗΡΟ το
+  // seasonScores/<uid>, άρα σε ΚΑΘΕ επόμενη παρτίδα της σεζόν τα ΠΡΟΫΠΑΡΧΟΝΤΑ awards
+  // ξαναπερνούν από .validate. Με το παλιό «!data.exists()» η 2η νίκη έπαιρνε PERMISSION_DENIED.
+  await ok('season aggregate: 2η παρτίδα ίδιας σεζόν ξαναγράφει ΙΔΙΟ παλιό award → ALLOW', (async () => {
+    const first = { [GAME]: Object.assign({}, completion, { creditedUid: 'score-host', won: false }) };
+    await assertSucceeds(V('score-host').ref('seasonScores/2026-Q3/score-host').set({
+      points: 0, wins: 0, gamesPlayed: 1, sumWinningAge: 0, updatedAt: T(), awards: first,
+    }));
+    // δεύτερη παρτίδα: το payload περιέχει ΚΑΙ το προηγούμενο award, αυτούσιο
+    await assertSucceeds(V('score-host').ref('seasonScores/2026-Q3/score-host').set({
+      points: 0, wins: 0, gamesPlayed: 2, sumWinningAge: 0, updatedAt: T(), awards: first,
+    }));
+  })());
+  await ok('season aggregate: ΑΛΛΑΓΜΕΝΟ υπάρχον award (πόντοι) → DENY', (async () => {
+    const tampered = { [GAME]: Object.assign({}, completion, { creditedUid: 'score-host', won: true, awardedPoints: 999 }) };
+    await assertFails(V('score-host').ref('seasonScores/2026-Q3/score-host').set({
+      points: 999, wins: 1, gamesPlayed: 2, sumWinningAge: 61, updatedAt: T(), awards: tampered,
+    }));
+  })());
   await ok('leaderboard: authenticated guest διαβάζει current season aggregates → ALLOW',
     assertSucceeds(ANON('leaderboard-reader').ref('seasonScores/2026-Q3').once('value')));
   await ok('leaderboard: πραγματικά unauthenticated client δεν διαβάζει season aggregates → DENY',

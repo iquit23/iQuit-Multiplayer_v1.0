@@ -35,6 +35,7 @@
   // v1.32: ο ΥΠΑΡΧΩΝ e2e διακόπτης, ανυψωμένος σε const ώστε να τον βλέπουν και οι εσωτερικές
   // συναρτήσεις (π.χ. hostCreate) — καμία έκθεση στο production App namespace.
   const E2E = new URLSearchParams(location.search).get('e2e') === '1';
+  const SCORE_DEBUG = /[?&]scoredebug=1/.test(location.search);
   const BOT_DELAY = FAST ? 900 : 5200, DISCO_DELAY = FAST ? 3000 : 25000; // αρκετό ώστε να ολοκληρώνεται το πιο αργό βήμα-βήμα animation
   const HB_MS = FAST ? 1200 : 5000;          // κάθε πότε «χτυπά» ο host
   const HB_LOST_MS = FAST ? 4000 : 15000;    // πόση σιωπή = χαμένος host
@@ -66,6 +67,8 @@
     scoreSetupPromise: null,
     scoreFinalizePromise: null,
     scoreCreditState: {},
+    scoreDiag: [],            // Αύγουστος 2.5: δομημένη εσωτερική διάγνωση σταδίων
+    scoreRetryTimer: null,
   };
 
   // ============================================================ ΗΧΟΙ (WebAudio — χωρίς αρχεία)
@@ -444,8 +447,15 @@
 
   function maybeFinalizeHostScore() {
     const g = App.game;
-    if (App.role !== 'host' || !g || g.phase !== 'ended' || g.scoreCompletionReady || App.scoreFinalizePromise) return;
+    if (App.role !== 'host' || !g || g.phase !== 'ended' || App.scoreFinalizePromise) return;
     if (g.scoreSetup === 'pending') return;
+    // Αύγουστος 2.5 — ΤΟ ΚΡΙΣΙΜΟ ΣΗΜΕΙΟ ΤΟΥ BUG: εδώ υπήρχε «|| g.scoreCompletionReady» στη
+    // συνθήκη εξόδου. Μόλις γραφόταν το completion, η συνάρτηση επέστρεφε ΓΙΑ ΠΑΝΤΑ, οπότε σε
+    // resume/reconnect ΔΕΝ καλούνταν ποτέ ξανά το publishScoreState() → ούτε το
+    // maybeCreditCurrentPlayer(). Το «θα γίνει ασφαλής επανάληψη στην επανασύνδεση» ήταν κενό
+    // γράμμα: το partial state (completion ✓ / seasonal aggregate ✗) δεν επισκευαζόταν ποτέ.
+    // Τώρα το completion θεωρείται ΟΛΟΚΛΗΡΩΜΕΝΟ ΒΗΜΑ, όχι τερματισμός: προχωράμε στο credit.
+    if (g.scoreCompletionReady) { maybeCreditCurrentPlayer(); return; }
     const evaluated = SCORE.evaluateGameResult(g);
     if (!evaluated.eligible) {
       if (g.scoreEligibility !== 'ineligible' || g.scoreReason !== evaluated.reason) {
@@ -477,19 +487,55 @@
     const result = g.scoreResult;
     const mine = (g.scoreRoster || []).find(p => p.playerId === App.myId && p.verifiedUid);
     if (!mine) return;
-    const state = App.scoreCreditState[g.gameId];
+    const gameId = g.gameId;
+    const state = App.scoreCreditState[gameId];
     if (state && (state.status === 'saving' || state.status === 'saved')) return;
-    App.scoreCreditState[g.gameId] = { status: 'saving' };
-    freshVerifiedScoreUser().then(({ ctx, snapshot }) => {
-      if (snapshot.user.uid !== mine.verifiedUid) throw new Error('Player UID mismatch.');
-      return SCORE.creditSeasonGame(ctx, result, mine.verifiedUid);
-    }).then(saved => {
-      App.scoreCreditState[g.gameId] = { status: 'saved', duplicate: saved.duplicate };
-      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
-    }).catch(() => {
-      App.scoreCreditState[g.gameId] = { status: 'error' };
-      if (App.game && App.game.gameId === g.gameId && App.game.phase === 'ended') showEnd();
-    });
+    // Μετά από αποτυχία επιτρέπουμε ΝΕΑ προσπάθεια, με μικρό backoff ώστε ένα προσωρινό
+    // δικτυακό πρόβλημα να μην παράγει καταιγισμό αιτημάτων.
+    if (state && state.status === 'error' && state.nextAt && Date.now() < state.nextAt) return;
+    const attempt = ((state && state.attempt) || 0) + 1;
+    App.scoreCreditState[gameId] = { status: 'saving', attempt: attempt };
+    freshVerifiedScoreUser().catch(e => { throw SCORE.stageError('auth-refresh', e); })
+      .then(({ ctx, snapshot }) => {
+        if (snapshot.user.uid !== mine.verifiedUid) throw SCORE.stageError('uid-mismatch', new Error('Player UID mismatch.'));
+        // «Ensure persisted»: επισκευάζει και το partial state (completion υπάρχει, aggregate λείπει).
+        return SCORE.ensureResultPersisted(ctx, g, mine.verifiedUid);
+      }).then(saved => {
+        App.scoreCreditState[gameId] = { status: 'saved', duplicate: saved.duplicate, attempt: attempt };
+        scoreDiag(gameId, { stage: 'done', attempt: attempt, duplicate: saved.duplicate, completionExisted: saved.completionExisted });
+        if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') showEnd();
+      }).catch(err => {
+        const stage = (err && err.stage) || 'unknown';
+        App.scoreCreditState[gameId] = {
+          status: 'error', stage: stage, attempt: attempt,
+          nextAt: Date.now() + Math.min(30000, 2000 * Math.pow(2, Math.min(attempt - 1, 4))),
+        };
+        scoreDiag(gameId, { stage: stage, attempt: attempt, permission: !!(err && err.permission), message: (err && err.message) || '' });
+        if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') showEnd();
+        scheduleScoreRetry(gameId);
+      });
+  }
+
+  // Αύγουστος 2.5 — δομημένη ΕΣΩΤΕΡΙΚΗ διάγνωση (ΠΟΤΕ δεν φτάνει στον παίκτη ως τεχνικό κείμενο).
+  // Ορατή στο console μόνο με ?scoredebug=1 και πάντα στο IQ_TEST hook για τα e2e.
+  function scoreDiag(gameId, info) {
+    const entry = Object.assign({ gameId: gameId, at: Date.now() }, info);
+    App.scoreDiag.push(entry);
+    if (App.scoreDiag.length > 40) App.scoreDiag.shift();
+    if (SCORE_DEBUG) console.info('[IQ score]', JSON.stringify(entry));
+  }
+
+  // Μπορεί να αποτύχει και το δίκτυο· δίνουμε πραγματικές, χρονομετρημένες επαναλήψεις αντί
+  // να υποσχόμαστε αόριστα «θα ξαναπροσπαθήσουμε».
+  function scheduleScoreRetry(gameId) {
+    if (App.scoreRetryTimer) return;
+    const st = App.scoreCreditState[gameId];
+    if (!st || st.status !== 'error') return;
+    const wait = Math.max(1000, (st.nextAt || 0) - Date.now());
+    App.scoreRetryTimer = setTimeout(() => {
+      App.scoreRetryTimer = null;
+      if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') maybeCreditCurrentPlayer();
+    }, wait);
   }
 
   // v1.13 (αίτημα Γιώργου): κάθε εκπαιδευτικό hint εμφανίζεται ΜΙΑ ΦΟΡΑ σε όλο το παιχνίδι
@@ -2303,6 +2349,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore };
   init();
 })();
