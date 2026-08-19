@@ -673,7 +673,7 @@ section('Αύγουστος 1.2 Transport routing & invitation links');
   assert(uiSrc.includes('dataset.transport = TRANSPORT_INFO.mode'), 'το πραγματικά επιλεγμένο transport εκτίθεται μόνο ως ασφαλές data-attribute για e2e/diagnostics');
   assert(uiSrc.includes('?turnonly=1&turnsetup=1&transport=peer'), 'Forced TURN Test παραμένει διαθέσιμο και ανοίγει ρητά PeerJS');
   assert(indexSrc.indexOf('js/transport.js') > -1 && indexSrc.indexOf('js/transport.js') < indexSrc.indexOf('js/ui.js'), 'transport helper φορτώνεται πριν από το ui.js');
-  assert(indexSrc.includes('IQUIT — Αύγουστος 2.5'), 'εμφανιζόμενη έκδοση Αύγουστος 2.5');
+  assert(indexSrc.includes('IQUIT — Αύγουστος 2.6'), 'εμφανιζόμενη έκδοση Αύγουστος 2.6');
 }
 
 // ---------- 9. Αύγουστος 1.3: SEO metadata & εισαγωγική ενότητα (μόνο περιεχόμενο/metadata) ----------
@@ -1178,6 +1178,31 @@ section('Mobile fix — ερωτηματολόγιο & toasts');
   const introRegression = await require('./intro-regression.test.js').run();
   passed += introRegression.passed;
   failed += introRegression.failed;
+
+  section('Αύγουστος 2.6 Canonical πίνακας ηλικία→πόντοι O,P + static');
+  const scoreTable = await require('./scoring-table.test.js').run();
+  passed += scoreTable.passed;
+  failed += scoreTable.failed;
+
+  section('Αύγουστος 2.6 Stage 4b: endgame UI ανά παίκτη A–O');
+  const stage4b = await require('./stage4b-ui.test.js').run();
+  passed += stage4b.passed;
+  failed += stage4b.failed;
+
+  section('Αύγουστος 2.6 Stage 4a: live per-player result wiring A–R');
+  const stage4a = await require('./stage4a-live.test.js').run();
+  passed += stage4a.passed;
+  failed += stage4a.failed;
+
+  section('Αύγουστος 2.6 Stage 3: per-player seasonal crediting A–Z');
+  const stage3 = await require('./stage3-crediting.test.js').run();
+  passed += stage3.passed;
+  failed += stage3.failed;
+
+  section('Αύγουστος 2.6 Multi-scorer schema + backward-compatible reader A–K');
+  const multiScorer = await require('./multi-scorer.test.js').run();
+  passed += multiScorer.passed;
+  failed += multiScorer.failed;
 
   section('Αύγουστος 2.5 In-app self-repair χαμένων νικών A–N');
   const recovery = await require('./score-recovery.test.js').run();

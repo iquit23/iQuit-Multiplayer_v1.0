@@ -79,7 +79,7 @@ const SEASON = '2026-Q3';
 function completion(gameId, uid, age, over) {
   return Object.assign({
     gameId: gameId, seasonId: SEASON, winnerUid: uid, winnerPlayerId: 'p0',
-    winningAge: age, awardedPoints: 164 - age, eligible: true, completedAt: Date.UTC(2026, 7, 12),
+    winningAge: age, awardedPoints: S.calculateVictoryScore(age), eligible: true, completedAt: Date.UTC(2026, 7, 12),
   }, over || {});
 }
 function scoreGame(gameId, uid, age, over) {
@@ -144,9 +144,9 @@ async function run(options) {
   await test('D', 'δύο χαμένες νίκες → και οι δύο ανακτώνται ακριβώς μία φορά', async function () {
     const db = makeDb(world({ [G1]: scoreGame(G1, ME, 61), [G2]: scoreGame(G2, ME, 50) }), { authUid: ME });
     const out = await S.recoverMissedAwards({ db: db, uid: ME }, ME, [G1, G2]);
-    assert(out.recovered.length === 2 && out.points === 103 + 114 && out.wins === 2, 'λάθος: ' + JSON.stringify(out));
+    assert(out.recovered.length === 2 && out.points === S.calculateVictoryScore(61) + S.calculateVictoryScore(50) && out.wins === 2, 'λάθος: ' + JSON.stringify(out));
     const agg = db._get('seasonScores/' + SEASON + '/' + ME);
-    assert(agg.points === 217 && agg.wins === 2 && agg.gamesPlayed === 2, 'λάθος aggregate: ' + JSON.stringify(agg));
+    assert(agg.points === S.calculateVictoryScore(61) + S.calculateVictoryScore(50) && agg.wins === 2 && agg.gamesPlayed === 2, 'λάθος aggregate: ' + JSON.stringify(agg));
     assert(Object.keys(agg.awards).length === 2, 'λάθος πλήθος receipts');
   });
 
@@ -334,11 +334,11 @@ async function run(options) {
       [G1]: scoreGame(G1, ME, 61), [G2]: scoreGame(G2, ME, 50), [G3]: scoreGame(G3, OTHER, 40),
     }), { authUid: ME });
     const rep = await S.seedLegacyGamesForCurrentUser({ db: db, uid: ME }, ME, [G1, G2, G3]);
-    assert(rep.recovered === 2 && rep.points === 103 + 114, 'λάθος batch: ' + JSON.stringify(rep));
+    assert(rep.recovered === 2 && rep.points === S.calculateVictoryScore(61) + S.calculateVictoryScore(50), 'λάθος batch: ' + JSON.stringify(rep));
     assert(rep.skipped === 1, 'το ξένο game δεν παραλείφθηκε');
     assert(rep.rows.length === 3, 'λάθος πλήθος γραμμών');
     const agg = db._get('seasonScores/' + SEASON + '/' + ME);
-    assert(agg.points === 217 && agg.wins === 2 && agg.gamesPlayed === 2, 'λάθος aggregate: ' + JSON.stringify(agg));
+    assert(agg.points === S.calculateVictoryScore(61) + S.calculateVictoryScore(50) && agg.wins === 2 && agg.gamesPlayed === 2, 'λάθος aggregate: ' + JSON.stringify(agg));
   });
 
   await test('LK', 'legacy DRY RUN: ΜΗΔΕΝ writes, πλήρες σχέδιο', async function () {
@@ -462,7 +462,7 @@ async function run(options) {
     // Το αποθηκευμένο completion λέει άλλη ηλικία από τον πίνακα (57)
     const db = makeDb(mmWorld({ winningAge: 40, awardedPoints: 124 }), { authUid: MM_UID });
     const out = await S.autoRecoverKnownLegacy({ db: db, uid: MM_UID }, MM_UID);
-    assert(out.verified.length === 0 && out.rejected[0].reason === 'stored-completion-mismatch',
+    assert(out.verified.length === 0 && /mismatch|awardedPoints/.test(out.rejected[0].reason),
       'δεν απορρίφθηκε το mismatch: ' + JSON.stringify(out));
     assert(!db._get('seasonScores/' + MM_SEASON + '/' + MM_UID), 'γράφτηκαν πόντοι');
   });

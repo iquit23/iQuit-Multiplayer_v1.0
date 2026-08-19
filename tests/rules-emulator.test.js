@@ -294,6 +294,31 @@ async function ok(name, p) { try { await p; passed++; console.log('  ✓ ' + nam
     assertFails(V('mallory').ref('userGames/mallory/' + GAME).set(T())));
   await ok('scoreGames: ΔΕΝ γίνεται enumeration ολόκληρου του κόμβου → DENY',
     assertFails(V('score-guest').ref('scoreGames').once('value')));
+  // Αύγουστος 2.6 — per-player results (multi-scorer schema)
+  await ok('results: ο ΙΔΙΟΣ γράφει το δικό του result → ALLOW',
+    assertSucceeds(V('score-guest').ref('scoreGames/' + GAME + '/results/score-guest').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p1', uid: 'score-guest', human: true,
+      eligible: true, quit: true, quitAge: 58, awardedPoints: 106, resultAt: T() })));
+  await ok('results: ΤΡΙΤΟΣ δεν γράφει result άλλου UID → DENY',
+    assertFails(V('mallory').ref('scoreGames/' + GAME + '/results/score-guest').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p1', uid: 'score-guest', human: true,
+      eligible: true, quit: true, quitAge: 25, awardedPoints: 170, resultAt: T() })));
+  await ok('results: υπάρχον result είναι IMMUTABLE → DENY',
+    assertFails(V('score-guest').ref('scoreGames/' + GAME + '/results/score-guest').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p1', uid: 'score-guest', human: true,
+      eligible: true, quit: true, quitAge: 25, awardedPoints: 170, resultAt: T() })));
+  await ok('results: awardedPoints εκτός canonical πίνακα → DENY',
+    assertFails(V('score-host').ref('scoreGames/' + GAME + '/results/score-host').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p0', uid: 'score-host', human: true,
+      eligible: true, quit: true, quitAge: 58, awardedPoints: 999, resultAt: T() })));
+  await ok('results: human !== true → DENY',
+    assertFails(V('score-host').ref('scoreGames/' + GAME + '/results/score-host').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p0', uid: 'score-host', human: false,
+      eligible: true, quit: true, quitAge: 58, awardedPoints: 106, resultAt: T() })));
+  await ok('results: χωρίς I QUIT με πόντους → DENY',
+    assertFails(V('score-host').ref('scoreGames/' + GAME + '/results/score-host').set({
+      gameId: GAME, seasonId: '2026-Q3', playerId: 'p0', uid: 'score-host', human: true,
+      eligible: true, quit: false, awardedPoints: 106, resultAt: T() })));
   await ok('leaderboard: authenticated guest διαβάζει current season aggregates → ALLOW',
     assertSucceeds(ANON('leaderboard-reader').ref('seasonScores/2026-Q3').once('value')));
   await ok('leaderboard: πραγματικά unauthenticated client δεν διαβάζει season aggregates → DENY',

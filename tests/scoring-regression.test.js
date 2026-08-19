@@ -70,7 +70,7 @@ async function run(options) {
   await test('D', 'age 64 scores 100', function () { assert(S.calculateVictoryScore(64) === 100, 'wrong score'); });
   await test('E', 'age 63 scores 101', function () { assert(S.calculateVictoryScore(63) === 101, 'wrong score'); });
   await test('F', 'age 61 scores 103', function () { assert(S.calculateVictoryScore(61) === 103, 'wrong score'); });
-  await test('G', 'age 25 scores 139', function () { assert(S.calculateVictoryScore(25) === 139, 'wrong score'); });
+  await test('G', 'age 25 scores 170 (canonical table)', function () { assert(S.calculateVictoryScore(25) === 170, 'wrong score'); });
 
   await test('H', 'invalid/non-winning age creates no award', function () {
     [null, undefined, NaN, 24, 65, 61.5, '61'].forEach(function (age) {

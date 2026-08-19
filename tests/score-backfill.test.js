@@ -19,7 +19,7 @@ const SEASON = '2026-Q3';
 function completion(gameId, uid, age, over) {
   return Object.assign({
     gameId: gameId, seasonId: SEASON, winnerUid: uid, winnerPlayerId: 'p0',
-    winningAge: age, awardedPoints: 164 - age, eligible: true, completedAt: Date.UTC(2026, 7, 12),
+    winningAge: age, awardedPoints: S.calculateVictoryScore(age), eligible: true, completedAt: Date.UTC(2026, 7, 12),
   }, over || {});
 }
 
@@ -136,9 +136,9 @@ async function run(options) {
     assert(r.recoverable.length === 3, 'λάθος πλήθος');
     const users = B.summariseByUser(r);
     const g = users.find(function (u) { return u.username === 'giorgos'; });
-    assert(g.wins === 2 && g.points === 103 + 114 && g.games.length === 2, 'λάθος σύνοψη: ' + JSON.stringify(g));
+    assert(g.wins === 2 && g.points === S.calculateVictoryScore(61) + S.calculateVictoryScore(50) && g.games.length === 2, 'λάθος σύνοψη: ' + JSON.stringify(g));
     const e = users.find(function (u) { return u.username === 'eleni'; });
-    assert(e.wins === 1 && e.points === 124, 'λάθος σύνοψη eleni');
+    assert(e.wins === 1 && e.points === S.calculateVictoryScore(40), 'λάθος σύνοψη eleni');
     assert(users[0].points >= users[1].points, 'δεν ταξινομήθηκε κατά πόντους');
   });
 

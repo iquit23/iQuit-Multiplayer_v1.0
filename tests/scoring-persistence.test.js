@@ -38,7 +38,15 @@ function evalAwardValidate(prev, next, gameId) {
   const root = node({});
   // Το τμήμα που αφορά root.child('scoreGames')… ελέγχεται από τον mock server χωριστά·
   // εδώ απομονώνουμε ΤΟΝ ΚΑΝΟΝΑ ΜΕΤΑΒΛΗΤΟΤΗΤΑΣ, που είναι το επίμαχο σημείο.
-  const expr = AWARD_VALIDATE.split('&& root.child(')[0];
+  // Απομονώνουμε ΤΟΝ ΚΑΝΟΝΑ ΜΕΤΑΒΛΗΤΟΤΗΤΑΣ = την ΠΡΩΤΗ ισοσταθμισμένη παρένθεση του validate.
+  // (naive split σε '&& root.child(' σπάει, αφού το validate περιέχει πλέον root.child και νωρίτερα)
+  let depth = 0, end = -1;
+  for (let i = 0; i < AWARD_VALIDATE.length; i++) {
+    const ch = AWARD_VALIDATE[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') { depth--; if (depth === 0) { end = i + 1; break; } }
+  }
+  const expr = AWARD_VALIDATE.slice(0, end);
   return !!(new Function('data', 'newData', '$gameId', 'return (' + expr + ');'))(node(prev), node(next), $gameId);
 }
 

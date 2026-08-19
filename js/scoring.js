@@ -32,10 +32,20 @@
     throw new Error('Secure random UUID generation is unavailable.');
   }
 
-  // Η μοναδική canonical V1 φόρμουλα του application code.
+  /* Η ΜΟΝΑΔΙΚΗ canonical πηγή αλήθειας για τους πόντους νίκης (Αύγουστος 2.6).
+     ΡΗΤΟΣ πίνακας — ΟΧΙ αριθμητικό shortcut. Ο παλιός τύπος «164 − age» καταργήθηκε· ίσχυε
+     μόνο για τις ηλικίες 56-64, που τυχαίνει να συμπίπτουν με τον νέο πίνακα.
+     Ηλικία 65 ή χωρίς I QUIT → 0 πόντοι. */
+  const VICTORY_POINTS = {
+    25: 170, 26: 169, 27: 168, 28: 167, 29: 166, 30: 165, 31: 164, 32: 163, 33: 162, 34: 161, 35: 160,
+    36: 149, 37: 148, 38: 147, 39: 146, 40: 145, 41: 144, 42: 143, 43: 142, 44: 141, 45: 140,
+    46: 129, 47: 128, 48: 127, 49: 126, 50: 125, 51: 124, 52: 123, 53: 122, 54: 121, 55: 120,
+    56: 108, 57: 107, 58: 106, 59: 105, 60: 104, 61: 103, 62: 102, 63: 101, 64: 100,
+  };
+
   function calculateVictoryScore(winningAge) {
     if (!Number.isInteger(winningAge) || winningAge < MIN_WINNING_AGE || winningAge > MAX_WINNING_AGE) return 0;
-    return 164 - winningAge;
+    return VICTORY_POINTS[winningAge] || 0;
   }
 
   function seasonIdForDate(value) {
@@ -127,7 +137,9 @@
   }
 
   // Pure transaction reducer: το award receipt και τα aggregates αλλάζουν μαζί ή καθόλου.
-  function applyGameTransaction(current, result, uid, won, updatedAt) {
+  // Το προαιρετικό `receipt` επιτρέπει per-player απόδειξη (Stage 3) ΧΩΡΙΣ δεύτερη υλοποίηση:
+  // οι φύλακες duplicate/aggregate παραμένουν ΑΚΡΙΒΩΣ οι ίδιοι για παλιό και νέο schema.
+  function applyGameTransaction(current, result, uid, won, updatedAt, receipt) {
     const value = current && typeof current === 'object' ? JSON.parse(JSON.stringify(current)) : {
       points: 0, wins: 0, gamesPlayed: 0, sumWinningAge: 0, awards: {}, updatedAt: 0,
     };
@@ -144,7 +156,7 @@
     }
     value.gamesPlayed += 1;
     value.updatedAt = updatedAt;
-    value.awards[result.gameId] = gameReceipt(result, uid, won);
+    value.awards[result.gameId] = receipt || gameReceipt(result, uid, won);
     return { duplicate: false, value: value };
   }
 
@@ -296,7 +308,7 @@
     if (typeof c.winningAge !== 'number' || Math.floor(c.winningAge) !== c.winningAge) problems.push('winningAge δεν είναι ακέραιος');
     const expected = calculateVictoryScore(c.winningAge);
     if (!expected) problems.push('winningAge εκτός επιτρεπτού εύρους');
-    else if (c.awardedPoints !== expected) problems.push('awardedPoints ' + c.awardedPoints + ' ≠ 164−' + c.winningAge + ' = ' + expected);
+    else if (c.awardedPoints !== expected) problems.push('awardedPoints ' + c.awardedPoints + ' ≠ canonical(' + c.winningAge + ') = ' + expected);
     const proof = game.proofs && game.proofs[c.winnerPlayerId];
     if (!proof || !proof.uid) problems.push('λείπει proof για ' + c.winnerPlayerId);
     else if (proof.uid !== c.winnerUid) problems.push('winnerUid ≠ proofs/' + c.winnerPlayerId + '.uid');
@@ -480,6 +492,211 @@
     }, Promise.resolve()).then(function () { return out; });
   }
 
+  /* ================= MULTI-SCORER SCHEMA (Stage 2 — ΜΟΝΟ αποθήκευση/ανάγνωση) =================
+     ΤΟ ΠΡΟΒΛΗΜΑ: το παλιό μοντέλο είχε ΕΝΑΝ winnerUid ανά παρτίδα. Πλέον ΚΑΘΕ human που κάνει
+     I QUIT δικαιούται δικό του αποτέλεσμα, ακόμη κι αν κάποιος άλλος τερμάτισε νωρίτερα ή στην
+     ίδια ηλικία. Νέο node: scoreGames/<gameId>/results/<uid> — ένα immutable record ανά UID.
+
+     ΠΡΟΣΟΧΗ (Stage 2): ΤΙΠΟΤΑ εδώ δεν αγγίζει seasonScores/points/wins/gamesPlayed/leaderboard.
+     Αποδεικνύουμε πρώτα ότι γράφονται και διαβάζονται σωστά πολλαπλά αποτελέσματα. */
+
+  // Per-player αποτέλεσμα από την ΤΕΛΙΚΗ κατάσταση της παρτίδας. Τα bots ΔΕΝ παράγουν record.
+  function evaluatePlayerResults(game) {
+    const out = { eligible: false, reason: null, seasonId: null, results: [] };
+    if (!game || game.phase !== 'ended') { out.reason = 'unfinished'; return out; }
+    if (game.scoreSetup !== 'ready') { out.reason = 'score-setup'; return out; }
+    // Πολυπαικτικό: ΟΛΟΙ οι άνθρωποι πρέπει να είναι verified, αλλιώς κανείς δεν είναι eligible.
+    if (!allHumansVerified(game.scoreRoster)) { out.reason = 'human-unverified'; return out; }
+    const seasonId = game.seasonId || seasonIdForDate(game.completedAt);
+    if (!seasonId || !game.gameId || !Number.isFinite(game.completedAt)) { out.reason = 'invalid-result'; return out; }
+    out.eligible = true;
+    out.seasonId = seasonId;
+    (game.scoreRoster || []).forEach(function (entry) {
+      const player = (game.players || []).find(function (p) { return p.id === entry.playerId; });
+      if (!player || player.isBot) return;                       // bots: ποτέ scoreable
+      // Πηγή αλήθειας για το «έκανε I QUIT» είναι το retiredAge του παίκτη.
+      const ranked = (game.rankings || []).find(function (r) { return r.id === entry.playerId; });
+      const age = (ranked && ranked.retiredAge !== null && ranked.retiredAge !== undefined)
+        ? ranked.retiredAge : (player.retiredAge !== undefined ? player.retiredAge : null);
+      const points = calculateVictoryScore(age);
+      const quit = points > 0;
+      out.results.push({
+        gameId: game.gameId,
+        seasonId: seasonId,
+        playerId: entry.playerId,
+        uid: entry.verifiedUid,
+        human: true,
+        eligible: true,
+        quit: quit,
+        quitAge: quit ? age : null,
+        awardedPoints: quit ? points : 0,     // χωρίς I QUIT → 0, ΠΟΤΕ αρνητικό/εικασία
+        resultAt: game.completedAt,
+      });
+    });
+    return out;
+  }
+
+  // Το ακριβές record που αποθηκεύεται (χωρίς null πεδία — το RTDB δεν τα κρατά).
+  function playerResultRecord(r) {
+    const rec = {
+      gameId: r.gameId, seasonId: r.seasonId, playerId: r.playerId, uid: r.uid,
+      human: true, eligible: r.eligible === true, quit: r.quit === true,
+      awardedPoints: Number(r.awardedPoints) || 0, resultAt: r.resultAt,
+    };
+    if (r.quit === true) rec.quitAge = r.quitAge;
+    return rec;
+  }
+
+  // Create-only. Αν υπάρχει ήδη, ελέγχουμε ότι ταυτίζεται — ΠΟΤΕ overwrite.
+  function persistPlayerResult(ctx, result) {
+    if (!ctx || !ctx.db || !result || !result.gameId || !result.uid) {
+      return Promise.reject(stageError('player-result', new Error('Invalid player result.')));
+    }
+    const rec = playerResultRecord(result);
+    const expected = calculateVictoryScore(rec.quit ? rec.quitAge : null);
+    if (rec.quit && rec.awardedPoints !== expected) {
+      return Promise.reject(stageError('player-result', new Error('awardedPoints do not match the canonical table.')));
+    }
+    if (!rec.quit && rec.awardedPoints !== 0) {
+      return Promise.reject(stageError('player-result', new Error('A non-quitting player cannot be awarded points.')));
+    }
+    return transactionCreate(ctx.db.ref('scoreGames/' + rec.gameId + '/results/' + rec.uid), rec)
+      .then(function (saved) {
+        const stored = saved.value || rec;
+        if (stored.uid !== rec.uid || stored.quit !== rec.quit ||
+            stored.awardedPoints !== rec.awardedPoints || (rec.quit && stored.quitAge !== rec.quitAge)) {
+          throw stageError('player-result', new Error('A different result is already stored for this player.'));
+        }
+        return { created: saved.created, duplicate: !saved.created, result: stored };
+      });
+  }
+
+  function persistPlayerResults(ctx, game) {
+    const ev = evaluatePlayerResults(game);
+    if (!ev.eligible) return Promise.reject(stageError('player-result', new Error('Ineligible game: ' + ev.reason)));
+    return ev.results.reduce(function (chain, r) {
+      return chain.then(function (acc) {
+        return persistPlayerResult(ctx, r).then(function (saved) { acc.push(saved); return acc; });
+      });
+    }, Promise.resolve([])).then(function (saved) {
+      return { seasonId: ev.seasonId, saved: saved, count: saved.length };
+    });
+  }
+
+  /* BACKWARD-COMPATIBLE READER — καταλαβαίνει ΚΑΙ τα δύο schema.
+     • NEW: results/<uid> (πολλοί scorers)
+     • OLD: completion.winnerUid/winnerPlayerId/winningAge/awardedPoints (ένας scorer)
+     Τα παλιά παιχνίδια διαβάζονται ΧΩΡΙΣ migration. Αν ένα game έχει ΚΑΙ τα δύο, το new
+     υπερισχύει ανά UID ώστε να μην εμφανιστεί ΠΟΤΕ διπλός normalized scorer. */
+  function readGameScorers(gameId, game) {
+    const out = { gameId: gameId, schema: 'none', seasonId: null, scorers: [], problems: [] };
+    if (!game || typeof game !== 'object') { out.problems.push('no-game'); return out; }
+    const byUid = {};
+    const results = game.results && typeof game.results === 'object' ? game.results : null;
+    if (results) {
+      Object.keys(results).forEach(function (uid) {
+        const r = results[uid] || {};
+        if (r.human !== true) { out.problems.push('non-human result: ' + uid); return; }
+        if (r.uid && r.uid !== uid) { out.problems.push('uid mismatch: ' + uid); return; }
+        if (r.gameId && r.gameId !== gameId) { out.problems.push('gameId mismatch: ' + uid); return; }
+        const quit = r.quit === true;
+        const expected = quit ? calculateVictoryScore(r.quitAge) : 0;
+        if (r.awardedPoints !== expected) { out.problems.push('points mismatch: ' + uid); return; }
+        byUid[uid] = {
+          uid: uid, playerId: r.playerId || null, seasonId: r.seasonId || null,
+          quit: quit, quitAge: quit ? r.quitAge : null, awardedPoints: r.awardedPoints,
+          eligible: r.eligible === true, resultAt: r.resultAt || null, source: 'results',
+        };
+        if (!out.seasonId && r.seasonId) out.seasonId = r.seasonId;
+      });
+      out.schema = 'results';
+    }
+    const c = game.completion;
+    if (c && c.winnerUid) {
+      if (!out.seasonId) out.seasonId = c.seasonId || null;
+      // Το παλιό completion περιγράφει ΕΝΑΝ scorer. Δεν το ξαναμετράμε αν υπάρχει ήδη result.
+      if (!byUid[c.winnerUid]) {
+        byUid[c.winnerUid] = {
+          uid: c.winnerUid, playerId: c.winnerPlayerId || null, seasonId: c.seasonId || null,
+          quit: true, quitAge: c.winningAge, awardedPoints: c.awardedPoints,
+          eligible: c.eligible === true, resultAt: c.completedAt || null, source: 'completion',
+        };
+        out.schema = out.schema === 'results' ? 'mixed' : 'completion';
+      } else if (out.schema === 'results') {
+        out.schema = 'mixed';
+      }
+    }
+    out.scorers = Object.keys(byUid).map(function (k) { return byUid[k]; })
+      .sort(function (a, b) { return a.uid < b.uid ? -1 : (a.uid > b.uid ? 1 : 0); });
+    return out;
+  }
+
+  /* ================= STAGE 3: PER-PLAYER SEASONAL CREDIT =================
+     Πηγή αλήθειας για ΝΕΑ games: scoreGames/<gameId>/results/<uid> (Stage 2) — ποτέ username
+     ή client UI state. Κάθε UID πιστώνεται ΞΕΧΩΡΙΣΤΑ, με το ΙΔΙΟ atomic transaction πάνω στο
+     seasonScores/<seasonId>/<uid> και τον ΙΔΙΟ φύλακα διπλοεγγραφής (awards/<gameId>).
+     quit=true  → points += awardedPoints, wins += 1, sumWinningAge += quitAge, gamesPlayed += 1
+     quit=false → points/wins/sumWinningAge αμετάβλητα, gamesPlayed += 1 (μία φορά) */
+
+  function playerReceipt(r) {
+    const rec = {
+      gameId: r.gameId, seasonId: r.seasonId, creditedUid: r.uid, playerId: r.playerId,
+      eligible: true, won: r.quit === true, awardedPoints: Number(r.awardedPoints) || 0,
+      resultAt: r.resultAt, source: 'result',
+    };
+    if (r.quit === true) rec.quitAge = r.quitAge;
+    return rec;
+  }
+
+  function creditPlayerResult(ctx, r) {
+    if (!ctx || !ctx.db || !r || !r.gameId || !r.uid || !r.seasonId) {
+      return Promise.reject(stageError('player-credit', new Error('Invalid player result credit.')));
+    }
+    const quit = r.quit === true;
+    const expected = quit ? calculateVictoryScore(r.quitAge) : 0;
+    if ((Number(r.awardedPoints) || 0) !== expected) {
+      return Promise.reject(stageError('player-credit', new Error('awardedPoints do not match the canonical table.')));
+    }
+    // Shim προς το υπάρχον reducer: μόνο τα πεδία που ΧΡΗΣΙΜΟΠΟΙΕΙ για τα aggregates.
+    const shim = { gameId: r.gameId, awardedPoints: expected, winningAge: quit ? r.quitAge : 0 };
+    const ref = ctx.db.ref('seasonScores/' + r.seasonId + '/' + r.uid);
+    let duplicate = false;
+    return ref.transaction(function (current) {
+      const next = applyGameTransaction(current, shim, r.uid, quit, Date.now(), playerReceipt(r));
+      duplicate = next.duplicate;
+      return next.duplicate ? undefined : next.value;
+    }).then(function (tx) {
+      return {
+        credited: !!tx.committed && !duplicate,
+        duplicate: !tx.committed || duplicate,
+        uid: r.uid, points: duplicate ? 0 : expected, won: quit,
+        aggregate: tx.snapshot && tx.snapshot.val ? tx.snapshot.val() : null,
+      };
+    }).catch(function (e) { throw stageError('player-credit', e); });
+  }
+
+  // Πιστώνει ΟΛΟΥΣ τους eligible ανθρώπους ενός game από τα αποθηκευμένα results.
+  // ΠΡΟΣΟΧΗ: στο production ο κάθε παίκτης γράφει ΜΟΝΟ το δικό του aggregate (rules ownership)·
+  // η λίστα μορφής χρησιμεύει σε recovery/tests και σε ό,τι ο ίδιος ο UID δικαιούται.
+  function creditResultsFromGameNode(ctx, gameId, gameNode, onlyUid) {
+    const read = readGameScorers(gameId, gameNode);
+    const out = { seasonId: read.seasonId, credited: [], duplicates: [], skipped: read.problems.slice(), points: 0 };
+    const list = read.scorers.filter(function (sc) { return !onlyUid || sc.uid === onlyUid; });
+    return list.reduce(function (chain, sc) {
+      return chain.then(function () {
+        if (!sc.eligible) { out.skipped.push('ineligible: ' + sc.uid); return null; }
+        return creditPlayerResult(ctx, {
+          gameId: gameId, seasonId: sc.seasonId || read.seasonId, playerId: sc.playerId, uid: sc.uid,
+          quit: sc.quit, quitAge: sc.quitAge, awardedPoints: sc.awardedPoints, resultAt: sc.resultAt,
+        }).then(function (res) {
+          if (res.duplicate) out.duplicates.push(sc.uid);
+          else { out.credited.push({ uid: sc.uid, points: res.points, won: res.won }); out.points += res.points; }
+          return null;
+        }).catch(function (e) { out.skipped.push(sc.uid + ': ' + ((e && e.message) || 'error')); return null; });
+      });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
   /* ---------- ΓΝΩΣΤΕΣ LEGACY ΧΑΜΕΝΕΣ ΝΙΚΕΣ (ΠΡΟΣΩΡΙΝΟ — αφαιρέσιμο με μία λίστα) ----------
      Καταχωρούνται ΜΟΝΟ περιπτώσεις με authoritative evidence από production export. Ο πίνακας
      ΔΕΝ δίνει πόντους· δίνει μόνο «ξέρω ότι αυτό το uid έχει αυτό το legacy gameId να ελέγξει».
@@ -550,6 +767,15 @@
 
   return {
     MIN_WINNING_AGE: MIN_WINNING_AGE,
+    VICTORY_POINTS: VICTORY_POINTS,
+    evaluatePlayerResults: evaluatePlayerResults,
+    playerReceipt: playerReceipt,
+    creditPlayerResult: creditPlayerResult,
+    creditResultsFromGameNode: creditResultsFromGameNode,
+    playerResultRecord: playerResultRecord,
+    persistPlayerResult: persistPlayerResult,
+    persistPlayerResults: persistPlayerResults,
+    readGameScorers: readGameScorers,
     stageError: stageError,
     ensureResultPersisted: ensureResultPersisted,
     inspectStoredCompletion: inspectStoredCompletion,

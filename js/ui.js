@@ -74,6 +74,8 @@
     scoreDiag: [],            // Αύγουστος 2.5: δομημένη εσωτερική διάγνωση σταδίων
     scoreRetryTimer: null,
     scoreRecoveryDone: false,   // self-repair: μία φορά ανά session
+    ownResultState: {},         // Stage 4a: κατάσταση per-player result ανά gameId
+    ownResultTimer: null,
   };
 
   // ============================================================ ΗΧΟΙ (WebAudio — χωρίς αρχεία)
@@ -355,6 +357,7 @@
     render();
     if (App.game.phase === 'ended') showEnd();
     maybeCreditCurrentPlayer();
+    maybePersistOwnResult();
   }
 
   function markScoreCasual(gameId, reason) {
@@ -448,7 +451,7 @@
       if (!App.game || App.game.gameId !== gameId) return;
       startScoreProofObserver(ctx, gameId);
       ensureLocalScoreProof();
-      if (g.phase === 'ended') maybeFinalizeHostScore();
+      if (g.phase === 'ended') { maybeFinalizeHostScore(); maybePersistOwnResult(); }
     }).catch(() => {
       if (g.phase === 'ended') markScoreCasual(gameId, 'host-session');
     });
@@ -612,6 +615,64 @@
       scoreDiag('recovery', { stage: 'recovery-failed', message: (err && err.message) || '' });
       return null;
     });
+  }
+
+  /* ================= STAGE 4a: LIVE PER-PLAYER RESULT (backend only, χωρίς UI copy) =========
+     ΙΔΙΟΚΤΗΣΙΑΚΟ ΜΟΝΤΕΛΟ (επιβεβαιωμένο από τα Rules): results/<uid> και seasonScores/<uid>
+     γράφονται ΜΟΝΟ από τον ίδιο τον κάτοχο (auth.uid === $uid). Άρα ΚΑΘΕ client — host ή
+     guest — γράφει ΜΟΝΟ το ΔΙΚΟ ΤΟΥ αποτέλεσμα, με βάση το authoritative state που
+     broadcastάρει ο host. Ο host ΔΕΝ γράφει ποτέ για guest και το αντίστροφο.
+
+     ΟΡΙΣΤΙΚΟ αποτέλεσμα = g.phase === 'ended' (τότε τα rankings/retiredAge είναι τελικά).
+     Δεν χρησιμοποιείται ΠΟΤΕ username, θέση #1 ή winnerUid ως προϋπόθεση. */
+  function maybePersistOwnResult() {
+    const g = App.game;
+    if (!g || g.phase !== 'ended' || g.scoreSetup !== 'ready' || !g.gameId || !App.myId) return;
+    if (App.role === 'tour') return;
+    const gameId = g.gameId;
+    const st = App.ownResultState[gameId];
+    if (st && (st.status === 'saving' || st.status === 'saved')) return;
+    if (st && st.status === 'error' && st.nextAt && Date.now() < st.nextAt) return;
+    // Eligibility ΑΚΡΙΒΩΣ όπως πριν: αν έστω ένας άνθρωπος είναι unverified, δεν γράφεται τίποτα.
+    const ev = SCORE.evaluatePlayerResults(g);
+    if (!ev.eligible) return;
+    const mineLocal = ev.results.find(r => r.playerId === App.myId);
+    if (!mineLocal) return;                       // bot ή μη-συμμετέχων: καμία εγγραφή
+    const attempt = ((st && st.attempt) || 0) + 1;
+    const info = { quit: mineLocal.quit === true, quitAge: mineLocal.quitAge, points: mineLocal.awardedPoints };
+    App.ownResultState[gameId] = Object.assign({ status: 'saving', attempt: attempt }, info);
+    freshVerifiedScoreUser().catch(e => { throw SCORE.stageError('auth-refresh', e); })
+      .then(({ ctx, snapshot }) => {
+        const uid = snapshot.user.uid;
+        if (mineLocal.uid !== uid) throw SCORE.stageError('uid-mismatch', new Error('Local UID does not match the frozen roster.'));
+        const mine = Object.assign({}, mineLocal, { uid: uid });
+        // ΣΕΙΡΑ: πρώτα το immutable result, μετά η canonical πίστωση. Αν το result υπάρχει ήδη
+        // (duplicate) ΔΕΝ το πειράζουμε — προχωράμε στο credit, που είναι από μόνο του idempotent.
+        return SCORE.persistPlayerResult(ctx, mine).then(() => SCORE.creditPlayerResult(ctx, mine));
+      })
+      .then(res => {
+        App.ownResultState[gameId] = Object.assign({}, info,
+          { status: 'saved', attempt: attempt, duplicate: res.duplicate, won: res.won });
+        scoreDiag(gameId, { stage: 'own-result', attempt: attempt, points: res.points, won: res.won, duplicate: res.duplicate });
+        if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') showEnd();
+      })
+      .catch(err => {
+        const stage = (err && err.stage) || 'unknown';
+        App.ownResultState[gameId] = Object.assign({}, info, { status: 'error', stage: stage, attempt: attempt,
+          nextAt: Date.now() + Math.min(30000, 2000 * Math.pow(2, Math.min(attempt - 1, 4))) });
+        scoreDiag(gameId, { stage: 'own-result:' + stage, attempt: attempt, message: (err && err.message) || '' });
+        scheduleOwnResultRetry(gameId);
+      });
+  }
+
+  function scheduleOwnResultRetry(gameId) {
+    if (App.ownResultTimer) return;
+    const st = App.ownResultState[gameId];
+    if (!st || st.status !== 'error') return;
+    App.ownResultTimer = setTimeout(() => {
+      App.ownResultTimer = null;
+      if (App.game && App.game.gameId === gameId && App.game.phase === 'ended') maybePersistOwnResult();
+    }, Math.max(1000, (st.nextAt || 0) - Date.now()));
   }
 
   // Αύγουστος 2.5 — δομημένη ΕΣΩΤΕΡΙΚΗ διάγνωση (ΠΟΤΕ δεν φτάνει στον παίκτη ως τεχνικό κείμενο).
@@ -908,7 +969,7 @@
           if (msg.mig) { App.migLobby = msg.mig.lobby; App.migChat = msg.mig.chat; } // v1.8: προίκα διαδοχής
           if ($('screen-game').classList.contains('hidden')) show('game');
           render(); maybeToastNewLog();
-          ensureLocalScoreProof();
+          ensureLocalScoreProof().then(() => maybePersistOwnResult());
           maybeCreditCurrentPlayer();
         } else if (msg.t === 'rejected') {
           App.net.close(); show('home'); homeErr(msg.msg);
@@ -2144,30 +2205,54 @@
     $('celOk').onclick = () => { closeOverlay(); render(); };
   }
 
+  /* Αύγουστος 2.6 (Stage 4b) — ΤΟ ΔΙΚΟ ΜΟΥ αποτέλεσμα, όχι του «νικητή».
+     Πηγή: App.ownResultState[gameId] (γράφεται από το Stage 4a live path). Δεν υπάρχει πλέον
+     gate «rankings[0].id === App.myId». Για ΠΑΛΙΑ/restored games χωρίς own result, πέφτουμε
+     στο προϋπάρχον single-winner μονοπάτι, ώστε να μη σπάσει τίποτα ιστορικό. */
   function endScoreHtml(g) {
+    const ineligible = g.scoreEligibility === 'ineligible' || g.scoreSetup === 'casual';
+    const own = App.ownResultState[g.gameId];
+    if (own) {
+      if (ineligible) {
+        return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scoreIneligible')) + '</div>';
+      }
+      if (!own.quit) return '';                       // χωρίς I QUIT: ΚΑΝΕΝΑ «+0», κανένα victory message
+      if (own.status === 'saved') {
+        return '<div class="notice" style="margin:12px 0; text-align:center;">' +
+          '<div style="font-size:20px; font-weight:900; color:var(--green);">' + esc(t('scoreIQuit', { points: own.points })) + '</div>' +
+          '<div style="margin-top:6px;">' + esc(t('scoreIndependence', { age: own.quitAge })) + '</div>' +
+          '<div class="muted" style="margin-top:5px;">' + esc(t('scoreWhy')) + '</div></div>';
+      }
+      if (own.status === 'error') {
+        return '<div class="notice" style="margin:12px 0;">' + esc(t('scorePendingRetry')) + '</div>';
+      }
+      return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scorePending')) + '</div>';
+    }
+    // ---- backward compatible: παλιά/επαναφερμένα games με μόνο completion ----
     const winner = g.rankings && g.rankings[0];
     const mine = winner && winner.id === App.myId;
     if (mine && g.scoreCompletionError) {
-      return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+      return '<div class="notice" style="margin:12px 0;">' + esc(t('scorePendingRetry')) + '</div>';
     }
     if (mine && g.scoreCompletionReady && g.scoreEligibility === 'eligible' && g.scoreResult) {
       const state = App.scoreCreditState[g.gameId];
       if (state && state.status === 'saved') {
         return '<div class="notice" style="margin:12px 0; text-align:center;">' +
-          '<div style="font-size:20px; font-weight:900; color:var(--green);">' + esc(t('scoreVictory', { points: g.scoreResult.awardedPoints })) + '</div>' +
-          '<div style="margin-top:6px;">' + esc(t('scoreFreedom', { age: g.scoreResult.winningAge })) + '</div>' +
+          '<div style="font-size:20px; font-weight:900; color:var(--green);">' + esc(t('scoreIQuit', { points: g.scoreResult.awardedPoints })) + '</div>' +
+          '<div style="margin-top:6px;">' + esc(t('scoreIndependence', { age: g.scoreResult.winningAge })) + '</div>' +
           '<div class="muted" style="margin-top:5px;">' + esc(t('scoreWhy')) + '</div></div>';
       }
       if ((state && state.status === 'error') || g.scoreCompletionError) {
-        return '<div class="notice" style="margin:12px 0;">' + esc(t('scoreSaveError')) + '</div>';
+        return '<div class="notice" style="margin:12px 0;">' + esc(t('scorePendingRetry')) + '</div>';
       }
       return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scorePending')) + '</div>';
     }
-    if (g.scoreEligibility === 'ineligible' || g.scoreSetup === 'casual') {
+    if (ineligible) {
       return '<div class="muted" style="margin:10px 0; text-align:center;">' + esc(t('scoreIneligible')) + '</div>';
     }
     return '';
   }
+
 
   function showEnd() {
     const g = App.game;
@@ -2450,6 +2535,6 @@
 
   window.IQ_UI = { showEnd, showRules, showFeedback, toggleLang };
   /* e2e-only hook (ενεργό ΜΟΝΟ με ?e2e=1) — για screenshots/έλεγχο modals από τα test scripts */
-  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE, SCORE };
+  if (E2E) window.IQ_TEST = { App, render, showCelebration, showStats, renderLobbyGuest, renderLobby, toast, act, closeOverlay, maybeCreditCurrentPlayer, maybeFinalizeHostScore, maybePersistOwnResult, maybeRecoverMissedAwards, initLegacyRecoveryPanel, RECOVERY_MODE, SCORE };
   init();
 })();
